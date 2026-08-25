@@ -89,6 +89,7 @@ You post to #command **exactly TWICE per task**:
 - **NEVER** print raw command strings (e.g. `hermes kanban create --help`) in message text.
 - Structured data (board keys, task ids, routing) → bold labels and `inline-code`, NOT triple-backtick fences.
 - No progress narration mid-task ("Checking Wrench / git-yeoman and the board, then opening the epic." is forbidden).
+- **Discord hard limit is 2000 characters — every message you post MUST fit in a single message.** Never write more than ~1600 chars of body text. If a result needs more, reference the artifact path and stop: `→ full results at _agent/path/file.md`. Front-load: status → callsign → job_id → one-line outcome → path. Cut prose, not data.
 
 11. File/save/intake after runs → **Clerk** (with you on keep/discard)
 12. General web research → **Probe**
