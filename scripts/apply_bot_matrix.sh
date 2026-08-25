@@ -177,6 +177,53 @@ mcp_off() {
   done
 }
 
+# OSB ON-R — enable carrier OSB with write tools excluded (POLICY.md §2).
+# Named consumers only: knowledge_lt, vault_librarian, hermes_ai_explorer.
+# Clerk stays ON-W elsewhere; never call this on obsidian_archivist.
+osb_readonly() {
+  local id="$1"
+  OSB_RO_ID="$id" python3 - <<'PY'
+from pathlib import Path
+import copy, os, yaml
+bot = os.environ["OSB_RO_ID"]
+default = yaml.safe_load((Path.home() / ".hermes/config.yaml").read_text()) or {}
+p = Path.home() / ".hermes/profiles" / bot / "config.yaml"
+cfg = yaml.safe_load(p.read_text()) if p.exists() else {}
+cfg = cfg or {}
+mcp = cfg.get("mcp_servers") or {}
+osb = copy.deepcopy((default.get("mcp_servers") or {}).get("obsidian-second-brain") or {})
+if not osb:
+    # Fallback to carrier sample path when desktop default lacks OSB
+    osb = {
+        "command": "uv",
+        "args": [
+            "run", "--with", "mcp<2", "python",
+            str(Path.home() / "obsidian-second-brain/integrations/obsidian-mcp-server/server.py"),
+        ],
+        "env": {
+            "OBSIDIAN_VAULT_PATH": str(
+                Path.home() / "Desktop/Existing Folders/OBSIDIAN"
+            ),
+        },
+    }
+osb = copy.deepcopy(osb)
+osb["enabled"] = True
+tools = osb.get("tools") or {}
+excl = set(tools.get("exclude") or [])
+excl |= {
+    "obsidian_save_note", "obsidian_capture", "obsidian_update_note",
+    "save_note", "capture", "update_note",
+}
+tools["exclude"] = sorted(excl)
+osb["tools"] = tools
+mcp["obsidian-second-brain"] = osb
+cfg["mcp_servers"] = mcp
+p.parent.mkdir(parents=True, exist_ok=True)
+p.write_text(yaml.safe_dump(cfg, sort_keys=False, default_flow_style=False))
+print(f"{bot} OSB read-only (write tools excluded)")
+PY
+}
+
 # Command — Helm is SUPER-AGENT (near-user perms). Never free tier.
 # Do NOT strip tools/MCP here — Helm needs full hermes-cli surface.
 pin chief_of_staff grok-4.5 xai-oauth
@@ -323,34 +370,7 @@ pin knowledge_lt claude-sonnet-4-6 anthropic
 chain knowledge_lt command claude-sonnet-4-6 anthropic
 off knowledge_lt $LT_EXEC_OFF
 mcp_off knowledge_lt todoist hugging_face kiwi vercel dropbox
-python3 - <<'PY'
-from pathlib import Path
-import yaml, copy
-default = yaml.safe_load((Path.home() / ".hermes/config.yaml").read_text()) or {}
-p = Path.home() / ".hermes/profiles/knowledge_lt/config.yaml"
-cfg = yaml.safe_load(p.read_text()) if p.exists() else {}
-cfg = cfg or {}
-mcp = cfg.get("mcp_servers") or {}
-osb = copy.deepcopy((default.get("mcp_servers") or {}).get("obsidian-second-brain") or {})
-if osb:
-    osb["enabled"] = True
-    tools = osb.get("tools") or {}
-    excl = set(tools.get("exclude") or [])
-    # Stacks is a routing node: vault WRITE stays with Clerk under grant.
-    excl |= {
-        "obsidian_save_note", "obsidian_capture", "obsidian_update_note",
-        "save_note", "capture", "update_note",
-    }
-    tools["exclude"] = sorted(excl)
-    osb["tools"] = tools
-    mcp["obsidian-second-brain"] = osb
-    cfg["mcp_servers"] = mcp
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(yaml.safe_dump(cfg, sort_keys=False, default_flow_style=False))
-    print("knowledge_lt OSB read-only (write tools excluded)")
-else:
-    print("knowledge_lt: no OSB server in default config — skipped")
-PY
+osb_readonly knowledge_lt
 
 # Coding / meta
 pin firstmate grok-4.5 xai-oauth
@@ -369,6 +389,8 @@ pin hermes_ai_explorer grok-4.5 xai-oauth
 chain hermes_ai_explorer cheap
 off hermes_ai_explorer computer_use image_gen video video_gen tts delegation
 mcp_off hermes_ai_explorer todoist kiwi vercel
+# Chart — OSB ON-R per BOT_MATRIX / POLICY (search/read/health; no writers)
+osb_readonly hermes_ai_explorer
 
 # Recon Wing: Sonar — passive signal watcher; LLM pass on diff only
 pin passive_watch grok-4.5 xai-oauth
@@ -409,11 +431,14 @@ pin vault_librarian grok-4.5 xai-oauth
 chain vault_librarian cheap
 off vault_librarian browser computer_use image_gen video video_gen tts delegation cronjob terminal code_execution
 mcp_off vault_librarian todoist hugging_face kiwi vercel dropbox
+# Librarian — OSB ON-R (search/read/health/backlinks/validate; no writers)
+osb_readonly vault_librarian
 
 pin obsidian_archivist grok-4.5 xai-oauth
 chain obsidian_archivist cheap
 off obsidian_archivist browser computer_use image_gen video video_gen tts delegation cronjob terminal code_execution
 mcp_off obsidian_archivist todoist hugging_face kiwi vercel dropbox
+# Clerk write posture: do NOT call osb_readonly here (ON-W / exclude [])
 
 pin research_agent grok-4.5 xai-oauth
 chain research_agent cheap
