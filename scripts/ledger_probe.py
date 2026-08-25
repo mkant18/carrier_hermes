@@ -163,16 +163,18 @@ def parse_log_tail(profile: str, lines: int = 500) -> list[dict]:
 
 
 # ─── Main probe ────────────────────────────────────────────────────────────────
-def run_probe(full: bool = False, live_only: bool = False) -> dict[str, Any]:
+def run_probe(full: bool = False, live_only: bool = False, fetch_or_activity: bool = False) -> dict[str, Any]:
     env = load_env()
     OR_KEY = env.get("OPENROUTER_API_KEY", os.environ.get("OPENROUTER_API_KEY", ""))
+    OR_MGMT_KEY = env.get("OPENROUTER_MANAGEMENT_KEY", os.environ.get("OPENROUTER_MANAGEMENT_KEY", ""))
     ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     # ── OpenRouter live balance ──────────────────────────────────────────────
     or_balance: dict[str, Any] = {}
     or_credits: dict[str, Any] = {}
+    or_activity: dict[str, Any] = {}
     if OR_KEY and not live_only:
-        key_data = or_fetch(OR_KEY, "key")
+        key_data = or_fetch(OR_KEY, "auth/key")
         credits_data = or_fetch(OR_KEY, "credits")
         if "data" in key_data:
             d = key_data["data"]
@@ -186,7 +188,7 @@ def run_probe(full: bool = False, live_only: bool = False) -> dict[str, Any]:
                 "is_free_tier": d.get("is_free_tier"),
                 "expires_at": d.get("expires_at"),
                 "is_management_key": d.get("is_management_key"),
-                "label": d.get("label", "")[:12] + "...",
+                "label": (d.get("label", "") or "")[:12] + "...",
             }
         else:
             or_balance = key_data
@@ -198,6 +200,61 @@ def run_probe(full: bool = False, live_only: bool = False) -> dict[str, Any]:
             }
         else:
             or_credits = credits_data
+
+    # ── OpenRouter activity (management key only) ────────────────────────────
+    if fetch_or_activity and not live_only:
+        if OR_MGMT_KEY:
+            activity_data = or_fetch(OR_MGMT_KEY, "activity?limit=100")
+            if "data" in activity_data:
+                entries = activity_data["data"]
+                # Compact: keep only the fields we care about
+                compact = []
+                for e in (entries if isinstance(entries, list) else []):
+                    compact.append({
+                        "id": e.get("id"),
+                        "created_at": e.get("created_at"),
+                        "model": e.get("model"),
+                        "provider": e.get("provider"),
+                        "total_cost": e.get("total_cost"),
+                        "prompt_tokens": e.get("prompt_tokens"),
+                        "completion_tokens": e.get("completion_tokens"),
+                        "native_tokens_prompt": e.get("native_tokens_prompt"),
+                        "native_tokens_completion": e.get("native_tokens_completion"),
+                        "latency": e.get("latency"),
+                        "finish_reason": e.get("finish_reason"),
+                        "app_id": e.get("app_id"),
+                    })
+                # Aggregate by model
+                by_model_or: dict[str, dict] = {}
+                total_or_cost = 0.0
+                for e in compact:
+                    m = e.get("model") or "unknown"
+                    cost = float(e.get("total_cost") or 0)
+                    ptok = int(e.get("prompt_tokens") or 0)
+                    ctok = int(e.get("completion_tokens") or 0)
+                    total_or_cost += cost
+                    if m not in by_model_or:
+                        by_model_or[m] = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "total_cost": 0.0}
+                    by_model_or[m]["calls"] += 1
+                    by_model_or[m]["prompt_tokens"] += ptok
+                    by_model_or[m]["completion_tokens"] += ctok
+                    by_model_or[m]["total_cost"] += cost
+                or_activity = {
+                    "status": "ok",
+                    "generation_count": len(compact),
+                    "total_cost": total_or_cost,
+                    "by_model": by_model_or,
+                    "recent": compact[:20],
+                }
+            else:
+                or_activity = {"status": "error", "detail": activity_data}
+        else:
+            or_activity = {
+                "status": "unavailable",
+                "detail": "OPENROUTER_MANAGEMENT_KEY not present in environment. "
+                          "Per-generation logs require a management key from openrouter.ai/settings/keys. "
+                          "Request one via Helm → LockBox to unlock this view.",
+            }
 
     # ── Parse all profile DBs ────────────────────────────────────────────────
     dbs = sorted(glob.glob(str(PROFILES_DIR / "*/state.db")))
@@ -320,6 +377,7 @@ def run_probe(full: bool = False, live_only: bool = False) -> dict[str, Any]:
         "ts": ts,
         "or_balance": or_balance,
         "or_credits": or_credits,
+        "or_activity": or_activity,
         "thresholds": {
             "soft_daily": SOFT_DAILY,
             "hard_daily": HARD_DAILY,
@@ -398,17 +456,33 @@ def print_summary(snapshot: dict) -> None:
     if reason:
         print(f"\n⚠️  {reason}")
 
+    # OR activity block
+    act = snapshot.get("or_activity", {})
+    if act:
+        status = act.get("status", "")
+        if status == "ok":
+            print(f"\nOR per-generation activity ({act.get('generation_count', 0)} calls, ${act.get('total_cost', 0):.4f} total):")
+            for model, d in sorted(act.get("by_model", {}).items(), key=lambda x: x[1].get("total_cost", 0), reverse=True):
+                print(f"  {model:40s} | {d['calls']} calls | "
+                      f"{d['prompt_tokens']+d['completion_tokens']:,} tok | ${d['total_cost']:.4f}")
+        elif status == "unavailable":
+            print(f"\n⚠️  OR activity logs unavailable — management key not present.")
+            print(f"   Add OPENROUTER_MANAGEMENT_KEY to ~/.hermes/.env to unlock per-generation detail.")
+        elif status == "error":
+            print(f"\n⚠️  OR activity fetch error: {act.get('detail')}")
+
 
 # ─── Entrypoint ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ledger Probe")
     parser.add_argument("--full", action="store_true", help="Include per-session detail")
     parser.add_argument("--live", action="store_true", help="Log tail only (fast, no DB)")
+    parser.add_argument("--or-activity", action="store_true", help="Fetch OR per-generation logs (needs OPENROUTER_MANAGEMENT_KEY)")
     parser.add_argument("--quiet", action="store_true", help="No stdout (write only)")
     parser.add_argument("--json", dest="json_out", action="store_true", help="Print raw JSON")
     args = parser.parse_args()
 
-    snapshot = run_probe(full=args.full, live_only=args.live)
+    snapshot = run_probe(full=args.full, live_only=args.live, fetch_or_activity=args.or_activity)
     path = write_snapshot(snapshot)
 
     if args.json_out:
