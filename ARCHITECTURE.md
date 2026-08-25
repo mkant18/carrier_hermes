@@ -95,6 +95,23 @@ Chief of Staff (grok-4.5 via SuperGrok OAuth, OR claude-opus-4-8/claude-sonnet-4
 - Tools: `web`, `browser`, `file` (write `_agent/research/`)
 - Note: read-only browser use
 
+**hermes_ai_explorer** (meta / optimization)
+- Model: quality — `anthropic/claude-sonnet-4-6` via Claude Max OAuth
+- Tools: `web`, `session_search`, `memory`, `file` (write `_agent/explorer/` only), OSB MCP read tools, optional `discord` (short fleet tips only)
+- Cron: 2–3× per week (not high-frequency)
+- Role: researches fleet behavior + Hermes/AI ecosystem; proposes workflow, cost, and connector optimizations to CoS/Michael. Never silent reconfig.
+- Boundary: not general research_agent; not CoS; not watcher
+
+### Knowledge layer
+
+**Obsidian Second Brain (OSB)** attached to Hermes via:
+1. Native skills under `~/.hermes/skills/obsidian-second-brain/`
+2. MCP stdio server `obsidian-second-brain` (read/search/health; Inbox writes excluded at Trust Level 0)
+3. `OBSIDIAN_VAULT_PATH` → `/Users/michaelkanter/Desktop/Existing Folders/OBSIDIAN`
+4. Primary consumer: `vault_librarian`; secondary: `hermes_ai_explorer`, `email_drafter` (contacts read)
+
+See `integrations/obsidian-second-brain.md`.
+
 ---
 
 ## MoA frontier preset

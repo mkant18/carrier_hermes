@@ -9,42 +9,69 @@ The original [carrier_ops](https://github.com/michaelkanter/carrier_ops) plan de
 | carrier_ops layer | Hermes equivalent |
 |---|---|
 | OpenClaw gateway (Discord/Telegram) | Hermes gateway — `platforms.discord`, `platforms.telegram` in config |
-| Podiom durable sessions + scheduler | Hermes profiles + `hermes cron` |
-| firstmate parallel crew dispatch | `delegate_task` + cron workers |
-| OpenMausBot harness / approval cards | Hermes `approvals` mode + per-toolset scoping |
+| Podiom durable sessions + scheduler | Hermes profiles + `hermes cron` + Kanban |
+| firstmate parallel crew dispatch | **firstmate** profile + worktrees / coding skills (default for coding) |
+| OpenMausBot harness / approval cards | Hermes `approvals` mode + per-toolset scoping + no-send tools |
 | LiteLLM model routing (aliases) | Hermes model aliases + MoA preset |
-| Subscription Watcher | Hermes cron job every 5 min (cheap model) |
-| buzz + maka dual audit | Hermes `state.db` sessions + Discord webhook hook |
+| Subscription Watcher | Cron `no_agent` heartbeat scripts + optional cheap summary |
+| buzz + maka dual audit | Hermes `state.db` + `_agent/audit/` + Discord webhook |
+| Obsidian / OB1 knowledge | **obsidian-second-brain** skills + MCP + vault_librarian |
+| Meta optimization (new) | **hermes_ai_explorer** profile (periodic) |
 
 ## Model tiers (Hermes-native)
 
 | Alias | Resolves to | Billing |
 |---|---|---|
-| `chief-of-staff` | `xai-oauth / grok-4.5` **or** `anthropic / claude-opus-4-8` **or** `anthropic / claude-sonnet-4-6` | SuperGrok OAuth subscription OR Claude Max OAuth |
-| `specialist` | `openrouter / deepseek/deepseek-chat-v3-0324` (rotated pool) | OpenRouter per-token (~$0.27/M) |
-| `watcher` | `openrouter / google/gemma-3n-e4b-it:free` (or any free tier) | OpenRouter free tier |
-| `frontier` | MoA preset — cheap reference models → grok-4.5 aggregator | Mixed |
+| `chief-of-staff` / `smart` | `xai-oauth / grok-4.5` (fallback Claude Max) | SuperGrok OAuth subscription |
+| `quality` | `anthropic / claude-sonnet-4-6` | Claude Max OAuth |
+| `frontier-quality` | `anthropic / claude-opus-4-8` | Claude Max OAuth (rare) |
+| `specialist` | `openrouter / deepseek/deepseek-chat-v3-0324` **paid pin** | OpenRouter per-token |
+| `watcher` | script-first (`no_agent`); optional DeepSeek summary | ~$0 |
+| `frontier` | MoA — cheap refs → grok-4.5 aggregator | Mixed |
+
+Do **not** pin email/calendar specialists to OpenRouter `:free` models.
 
 ## Directory structure
 
 ```
 carrier_hermes/
-├── README.md                  # this file
-├── ARCHITECTURE.md            # full design rationale
+├── README.md
+├── ARCHITECTURE.md
+├── integrations/
+│   └── obsidian-second-brain.md
 ├── profiles/
-│   ├── chief_of_staff/        # SOUL.md + config overrides
+│   ├── chief_of_staff/
+│   ├── firstmate/                 # coding default (plan)
+│   ├── hermes_ai_explorer/        # fleet + AI optimization advisor
 │   ├── email_reader/
 │   ├── email_drafter/
 │   ├── calendar_manager/
-│   ├── vault_librarian/
+│   ├── vault_librarian/           # OSB primary
 │   ├── research_agent/
 │   └── subscription_watcher/
 ├── prompts/
-│   └── SETUP_PROMPT.md        # the prompt to run in a new Hermes session to build the whole fleet
-└── moa/
-    └── frontier_preset.md     # MoA preset definition for the frontier escalation tier
+│   ├── SETUP_PROMPT.md
+│   ├── IMPLEMENT_PROMPT.md        # full plan implementation session
+│   └── explorer_cron_prompt.md
+├── moa/
+│   └── frontier_preset.md
+└── .hermes/plans/                 # hardening + cost-optimal plans
 ```
 
 ## Quickstart
 
-See `prompts/SETUP_PROMPT.md` — paste it into a fresh Hermes session with full tool access. It will create every bot profile, wire every tool, set up the model aliases, configure the MoA preset, and start the Subscription Watcher cron.
+1. **Full fleet build (preferred):** paste `prompts/IMPLEMENT_PROMPT.md` into a fresh Hermes session with full tool access. It implements the cost-optimal plan + explorer + OSB.
+2. **Legacy bootstrap:** `prompts/SETUP_PROMPT.md` (may lag the plan — prefer IMPLEMENT_PROMPT).
+3. **OSB only:** follow `integrations/obsidian-second-brain.md`.
+
+## Profiles (summary)
+
+| Profile | Role |
+|---|---|
+| chief_of_staff | Inbound classify/dispatch |
+| firstmate | Coding crew default |
+| hermes_ai_explorer | Periodic workflow/cost/connector advisor → CoS |
+| email_reader / email_drafter / calendar_manager | Ops specialists |
+| vault_librarian | Obsidian second brain |
+| research_agent | General research briefs |
+| subscription_watcher | Heartbeat / lock / alerts |

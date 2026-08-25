@@ -1,16 +1,26 @@
 # Carrier Hermes Fleet Setup Prompt
 
-> Paste this entire prompt into a fresh Hermes session with full tool access (yolo mode or smart approval).
-> The session will build the entire chief-of-staff fleet from scratch.
-> Prerequisites: OPENROUTER_API_KEY in ~/.hermes/.env, xai-oauth credential active, anthropic OAuth credential active.
+> **DEPRECATED for full fleet builds.** Use `prompts/IMPLEMENT_PROMPT.md` instead — it includes the cost-optimal plan, FirstMate, hermes_ai_explorer, Obsidian Second Brain, no_agent watcher, and shadow-mode gates.
+>
+> This file remains as a lighter bootstrap reference. Where it conflicts with IMPLEMENT_PROMPT or `.hermes/plans/2026-08-25_122838-cost-optimal-fleet-hardening.md`, those win.
+
+> Paste IMPLEMENT_PROMPT (preferred) or this prompt into a fresh Hermes session with full tool access.
+> Prerequisites: OPENROUTER_API_KEY in ~/.hermes/.env, xai-oauth credential active, anthropic OAuth credential active, OBSIDIAN_VAULT_PATH set.
 
 ---
 
 You are setting up Michael Kanter's personal AI agent fleet called "Carrier Hermes" — a Hermes Agent implementation of the Carrier Ops chief-of-staff system. Work through each section in order. Report what you've done after each section. Do not skip steps; do not ask for confirmation between steps unless an error requires it.
 
+**Prefer:** stop and tell Michael to run `~/carrier_hermes/prompts/IMPLEMENT_PROMPT.md` if they want the full hardened fleet. If they insisted on this SETUP file, continue but still:
+- Pin specialist to paid DeepSeek only (no free rotation)
+- Install hermes_ai_explorer + firstmate when SOULs exist
+- Wire OSB per `integrations/obsidian-second-brain.md`
+
 Reference files are at: ~/carrier_hermes/
 - README.md — system overview
 - ARCHITECTURE.md — full design rationale and governance rules
+- prompts/IMPLEMENT_PROMPT.md — canonical full implementation
+- integrations/obsidian-second-brain.md — vault wiring
 - profiles/*/SOUL.md — each agent's identity and constraints
 
 ---
