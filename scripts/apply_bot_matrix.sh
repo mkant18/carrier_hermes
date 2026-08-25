@@ -103,6 +103,10 @@ import os
 from pathlib import Path
 import yaml
 
+# POLICY: Frontier models (Claude Opus, Grok-4.x) are SUBSCRIPTION-ONLY.
+# They MUST NEVER appear in fallback_providers via openrouter or any per-token provider.
+# Subscription providers for frontier: anthropic (Claude Max), xai-oauth (SuperGrok).
+# OpenRouter is ONLY permitted for cheap non-frontier models below.
 TAILS = {
     "command": [
         {"provider": "openrouter", "model": "deepseek/deepseek-chat-v3-0324"},
@@ -117,6 +121,13 @@ TAILS = {
         {"provider": "openrouter", "model": "google/gemini-2.5-flash-lite"},
     ],
 }
+
+# Guard: refuse to write any frontier model via openrouter
+FORBIDDEN = ["claude-opus", "grok-4"]
+for tier_name, entries in TAILS.items():
+    for e in entries:
+        if e["provider"] == "openrouter" and any(f in e["model"].lower() for f in FORBIDDEN):
+            raise ValueError(f"BILLING VIOLATION: {e['provider']}/{e['model']} in TAILS[{tier_name!r}]")
 
 bot = os.environ["CHAIN_ID"]
 tier = os.environ["CHAIN_TIER"]
@@ -172,11 +183,17 @@ bu = str(m.get("base_url") or "")
 if "opencode" in bu or ":free" in bu or bu.strip() == "":
     m.pop("base_url", None)
 # Helm keeps the QUALITY paid tail (command tier) — it coordinates the fleet.
+# POLICY: frontier models (Opus, Grok-4) via openrouter are STRICTLY FORBIDDEN.
 cfg["fallback_providers"] = [
     {"provider": "anthropic", "model": "claude-sonnet-5"},
     {"provider": "openrouter", "model": "deepseek/deepseek-chat-v3-0324"},
     {"provider": "openrouter", "model": "google/gemini-3.7-flash"},
 ]
+# Hard guard: refuse to write frontier via openrouter
+FORBIDDEN = ["claude-opus", "grok-4"]
+for fb in cfg["fallback_providers"]:
+    if fb["provider"] == "openrouter" and any(f in fb["model"].lower() for f in FORBIDDEN):
+        raise ValueError(f"BILLING VIOLATION: {fb['provider']}/{fb['model']} in Helm fallback_providers")
 # Keep the alias map aligned with the live chain so `smart`/`quality`/`cheap`
 # don't silently route to retired pins.
 aliases = m.get("aliases")
@@ -185,6 +202,8 @@ if isinstance(aliases, dict):
         "smart": "xai-oauth/grok-4.5",
         "chief-of-staff": "xai-oauth/grok-4.5",
         "quality": "anthropic/claude-sonnet-5",
+        # frontier-quality and opus aliases INTENTIONALLY OMITTED:
+        # Opus / Grok-4 are subscription-only — never via per-token OpenRouter API.
         "specialist": "openrouter/deepseek/deepseek-v4-flash-0731",
         "rote": "openrouter/deepseek/deepseek-v4-flash-0731",
         "cheap": "openrouter/deepseek/deepseek-v4-flash-0731",
@@ -193,6 +212,12 @@ if isinstance(aliases, dict):
         "gemini-flash": "openrouter/google/gemini-2.5-flash-lite",
         "fallback-flash": "openrouter/google/gemini-2.5-flash-lite",
     })
+    # Hard guard: strip any alias that would route frontier via openrouter
+    FORBIDDEN = ["claude-opus", "grok-4"]
+    for k, v in list(aliases.items()):
+        if v.startswith("openrouter/") and any(f in v.lower() for f in FORBIDDEN):
+            del aliases[k]
+            print(f"BLOCKED alias {k!r} -> {v!r} (frontier via openrouter)")
 # Super-agent tool surface
 cfg["platform_toolsets"] = {"cli": ["hermes-cli"]}
 # MCP: mirror default useful servers; Helm gets FULL OSB including write tools
@@ -371,24 +396,24 @@ echo "BOT_MATRIX applied"
 # so never trust the "pinned ..." lines alone — read the files back.
 # ---------------------------------------------------------------------------
 drift=0
-verify_pin chief_of_staff       grok-4.6                          || drift=1
-verify_pin subscription_watcher deepseek/deepseek-chat-v3-0324    || drift=1
-verify_pin api_watcher          deepseek/deepseek-chat-v3-0324    || drift=1
-verify_pin lockbox              google/gemini-2.5-flash           || drift=1
-verify_pin coding_lt            claude-sonnet-4-6                 || drift=1
-verify_pin ops_lt               claude-sonnet-4-6                 || drift=1
-verify_pin knowledge_lt         claude-sonnet-4-6                 || drift=1
-verify_pin firstmate            claude-sonnet-4-6                 || drift=1
-verify_pin hermes_ai_explorer   claude-sonnet-4-6                 || drift=1
-verify_pin passive_watch        deepseek/deepseek-chat-v3-0324    || drift=1
-verify_pin email_reader         deepseek/deepseek-chat-v3-0324    || drift=1
-verify_pin email_drafter        claude-sonnet-4-6                 || drift=1
-verify_pin calendar_manager     deepseek/deepseek-chat-v3-0324    || drift=1
-verify_pin todoist_manager      deepseek/deepseek-chat-v3-0324    || drift=1
-verify_pin finance_reader       claude-sonnet-4-6                 || drift=1
-verify_pin vault_librarian      claude-sonnet-4-6                 || drift=1
-verify_pin obsidian_archivist   claude-sonnet-4-6                 || drift=1
-verify_pin research_agent       claude-sonnet-4-6                 || drift=1
+verify_pin chief_of_staff       grok-4.5                              || drift=1
+verify_pin subscription_watcher grok-4.5                              || drift=1
+verify_pin api_watcher          grok-4.5                              || drift=1
+verify_pin lockbox              grok-4.5                              || drift=1
+verify_pin coding_lt            grok-4.5                              || drift=1
+verify_pin ops_lt               grok-4.5                              || drift=1
+verify_pin knowledge_lt         grok-4.5                              || drift=1
+verify_pin firstmate            grok-4.5                              || drift=1
+verify_pin hermes_ai_explorer   grok-4.5                              || drift=1
+verify_pin passive_watch        grok-4.5                              || drift=1
+verify_pin email_reader         grok-4.5                              || drift=1
+verify_pin email_drafter        grok-4.5                              || drift=1
+verify_pin calendar_manager     grok-4.5                              || drift=1
+verify_pin todoist_manager      grok-4.5                              || drift=1
+verify_pin finance_reader       grok-4.5                              || drift=1
+verify_pin vault_librarian      grok-4.5                              || drift=1
+verify_pin obsidian_archivist   grok-4.5                              || drift=1
+verify_pin research_agent       grok-4.5                              || drift=1
 
 if [[ "$drift" -ne 0 ]]; then
   echo "FAIL: one or more pins drifted — check for live 'serve' processes." >&2
