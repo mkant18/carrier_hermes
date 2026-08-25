@@ -14,7 +14,7 @@ set -euo pipefail
 # So: stop every roster serve process first, then pin. Do not "fix" this by
 # re-running the script — the second run gets clobbered exactly the same way.
 # ---------------------------------------------------------------------------
-ROSTER_IDS="chief_of_staff subscription_watcher api_watcher lockbox \
+ROSTER_IDS="chief_of_staff marshal subscription_watcher api_watcher lockbox \
 coding_lt firstmate hermes_ai_explorer passive_watch ops_lt email_reader \
 email_drafter calendar_manager todoist_manager knowledge_lt vault_librarian \
 obsidian_archivist research_agent finance_reader"
@@ -285,6 +285,15 @@ pin lockbox grok-4.5 xai-oauth
 chain lockbox nocn
 off lockbox browser computer_use image_gen video video_gen x_search tts web delegation code_execution vision cronjob
 mcp_off lockbox todoist hugging_face kiwi vercel dropbox obsidian-second-brain
+
+# Marshal 🎖️ — 2IC to Helm; Kanban Commander. quality Sonnet Max (same tier as Lts).
+# Sequencing and review require judgment — not rote. command tail.
+# No execution tools (terminal, code_exec, browser, web). No domain MCP.
+pin marshal claude-sonnet-4-6 anthropic
+chain marshal command claude-sonnet-4-6 anthropic
+off marshal terminal code_execution browser computer_use delegation web \
+  image_gen video video_gen tts x_search vision cronjob
+mcp_off marshal todoist hugging_face kiwi vercel dropbox obsidian-second-brain
 
 # ---------------------------------------------------------------------------
 # Lieutenants (Wing Leads) — dispatch / review / routing ONLY.

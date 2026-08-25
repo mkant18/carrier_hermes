@@ -12,6 +12,7 @@ MCP filters are **include/exclude on that bot home**. Default desktop home may k
 
 | bot_id | Callsign | Model | Toolsets ON | Toolsets OFF | MCP |
 |---|---|---|---|---|---|
+| `marshal` | Marshal 🎖️ | `quality` Sonnet Max; fallback Grok 4.5 | kanban (owner — all lanes), todo, session_search, memory, file `_agent/marshal/**`, aipass, discord `#command`+`#fleet` via First Watch, clarify | terminal, code_execution, browser, web, computer_use, mail, mail_send, todoist MCP, calendar, OSB write, delegation | **none** |
 | `chief_of_staff` | Helm ⚓️ | `smart` Grok 4.5; fallback `quality` | kanban, cronjob, discord/gateway as configured, memory, session_search, todo, clarify, skills (roster) | terminal, file, web, browser, code_execution, computer_use, delegation (keep off unless scratch explicitly enabled); **no Doppler / no secrets** | **none** domain. No todoist, no OSB, no mail, no Doppler. |
 | `subscription_watcher` | Vigil 📡 | heartbeat none; summary `watcher-summary` | (cron script only). Summary job: session_search, file (narrow), discord | web, browser, terminal (except script), delegation, todoist, OSB | none |
 | `api_watcher` | Ledger 📒 | heartbeat none; narrative specialist | script/terminal **narrow** (curl OpenRouter + lock scripts), file `_agent/api_watcher/`, discord, session_search | web browse, browser, delegation, domain MCP | none |
