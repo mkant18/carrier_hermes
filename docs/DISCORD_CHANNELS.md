@@ -16,6 +16,7 @@ Names are frozen. **Do not invent snowflake IDs.**
 | Job launch board (Wrench dispatches to Mate here) | `#catapult` | `1541919999894229053` |
 | Ops Wing internal coordination (Deck + squadron) | `#quarterdeck` | `1541929900586565783` |
 | Knowledge Wing internal coordination (Stacks + squadron) | `#chart-room` | `1541929921176281170` |
+| Recon Wing internal coordination (Chart + Sonar + Probe) | `#war-room` | `1541931585220255894` |
 
 ### Routing rules (frozen intent)
 

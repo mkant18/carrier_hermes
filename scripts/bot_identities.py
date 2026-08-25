@@ -174,6 +174,7 @@ CHANNELS = {
     # Wing home channels (internal coordination)
     "quarterdeck": "1541929900586565783",   # Ops Wing home
     "chart_room":  "1541929921176281170",   # Knowledge Wing home
+    "war_room":    "1541931585220255894",   # Recon Wing home
     # Domain specialist channels
     "email":      "1541155152726204416",
     "calendar":   "1541155189019517078",
