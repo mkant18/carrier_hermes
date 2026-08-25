@@ -1,14 +1,28 @@
 # Shadow mode — live mutation policy
 
-**Default: ON** for side-effecting ops until Michael exits.
+**Updated: 2026-08-25** — Michael exited shadow for named surfaces (this session).
 
-## Still shadowed (no live mutation)
+## Live (unshadowed 2026-08-25)
 
-- Tasker → Todoist API writes (proposals under `_agent/todoist/proposals-*.md` only)
-- Chronos → calendar writes (summaries only)
-- Clerk → permanent vault notes outside `_agent/` (stage under `_agent/archivist/`)
+| Surface | Bot | Authority | Gate |
+|---|---|---|---|
+| **Todoist API writes** | Tasker (`todoist_manager`) | `unshadow Todoist` | Job/idempotency via `_agent/todoist/state.json`; no bulk destructive without packet flags |
+| **Calendar writes** | Chronos (`calendar_manager`) | `unshadow calendar` | Calendar MCP when wired; Todoist still → Tasker |
+| **Clerk permanent intake** | Clerk (`obsidian_archivist`) | `unshadow intake` | **Only** when job packet has `trust_override: intake_enabled` (or equivalent CoS grant). Stage otherwise under `_agent/archivist/`. |
 
-## Not shadowed (allowed)
+Audit: `_agent/audit/events.jsonl` (helm `unshadow` events).
+
+## Still gated / not open season
+
+- **Vault constitution Trust Level** remains **0** until Michael says `raise TL` and updates vault `CLAUDE.md`.  
+  Fleet intake unshadow ≠ automatic TL raise. Permanent paths outside `_agent/` still require the packet grant **and** a TL raise for full constitutional alignment.
+- OSB Inbox **write** tools stay **excluded** on default MCP and on Librarian / Helm / Scout / non-Clerk homes.
+- Clerk without `trust_override: intake_enabled` → stage only under `_agent/archivist/`.
+- Mate: never push `main`; branches OK.
+- No mail **send** tools.
+- LockBox: live only under Helm `HANDSHAKE_GRANT` (see below).
+
+## Always allowed (unchanged)
 
 - Reads (mail, calendar, vault, Todoist GET)
 - `_agent/**` writes
@@ -18,11 +32,11 @@
 - Quill drafts + `#drafts` posts
 - Helm classify / Kanban create
 
-## Exit criteria (all required)
+## Exit criteria (reference)
 
 1. Phase A freeze committed.  
-2. Phase B smokes PASS (`docs/CLASSIFICATION_GOLDEN.md`, lock+halt refuse, aipass round-trip, OSB read, model pings, Chronos ≠ Tasker).  
-3. Michael explicitly raises Trust Level **or** says “unshadow Todoist/calendar/intake”.  
+2. Phase B smokes (structural); note DeepSeek ping may flake independently.  
+3. Michael says exact go phrases per surface.  
 4. Standing override logged in `_agent/audit/events.jsonl`.
 
 No automatic end date. Absence of protest ≠ exit.

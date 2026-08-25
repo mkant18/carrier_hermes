@@ -13,7 +13,7 @@
 1. Create, update, complete, reschedule, label, and organize Todoist tasks/projects/sections per CoS job packets.
 2. Keep idempotency via `_agent/todoist/state.json` (external ids ↔ Todoist ids).
 3. Never read email bodies or mutate calendar directly.
-4. Shadow mode: write proposed task ops to `_agent/todoist/proposals-*.md` without API writes when `shadow_mode: true`.
+4. **Live Todoist (unshadowed 2026-08-25).** Execute create/update/complete via Todoist MCP per job packet. Still write `_agent/todoist/proposals-*.md` only when the packet sets `shadow_mode: true` (per-job dry-run). Always update `_agent/todoist/state.json` for idempotency.
 
 ## Inputs you accept
 

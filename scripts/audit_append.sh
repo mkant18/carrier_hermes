@@ -10,6 +10,7 @@ detail="${3:-}"
 ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 # minimal JSON escape
 json_escape() { python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1"; }
+# Note: use real newline in format (single-quoted '\n'), not '\\n' (literal backslash-n).
 line=$(printf '{"ts":%s,"agent":%s,"event":%s,"detail":%s}\n' \
   "$(json_escape "$ts")" "$(json_escape "$agent")" "$(json_escape "$event")" "$(json_escape "$detail")")
 printf '%s' "$line" >>"$AUDIT"

@@ -17,20 +17,20 @@ Also set in `~/.hermes/.env` so every profile inherits it.
 | **Native Hermes skills** | Built via `obsidian-second-brain` Hermes adapter → `~/.hermes/skills/obsidian-second-brain/` | Playbooks (ingest patterns, health, research helpers) |
 | **MCP server** | `integrations/obsidian-mcp-server/server.py` via stdio | Bounded tools: search, read, health, backlinks, validate |
 
-## Trust Level 0 policy (fleet)
+## Trust Level 0 policy (fleet) + Clerk intake unshadow (2026-08-25)
 
-Vault `CLAUDE.md` rules:
+Vault `CLAUDE.md` rules (constitution **still TL0** until Michael says `raise TL`):
 
 - READ any note
-- WRITE only `_agent/**`
-- Never edit/move/delete outside `_agent/`
+- WRITE only `_agent/**` by default
+- Never edit/move/delete outside `_agent/` without raised TL + grant
 
-**MCP tool filter for Hermes (recommended):**
+**MCP tool filter for Hermes:**
 
-- **Allow:** `obsidian_search`, `obsidian_read_note`, `obsidian_validate_note`, `obsidian_backlinks`, `obsidian_vault_health`, `obsidian_list_skills`, `obsidian_get_skill`
-- **Exclude writes that target Inbox:** `obsidian_save_note`, `obsidian_capture`, `obsidian_update_note` until Trust Level is raised
+- **Default / Librarian / Scout / Helm / everyone except Clerk — Exclude writes:** `obsidian_save_note`, `obsidian_capture`, `obsidian_update_note`
+- **Clerk (`obsidian_archivist`) home only:** those write tools **enabled** structurally; **use** only when job has `trust_override: intake_enabled` (fleet `unshadow intake` 2026-08-25)
 
-Profiles that write: use file tools under `$OBSIDIAN_VAULT_PATH/_agent/...` only.
+Profiles that write without OSB MCP: use file tools under `$OBSIDIAN_VAULT_PATH/_agent/...` only.
 
 ## Install skills (from OSB repo)
 
@@ -104,7 +104,7 @@ hermes mcp test obsidian-second-brain
 | Profile | Access |
 |---|---|
 | vault_librarian (**Librarian**) | Query-out: OSB read/health + `_agent/librarian/` |
-| obsidian_archivist (**Clerk**) | Intake-in: stage `_agent/archivist/`; OSB write tools **only** when intake enabled |
+| obsidian_archivist (**Clerk**) | Intake-in: stage `_agent/archivist/`; OSB write tools **on this home**; permanent file only with `trust_override: intake_enabled` |
 | hermes_ai_explorer (**Scout**) | Read vault + write `_agent/explorer/` |
 | email_drafter (**Quill**) | May read People/ / contacts; write `_agent/drafts/` only |
 | chief_of_staff (**Helm**) | No vault file tools; routes Librarian vs Clerk |

@@ -1,29 +1,35 @@
 # Phase B status — 2026-08-25
 
-Shadow remains ON for Todoist mutations, calendar mutations, and Clerk permanent vault writes.
+Shadow **partial exit** 2026-08-25 (Session 2): Todoist + calendar live; Clerk intake grant-gated. Vault TL still **0**.
 
 | Check | Result |
 |---|---|
 | Phase A freeze commit | PASS `a14a251` |
-| 12 bot homes + SOULs + Bot Mode descriptions | PASS |
+| 12→13 bot homes + SOULs + Bot Mode descriptions | PASS (incl. LockBox) |
 | AIPass Helm→Clerk send | PASS |
 | Vigil/Ledger lock+halt refuse | PASS |
-| Golden classify (22) | PASS |
-| OSB vault read + MCP stdio | PASS (Inbox writers still excluded in default MCP filter) |
+| Golden classify | PASS (26 prompts on latest smoke) |
+| OSB vault read + MCP stdio | PASS (default MCP still excludes Inbox writers; **Clerk home** may enable writes for grant-gated intake) |
 | Grok ping (xai-oauth) | PASS |
 | Claude ping (anthropic) | PASS |
-| DeepSeek ping | **SKIP** — `OPENROUTER_API_KEY` commented/missing in `~/.hermes/.env` |
+| DeepSeek ping | **FAIL/flake** on 2026-08-25 re-smoke (timeout) — Tasker/Chronos pin risk |
 | Chronos ≠ Tasker | PASS |
-| Vigil cron every 5m `no_agent` | PASS `5c9e2d583117` |
-| Ledger cron every 15m `no_agent` | PASS `94d873c5ad73` (no halt when key missing) |
-| Scout Tue/Thu 09:00 | PASS `11406eb785ea` |
-| Clerk daily drain | PASS created **paused** `45ba5f589891` |
+| Vigil cron every 5m `no_agent` | PASS |
+| Ledger cron every 15m `no_agent` | PASS |
+| Scout Tue/Thu 09:00 | PASS |
+| Clerk daily drain | PASS created **paused** |
 | Kanban board `carrier` | PASS |
-| Live Todoist/calendar/Clerk permanent | **SHADOW** |
+| Live Todoist | **LIVE** (Michael: `unshadow Todoist`) |
+| Live calendar | **LIVE** (Michael: `unshadow calendar`) |
+| Clerk permanent | **GRANT-GATED** (`unshadow intake`; requires `trust_override: intake_enabled`; TL still 0) |
 
-## Michael actions (not done here)
+## Michael actions
 
-1. Uncomment/set `OPENROUTER_API_KEY` in `~/.hermes/.env` so Ledger can measure $ and specialists can run.  
-2. Paste Discord channel IDs into `docs/DISCORD_CHANNELS.md`.  
-3. Raise TL / unshadow when ready (`prompts/SHADOW_MODE.md`).  
-4. Optional: `hermes kanban boards switch carrier` when ready to make it the current board.
+1. Fix DeepSeek/OpenRouter path if Tasker/Chronos jobs will run hot (latest smoke timed out on ping).  
+2. Optional: `raise TL` + edit vault `CLAUDE.md` for full constitutional permanent filing.  
+3. Optional: `hermes kanban boards switch carrier`.  
+4. Wire calendar MCP if Chronos writes are expected beyond policy allow.
+
+## Audit
+
+`_agent/audit/events.jsonl` — helm `unshadow` ×3 (Todoist, calendar, intake).

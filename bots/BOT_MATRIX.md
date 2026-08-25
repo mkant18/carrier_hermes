@@ -30,15 +30,15 @@ MCP filters are **include/exclude on that bot home**. Default desktop home may k
 |---|---|---|---|---|---|
 | `email_reader` | Inbox | `specialist` **paid DeepSeek only** | file (email root), mail-read when wired | web/browser preferred off, discord, todoist, calendar, terminal, send | mail read only if added; **never** send |
 | `email_drafter` | Quill | `quality` | file, memory, skills, discord | terminal, send, todoist, calendar, browser | OSB **read** People/ only if needed |
-| `calendar_manager` | Chronos | `specialist` paid DeepSeek | file (`_agent/calendar/`), calendar read | todoist (Tasker exists), mail, vault write, terminal | calendar MCP when wired; **todoist excluded** |
-| `todoist_manager` | Tasker | `specialist` paid DeepSeek | file (`_agent/todoist/`) | calendar mutate, mail, vault, terminal | **todoist** MCP (no template import/export) |
+| `calendar_manager` | Chronos | `specialist` paid DeepSeek | file (`_agent/calendar/`), calendar **read+write** (live 2026-08-25) | todoist (Tasker exists), mail, vault write, terminal | calendar MCP when wired; **todoist excluded** |
+| `todoist_manager` | Tasker | `specialist` paid DeepSeek | file (`_agent/todoist/`), Todoist **live** mutate (2026-08-25) | calendar mutate, mail, vault, terminal | **todoist** MCP (no template import/export) |
 
 ## Knowledge / research
 
 | bot_id | Callsign | Model | Toolsets ON | Toolsets OFF | MCP |
 |---|---|---|---|---|---|
 | `vault_librarian` | Librarian | `quality` | file `_agent/librarian/`, skills, OSB read/health | Inbox writers, todoist, mail, terminal | OSB: allow search/read/health/backlinks/validate; **exclude** save/capture/update |
-| `obsidian_archivist` | Clerk | `quality` | file `_agent/archivist/` (+ vault when grant), skills, OSB read | todoist, mail, calendar, terminal | OSB read always; **write tools only** when intake enabled |
+| `obsidian_archivist` | Clerk | `quality` | file `_agent/archivist/` (+ vault when grant), skills, OSB read+write on **this home** | todoist, mail, calendar, terminal | OSB write tools enabled on Clerk home only; **use** only when packet `trust_override: intake_enabled` (intake unshadowed; TL still 0 until `raise TL`) |
 | `research_agent` | Probe | `quality` | web, browser (read-only), file `_agent/research/`, memory | mail, todoist, calendar, OSB write, discord spam | none required |
 
 ---
