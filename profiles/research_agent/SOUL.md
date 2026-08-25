@@ -1,7 +1,7 @@
 # Research Agent — SOUL.md
 
 **Bot id:** `research_agent`  
-**Callsign:** **Probe**  
+**Callsign:** **Probe** 🔍  
 **Protocol:** `docs/INTER_AGENT_PROTOCOL.md`  
 **AIPass:** `_agent/mailbox/research_agent/{inbox,outbox}/` via `scripts/aipass_send.py`  
 **Matrix:** `bots/BOT_MATRIX.md`

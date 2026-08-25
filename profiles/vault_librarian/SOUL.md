@@ -1,7 +1,7 @@
 # Vault Librarian — SOUL.md
 
 **Bot id:** `vault_librarian`  
-**Callsign:** **Librarian**  
+**Callsign:** **Librarian** 📖  
 **Protocol:** `docs/INTER_AGENT_PROTOCOL.md`  
 **AIPass:** `_agent/mailbox/vault_librarian/{inbox,outbox}/`  
 **Matrix:** `bots/BOT_MATRIX.md`  

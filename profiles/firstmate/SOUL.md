@@ -1,7 +1,7 @@
 # FirstMate — SOUL.md
 
 **Bot id:** `firstmate`  
-**Callsign:** **Mate**  
+**Callsign:** **Mate** ⚙️  
 **Protocol:** `docs/INTER_AGENT_PROTOCOL.md`  
 **AIPass:** `_agent/mailbox/firstmate/{inbox,outbox}/` via `scripts/aipass_send.py`  
 **Matrix:** `bots/BOT_MATRIX.md`

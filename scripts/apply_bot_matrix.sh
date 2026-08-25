@@ -52,32 +52,44 @@ PY
 
 quiesce_serves
 
+# ---------------------------------------------------------------------------
+# CLOBBER FIX (2026-08-25 Session 3):
+# Root cause of the "all bots read back grok-4.5" bug was twofold:
+#
+# 1. `hermes config set` routes through the in-memory serve, which has a full
+#    copy of the bot's config in RAM. The serve WRITES BACK its copy on its own
+#    cadence after we write our change, which overwrites the disk. So
+#    `hermes config set` was fighting a live process and losing.
+#
+# 2. Per-bot pkill + write is not enough: Desktop respawns serves between each
+#    iteration, so the next bot's serve comes up, loads from disk (our correct
+#    write), but then the PREVIOUS bot's freshly respawned serve flushes back.
+#
+# FIX: write the YAML directly (bypassing the serve entirely), then kill all
+# serves in a single mass-kill AFTER all writes are done. Desktop respawns them
+# from the freshly-written disk state. The verify pass confirms all 18 stuck.
+#
+# chain() already writes YAML directly. pin() is reworked to write directly too.
+# ---------------------------------------------------------------------------
+
 pin() {
-  local id="$1" model="$2" provider="$3" attempt got
-  # Quiesce THIS bot's serve immediately before writing. Quiescing once up-front
-  # is not enough: Desktop respawns serves mid-run, so a bot pinned late in the
-  # script gets clobbered by a process that came back while earlier bots pinned.
-  for attempt in 1 2 3; do
-    pkill -f "profile $id serve" 2>/dev/null || true
-    sleep 1
-    hermes -p "$id" config set model "$model" >/dev/null
-    hermes -p "$id" config set model.provider "$provider" --force >/dev/null
-    got=$(python3 - "$id" <<'PY'
+  local id="$1" model="$2" provider="$3"
+  # Write model pin directly to YAML — do NOT use `hermes config set` here.
+  # The serve has the config in memory and will write-back over any `config set`.
+  python3 - "$id" "$model" "$provider" <<'PY'
 import sys, yaml, pathlib
-p = pathlib.Path.home() / ".hermes/profiles" / sys.argv[1] / "config.yaml"
-try:
-    print(((yaml.safe_load(p.read_text()) or {}).get("model") or {}).get("default", ""))
-except Exception:
-    print("")
+bot, model, provider = sys.argv[1], sys.argv[2], sys.argv[3]
+p = pathlib.Path.home() / ".hermes/profiles" / bot / "config.yaml"
+cfg = (yaml.safe_load(p.read_text()) if p.exists() else {}) or {}
+m = cfg.setdefault("model", {})
+m["default"] = model
+m["provider"] = provider
+m.pop("fallback", None)
+cfg.pop("fallback_model", None)
+p.parent.mkdir(parents=True, exist_ok=True)
+p.write_text(yaml.safe_dump(cfg, sort_keys=False, default_flow_style=False))
+print(f"pin  {bot} -> {provider}/{model}")
 PY
-)
-    if [[ "$got" == "$model" ]]; then
-      echo "pinned $id -> $provider/$model"
-      return 0
-    fi
-  done
-  echo "WARN  $id would not hold pin $model (got '$got') after 3 attempts" >&2
-  return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -97,8 +109,8 @@ PY
 # tool call exits rc=0 without kanban_complete and the board scores it a crash.
 # ---------------------------------------------------------------------------
 chain() {
-  local id="$1" tier="$2"
-  CHAIN_ID="$id" CHAIN_TIER="$tier" python3 - <<'PY'
+  local id="$1" tier="$2" primary_model="${3:-grok-4.5}" primary_provider="${4:-xai-oauth}"
+  CHAIN_ID="$id" CHAIN_TIER="$tier" CHAIN_PRIMARY_MODEL="$primary_model" CHAIN_PRIMARY_PROVIDER="$primary_provider" python3 - <<'PY'
 import os
 from pathlib import Path
 import yaml
@@ -131,12 +143,14 @@ for tier_name, entries in TAILS.items():
 
 bot = os.environ["CHAIN_ID"]
 tier = os.environ["CHAIN_TIER"]
+primary_model = os.environ.get("CHAIN_PRIMARY_MODEL", "grok-4.5")
+primary_provider = os.environ.get("CHAIN_PRIMARY_PROVIDER", "xai-oauth")
 p = Path.home() / ".hermes/profiles" / bot / "config.yaml"
 cfg = (yaml.safe_load(p.read_text()) if p.exists() else {}) or {}
 
 m = cfg.setdefault("model", {})
-m["default"] = "grok-4.5"
-m["provider"] = "xai-oauth"
+m["default"] = primary_model
+m["provider"] = primary_provider
 # Legacy single-fallback key shadows the list form — must not survive.
 m.pop("fallback", None)
 cfg.pop("fallback_model", None)
@@ -147,7 +161,7 @@ cfg["fallback_providers"] = [
 
 p.parent.mkdir(parents=True, exist_ok=True)
 p.write_text(yaml.safe_dump(cfg, sort_keys=False, default_flow_style=False))
-print(f"chain {bot} -> grok-4.5 > sonnet-5 > {tier} tail")
+print(f"chain {bot} -> {primary_provider}/{primary_model} > {TAILS[tier][0]['provider']}/{TAILS[tier][0]['model']} > {tier} tail")
 PY
 }
 
@@ -274,31 +288,30 @@ mcp_off lockbox todoist hugging_face kiwi vercel dropbox obsidian-second-brain
 
 # ---------------------------------------------------------------------------
 # Lieutenants (Wing Leads) — dispatch / review / routing ONLY.
-# Advanced model (Grok 4.5 > Sonnet 5, both $0 marginal on subs) because they
-# coordinate; they must NEVER hold execution tools. Lts keep the QUALITY paid
-# tail (command tier); sub-specialists drop to the ~9x cheaper tail. Stripping
-# these tools is the whole point of the layer — unlike Helm (SUPER-USER), Lts
-# are deliberately constrained.
+# Advanced model: claude-sonnet-4-6 (Sonnet Max, $0 marginal on Claude Max sub).
+# BOT_MATRIX specifies "quality Sonnet Max" for Lts — NOT grok-4.5.
+# Grok-4.5 is the squadron default; Lts get Sonnet for coordination judgment.
+# Lts must NEVER hold execution tools. Stripping tools is the point of this layer.
 # ---------------------------------------------------------------------------
 LT_EXEC_OFF="terminal code_execution browser computer_use delegation web \
 image_gen video video_gen tts x_search vision cronjob"
 
 # Wrench 🔧 — Coding Wing lead over Mate
-pin coding_lt grok-4.5 xai-oauth
-chain coding_lt command
+pin coding_lt claude-sonnet-4-6 anthropic
+chain coding_lt command claude-sonnet-4-6 anthropic
 off coding_lt $LT_EXEC_OFF
 mcp_off coding_lt todoist hugging_face kiwi vercel dropbox obsidian-second-brain
 
 # Deck 🗂️ — Ops Wing lead over Inbox, Quill, Chronos, Tasker, Purse
-pin ops_lt grok-4.5 xai-oauth
-chain ops_lt command
+pin ops_lt claude-sonnet-4-6 anthropic
+chain ops_lt command claude-sonnet-4-6 anthropic
 off ops_lt $LT_EXEC_OFF
 mcp_off ops_lt todoist hugging_face kiwi vercel dropbox obsidian-second-brain
 
 # Stacks 📚 — Knowledge Wing lead over Librarian, Clerk.
 # Keeps OSB but READ-ONLY: write tools stay excluded (intake is Clerk's, gated).
-pin knowledge_lt grok-4.5 xai-oauth
-chain knowledge_lt command
+pin knowledge_lt claude-sonnet-4-6 anthropic
+chain knowledge_lt command claude-sonnet-4-6 anthropic
 off knowledge_lt $LT_EXEC_OFF
 mcp_off knowledge_lt todoist hugging_face kiwi vercel dropbox
 python3 - <<'PY'
@@ -389,20 +402,33 @@ chain research_agent cheap
 off research_agent computer_use image_gen video video_gen tts delegation cronjob terminal
 mcp_off research_agent todoist hugging_face kiwi vercel dropbox
 
+# ---------------------------------------------------------------------------
+# Mass-kill all serves AFTER all writes are done.
+# This is the key to preventing clobber: writes happen first (directly to YAML),
+# then we kill the serves so Desktop respawns them from the freshly-written disk.
+# A serve that comes back while we're mid-loop would flush its stale in-memory
+# config over an earlier write — so we kill them ALL here at the end, not per-bot.
+# ---------------------------------------------------------------------------
+echo "mass-killing all roster serve processes so Desktop respawns from fresh disk..."
+for roster_id in $ROSTER_IDS; do
+  pkill -f "profile $roster_id serve" 2>/dev/null || true
+done
+sleep 3
+echo "serve processes quiesced — Desktop will respawn from updated configs"
+
 echo "BOT_MATRIX applied"
 
 # ---------------------------------------------------------------------------
-# Verify every pin actually stuck. A live serve process can clobber a write,
-# so never trust the "pinned ..." lines alone — read the files back.
+# Verify every pin actually stuck. Reads directly from YAML — bypasses serve.
 # ---------------------------------------------------------------------------
 drift=0
 verify_pin chief_of_staff       grok-4.5                              || drift=1
 verify_pin subscription_watcher grok-4.5                              || drift=1
 verify_pin api_watcher          grok-4.5                              || drift=1
 verify_pin lockbox              grok-4.5                              || drift=1
-verify_pin coding_lt            grok-4.5                              || drift=1
-verify_pin ops_lt               grok-4.5                              || drift=1
-verify_pin knowledge_lt         grok-4.5                              || drift=1
+verify_pin coding_lt            claude-sonnet-4-6                     || drift=1
+verify_pin ops_lt               claude-sonnet-4-6                     || drift=1
+verify_pin knowledge_lt         claude-sonnet-4-6                     || drift=1
 verify_pin firstmate            grok-4.5                              || drift=1
 verify_pin hermes_ai_explorer   grok-4.5                              || drift=1
 verify_pin passive_watch        grok-4.5                              || drift=1

@@ -1,7 +1,7 @@
 # Email Reader — SOUL.md
 
 **Bot id:** `email_reader`  
-**Callsign:** **Inbox**  
+**Callsign:** **Inbox** 📬  
 **Protocol:** `docs/INTER_AGENT_PROTOCOL.md`  
 **AIPass:** `_agent/mailbox/email_reader/{inbox,outbox}/` via `scripts/aipass_send.py`  
 **Matrix:** `bots/BOT_MATRIX.md`

@@ -1,7 +1,7 @@
 # Todoist Manager — SOUL.md
 
 **Bot id:** `todoist_manager`  
-**Callsign:** **Tasker**  
+**Callsign:** **Tasker** ✅  
 **Protocol:** `docs/INTER_AGENT_PROTOCOL.md`  
 **AIPass:** `_agent/mailbox/todoist_manager/{inbox,outbox}/`  
 **Matrix:** `bots/BOT_MATRIX.md`  

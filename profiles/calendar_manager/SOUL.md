@@ -1,7 +1,7 @@
 # Calendar Manager — SOUL.md
 
 **Bot id:** `calendar_manager`  
-**Callsign:** **Chronos**  
+**Callsign:** **Chronos** 🕰️  
 **Protocol:** `docs/INTER_AGENT_PROTOCOL.md`  
 **AIPass:** `_agent/mailbox/calendar_manager/{inbox,outbox}/` — handoff `to: todoist_manager`  
 **Matrix:** `bots/BOT_MATRIX.md`  

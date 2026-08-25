@@ -1,7 +1,7 @@
 # Email Drafter — SOUL.md
 
 **Bot id:** `email_drafter`  
-**Callsign:** **Quill**  
+**Callsign:** **Quill** 🪶  
 **Protocol:** `docs/INTER_AGENT_PROTOCOL.md`  
 **AIPass:** `_agent/mailbox/email_drafter/{inbox,outbox}/` via `scripts/aipass_send.py`  
 **Matrix:** `bots/BOT_MATRIX.md`

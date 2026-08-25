@@ -150,14 +150,16 @@ finance_reader
 IDS
 [[ "$homes" == "18" ]] && pass "eighteen_bot_homes" || failc "eighteen_bot_homes" "homes=$homes missing:$missing_homes"
 
-# 8b Lieutenants pinned to an advanced model and barred from execution tools
+# 8b Lieutenants model check via hermes config get (serve-based, may lag apply script)
+# NOTE: check #11 (lt_pin_disk_*) reads directly from YAML and is authoritative.
+# This check is kept as a secondary signal for live serve state.
 for lt in coding_lt ops_lt knowledge_lt; do
   m=$(hermes -p "$lt" config get model.default 2>/dev/null \
     || hermes -p "$lt" config get model 2>/dev/null || true)
   if [[ "$m" == *"claude-sonnet-4-6"* ]]; then
     pass "lt_model_$lt"
   else
-    failc "lt_model_$lt" "expected claude-sonnet-4-6, got '$m'"
+    failc "lt_model_$lt" "expected claude-sonnet-4-6, got '$m' (check lt_pin_disk_* for authoritative YAML state)"
   fi
 done
 
@@ -180,6 +182,38 @@ if [[ -f "$HOME/.hermes/carrier/lockbox/keys/helm-grant-v1" ]]; then
 else
   skip "lockbox_hmac_key" "key not generated yet"
 fi
+
+# 10 fleet_signal.sh — First Watch outbound REST smoke
+if [[ -f "$ROOT/scripts/fleet_signal.sh" ]]; then
+  if bash "$ROOT/scripts/fleet_signal.sh" RAW "**[smoke]** fleet_signal smoke — $(date -u +%Y-%m-%dT%H:%M:%SZ)" 2>/tmp/fleet_signal_smoke.err; then
+    pass "fleet_signal_post"
+  else
+    failc "fleet_signal_post" "$(cat /tmp/fleet_signal_smoke.err)"
+  fi
+else
+  failc "fleet_signal_post" "scripts/fleet_signal.sh not found"
+fi
+
+# 11 Lt model pins on disk (direct YAML read — bypasses serve clobber)
+for lt_bot in coding_lt ops_lt knowledge_lt; do
+  lt_model=$(python3 -c "
+import yaml, pathlib, sys
+p = pathlib.Path.home() / '.hermes/profiles' / sys.argv[1] / 'config.yaml'
+cfg = yaml.safe_load(p.read_text()) if p.exists() else {}
+print((cfg or {}).get('model', {}).get('default', ''))
+" "$lt_bot" 2>/dev/null || true)
+  lt_prov=$(python3 -c "
+import yaml, pathlib, sys
+p = pathlib.Path.home() / '.hermes/profiles' / sys.argv[1] / 'config.yaml'
+cfg = yaml.safe_load(p.read_text()) if p.exists() else {}
+print((cfg or {}).get('model', {}).get('provider', ''))
+" "$lt_bot" 2>/dev/null || true)
+  if [[ "$lt_model" == "claude-sonnet-4-6" && "$lt_prov" == "anthropic" ]]; then
+    pass "lt_pin_disk_$lt_bot"
+  else
+    failc "lt_pin_disk_$lt_bot" "wanted anthropic/claude-sonnet-4-6, got $lt_prov/$lt_model"
+  fi
+done
 
 echo "=== done fail=$fail ==="
 exit "$fail"

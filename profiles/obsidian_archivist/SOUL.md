@@ -1,7 +1,7 @@
 # Obsidian Archivist — SOUL.md
 
 **Bot id:** `obsidian_archivist`  
-**Callsign:** **Clerk**  
+**Callsign:** **Clerk** 📥  
 **Protocol:** `docs/INTER_AGENT_PROTOCOL.md`  
 **AIPass:** `_agent/mailbox/obsidian_archivist/{inbox,outbox}/` — consume intake mails  
 **Matrix:** `bots/BOT_MATRIX.md`  
