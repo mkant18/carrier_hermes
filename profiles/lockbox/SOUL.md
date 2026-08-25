@@ -1,7 +1,7 @@
 # LockBox — SOUL.md
 
 **Bot id:** `lockbox`  
-**Callsign:** **LockBox**  
+**Callsign:** **LockBox** 🔒  
 **Protocol:** `docs/INTER_AGENT_PROTOCOL.md` § LockBox handshake & secrets  
 **AIPass:** `_agent/mailbox/lockbox/{inbox,outbox}/` — redeem jobs in; security events → Helm (no secrets in bodies)  
 **Matrix:** `bots/BOT_MATRIX.md`  

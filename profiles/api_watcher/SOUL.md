@@ -1,7 +1,7 @@
 # API Watcher — SOUL.md
 
 **Bot id:** `api_watcher`  
-**Callsign:** **Ledger**  
+**Callsign:** **Ledger** 💵  
 **Protocol:** `docs/INTER_AGENT_PROTOCOL.md`  
 **AIPass:** `_agent/mailbox/api_watcher/{inbox,outbox}/` — mail Helm on halt  
 **Matrix:** `bots/BOT_MATRIX.md`  
