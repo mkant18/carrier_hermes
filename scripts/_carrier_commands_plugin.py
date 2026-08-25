@@ -82,12 +82,19 @@ def _post_to_discord(channel_id: str, content: str, token: str) -> None:
         "allowed_mentions": {"parse": []},  # no pings
     }).encode("utf-8")
 
+    # Cloudflare sits in front of discord.com and returns HTTP 403
+    # "error code: 1010" when the client signature looks like a bare
+    # Python scraper. Python-urllib's default UA is banned; Discord's
+    # documented bot UA is accepted. Without this, !status/!flights/
+    # !trace intercept cleanly (green ✅) but the follow-up POST dies
+    # silently and the channel never sees a reply.
     req = urllib.request.Request(
         url,
         data=payload,
         headers={
             "Authorization": f"Bot {token}",
             "Content-Type": "application/json",
+            "User-Agent": "DiscordBot (https://github.com/NousResearch/hermes-agent, carrier-commands/1.0) Python/3.11",
         },
         method="POST",
     )
