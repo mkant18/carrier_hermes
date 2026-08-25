@@ -47,6 +47,13 @@ co-equal *beside* Helm — never under a Lt.
 Paste `prompts/IMPLEMENT_PROMPT.md` into a fresh Hermes session.  
 **Phase A** freezes inter-bot protocol. **Phase B** creates the **bot roster** (not “a pile of anonymous profiles”).
 
+**Windows PC as primary host** (more RAM/GPU/storage): paste  
+[`prompts/WINDOWS_PRIMARY_HOST_SETUP.md`](prompts/WINDOWS_PRIMARY_HOST_SETUP.md)  
+into a fresh session **on the PC**. Prefer running that install chat on cheap OpenRouter  
+`deepseek/deepseek-v4-flash-0731` (fallback `google/gemini-2.5-flash-lite`).  
+It pulls Doppler secrets, wires the fleet, and enforces **no Anthropic/Grok API tokens**  
+(`scripts/billing_guard.py` — OAuth/subscription only for Claude + Grok).
+
 Post-fleet todos (two fresh sessions):
 
 - [`prompts/SESSION_OPENROUTER_AND_DISCORD.md`](prompts/SESSION_OPENROUTER_AND_DISCORD.md) — OpenRouter key + Discord IDs  

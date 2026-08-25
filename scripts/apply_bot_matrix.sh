@@ -134,12 +134,18 @@ TAILS = {
     ],
 }
 
-# Guard: refuse to write any frontier model via openrouter
-FORBIDDEN = ["claude-opus", "grok-4"]
+# Guard: refuse Anthropic/Grok via openrouter or API tokens — OAuth only.
+FORBIDDEN_OR = (
+    "anthropic/", "claude-opus", "claude-sonnet", "claude-haiku", "claude-3", "claude-4",
+    "x-ai/", "xai/", "grok-", "grok/",
+)
 for tier_name, entries in TAILS.items():
     for e in entries:
-        if e["provider"] == "openrouter" and any(f in e["model"].lower() for f in FORBIDDEN):
+        m = e["model"].lower()
+        if e["provider"] == "openrouter" and any(f in m for f in FORBIDDEN_OR):
             raise ValueError(f"BILLING VIOLATION: {e['provider']}/{e['model']} in TAILS[{tier_name!r}]")
+        if e["provider"] in ("xai",):
+            raise ValueError(f"BILLING VIOLATION: use xai-oauth not {e['provider']}")
 
 bot = os.environ["CHAIN_ID"]
 tier = os.environ["CHAIN_TIER"]
@@ -203,11 +209,17 @@ cfg["fallback_providers"] = [
     {"provider": "openrouter", "model": "deepseek/deepseek-chat-v3-0324"},
     {"provider": "openrouter", "model": "google/gemini-3.7-flash"},
 ]
-# Hard guard: refuse to write frontier via openrouter
-FORBIDDEN = ["claude-opus", "grok-4"]
+# Hard guard: Anthropic/Grok never via OpenRouter or API-key providers
+FORBIDDEN_OR = (
+    "anthropic/", "claude-opus", "claude-sonnet", "claude-haiku", "claude-3", "claude-4",
+    "x-ai/", "xai/", "grok-", "grok/",
+)
 for fb in cfg["fallback_providers"]:
-    if fb["provider"] == "openrouter" and any(f in fb["model"].lower() for f in FORBIDDEN):
+    m = str(fb.get("model") or "").lower()
+    if fb.get("provider") == "openrouter" and any(f in m for f in FORBIDDEN_OR):
         raise ValueError(f"BILLING VIOLATION: {fb['provider']}/{fb['model']} in Helm fallback_providers")
+    if fb.get("provider") in ("xai",):
+        raise ValueError("BILLING VIOLATION: use xai-oauth not xai API key provider")
 # Keep the alias map aligned with the live chain so `smart`/`quality`/`cheap`
 # don't silently route to retired pins.
 aliases = m.get("aliases")
@@ -216,8 +228,8 @@ if isinstance(aliases, dict):
         "smart": "xai-oauth/grok-4.5",
         "chief-of-staff": "xai-oauth/grok-4.5",
         "quality": "anthropic/claude-sonnet-5",
-        # frontier-quality and opus aliases INTENTIONALLY OMITTED:
-        # Opus / Grok-4 are subscription-only — never via per-token OpenRouter API.
+        # frontier-quality / opus / openrouter claude|grok INTENTIONALLY OMITTED:
+        # Anthropic + Grok are subscription OAuth only — never API tokens / OpenRouter.
         "specialist": "openrouter/deepseek/deepseek-v4-flash-0731",
         "rote": "openrouter/deepseek/deepseek-v4-flash-0731",
         "cheap": "openrouter/deepseek/deepseek-v4-flash-0731",
@@ -226,12 +238,12 @@ if isinstance(aliases, dict):
         "gemini-flash": "openrouter/google/gemini-2.5-flash-lite",
         "fallback-flash": "openrouter/google/gemini-2.5-flash-lite",
     })
-    # Hard guard: strip any alias that would route frontier via openrouter
-    FORBIDDEN = ["claude-opus", "grok-4"]
+    # Hard guard: strip any alias that would route Anthropic/Grok via openrouter
     for k, v in list(aliases.items()):
-        if v.startswith("openrouter/") and any(f in v.lower() for f in FORBIDDEN):
+        vs = str(v or "")
+        if vs.startswith("openrouter/") and any(f in vs.lower() for f in FORBIDDEN_OR):
             del aliases[k]
-            print(f"BLOCKED alias {k!r} -> {v!r} (frontier via openrouter)")
+            print(f"BLOCKED alias {k!r} -> {vs!r} (Anthropic/Grok via openrouter)")
 # Super-agent tool surface
 cfg["platform_toolsets"] = {"cli": ["hermes-cli"]}
 # MCP: mirror default useful servers; Helm gets FULL OSB including write tools
@@ -465,3 +477,14 @@ if [[ "$drift" -ne 0 ]]; then
   exit 1
 fi
 echo "all 18 pins verified on disk"
+
+# Final hard gate: no Anthropic/Grok API tokens or OpenRouter frontier routes
+ROOT="${CARRIER_HERMES_ROOT:-$HOME/carrier_hermes}"
+if [[ -f "$ROOT/scripts/billing_guard.py" ]]; then
+  python3 "$ROOT/scripts/billing_guard.py" --fix-env || {
+    echo "FAIL: billing_guard violations after matrix apply" >&2
+    exit 1
+  }
+else
+  echo "WARN: billing_guard.py missing — skip billing audit" >&2
+fi

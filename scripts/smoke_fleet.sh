@@ -251,5 +251,16 @@ else
   failc "github_auth" "run: bash scripts/smoke_github_auth.sh for full report"
 fi
 
+# Billing hard-guard: never Anthropic/Grok via API token or OpenRouter
+if [[ -f "$ROOT/scripts/billing_guard.py" ]]; then
+  if python3 "$ROOT/scripts/billing_guard.py" --quiet-ok; then
+    pass "billing_guard_no_anthropic_grok_api"
+  else
+    failc "billing_guard_no_anthropic_grok_api" "Anthropic/Grok API token or OpenRouter frontier route detected"
+  fi
+else
+  failc "billing_guard_no_anthropic_grok_api" "scripts/billing_guard.py missing"
+fi
+
 echo "=== done fail=$fail ==="
 exit "$fail"
