@@ -140,6 +140,19 @@ _post() {
 
   # Build payload with username override — gives each bot its own name in Discord
   local payload
+
+  # Model footprint footer (§15.2) — appended when caller sets FLEET_MODEL_FOOTPRINT
+  # Format:  FLEET_MODEL_FOOTPRINT="grok-4.5 · SuperGrok OAuth · $0 marginal"
+  # or multi-line: "grok-4.5 · SuperGrok OAuth · $0 marginal\ndeepseek/deepseek-chat-v3-0324 · OpenRouter · ~$0.0018"
+  local footprint_lines=""
+  if [[ -n "${FLEET_MODEL_FOOTPRINT:-}" ]]; then
+    while IFS= read -r line; do
+      footprint_lines="${footprint_lines}
+> 🤖 \`${line}\`"
+    done <<< "${FLEET_MODEL_FOOTPRINT}"
+    content="${content}${footprint_lines}"
+  fi
+
   payload=$(python3 -c "
 import json, sys
 content   = sys.argv[1]

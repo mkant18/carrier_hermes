@@ -197,8 +197,8 @@ Each bot: **bot_id**, **callsign**, **voice**, **never-be**, **authority**, **mo
 | Authority | Read mail; write triage + `state.json`. |
 | Model | `specialist` **paid DeepSeek only**. No `:free` rotate. |
 | Speaks to | Helm via job/result. Never Michael with raw phishing-prone content unframed. |
-| Knowledge | Mail API/CLI; `_agent/email/`. **No** calendar, Todoist, vault People unless IDs pasted in brief. |
-| Tools | mail-read when wired; file `_agent/email/` only. No send, discord, todoist, browser preferred off. |
+| Knowledge | Personal Gmail via `google-workspace` + `scripts/gapi_fleet.py inbox`; `_agent/email/`. **No** calendar, Todoist, vault People unless IDs pasted in brief. Never firm email. |
+| Tools | terminal **narrow** (Gmail read only through fleet gate), skills, file `_agent/email/`. No send, discord spam, todoist, browser preferred off. |
 | Write roots | `_agent/email/**` |
 | Return | Validated JSON (`schemas/email_triage.schema.json`) + triage markdown path. |
 
@@ -442,6 +442,8 @@ Every message on Discord opens with `**Callsign Emoji**` — see §1b for the fu
 
 IDs: `docs/DISCORD_CHANNELS.md` (blank until Michael fills). Specialists do not argue on Discord.
 
+**Model Footprint (§15.2):** Every Discord message MUST end with `> 🤖 \`<model>\` · <provider> · <cost>`. See §15 for format, examples, and pitfalls.
+
 ---
 
 ## 5. Standard job packet (Helm → bot)
@@ -511,6 +513,8 @@ Template: `templates/result_packet.md`.
 ```
 
 Helm **must** see `status` + (artifact **or** blocker) before telling Michael “done.”
+
+**Model Footprint (§15.1):** Every result packet MUST include a `## Model Footprint` section (model id, provider, via_openrouter, token counts, cost estimate). See §15 for the full spec and template.
 
 ---
 
@@ -779,3 +783,74 @@ Discord prefix: **Callsign Emoji** mandatory on every First Watch POST (§1b)
 | Golden classify | `docs/CLASSIFICATION_GOLDEN.md` |
 | SOUL cross-links | every `bots/*/SOUL.md` |
 | LockBox grants | `templates/access_request.md`, `templates/handshake_grant.md`, schemas, `scripts/lockbox_verify_grant.py` |
+
+---
+
+## 15. Model Footprint (mandatory on all outputs)
+
+Every bot **MUST** report the model(s) it used, whether it routed through OpenRouter, and its cost estimate on **every action that produces a Kanban result packet or a Discord message**. This is a fleet-wide transparency requirement — no exceptions, including command-tier bots and Lts.
+
+### 15.1 Kanban result packet — `## Model Footprint` section
+
+Required section in every result packet (see `templates/result_packet.md`):
+
+```markdown
+## Model Footprint
+- model: <model_id>          # e.g. deepseek/deepseek-chat-v3-0324 | grok-4.5 | claude-sonnet-4-6
+- provider: <provider>       # openrouter | anthropic | xai-oauth | no_agent
+- via_openrouter: <bool>     # true | false
+- tokens_in: ~<N>
+- tokens_out: ~<N>
+- cost_estimate: <value>     # ~$X.XXXX | subscription — $0 marginal | $0 no-LLM heartbeat
+```
+
+Multi-model turns (e.g. a bot that calls a cheap model for triage and a quality model for synthesis): list all models as a YAML sequence under `model:`. Sum cost estimates.
+
+### 15.2 Discord messages — footprint comment line
+
+Every Discord message (First Watch REST POST, Helm #command post, #fleet, #alerts, #drafts) **MUST end with** a footer line in this format, appended after the main body:
+
+```
+> 🤖 `<model_id>` · <provider> · <cost>
+```
+
+Examples:
+```
+> 🤖 `deepseek/deepseek-chat-v3-0324` · OpenRouter · ~$0.0018
+> 🤖 `grok-4.5` · SuperGrok OAuth · $0 marginal
+> 🤖 `claude-sonnet-4-6` · Claude Max · $0 marginal
+> 🤖 `google/gemini-2.5-flash` · OpenRouter · ~$0.0004
+> 🤖 no-LLM heartbeat · $0
+```
+
+For multi-model turns, list each on its own `> 🤖` line.
+
+### 15.3 Cost estimation guidance
+
+| Provider / billing | Cost estimate |
+|---|---|
+| OpenRouter paid (DeepSeek, Gemini Flash, GPT-4o-mini) | Estimate from token counts × published OR price; e.g. DeepSeek V3 ~$0.27/M in, $1.10/M out |
+| Claude Max subscription | `subscription — $0 marginal` |
+| SuperGrok OAuth subscription | `subscription — $0 marginal` |
+| `no_agent` script (no LLM) | `$0 no-LLM heartbeat` |
+| Unknown / unable to estimate | `~$? (model unknown)` |
+
+Estimates are best-effort; accuracy ±50% is acceptable. Never fabricate a precise figure — use `~` prefix and round to 4 decimal places max. When genuinely unsure of token counts, note `~tokens unknown` and still state the model.
+
+### 15.4 Scope — what is covered
+
+| Surface | Required |
+|---|---|
+| Kanban result packet comment (any lane, any bot) | ✅ `## Model Footprint` section |
+| Discord #command, #fleet, #alerts, #drafts message | ✅ `> 🤖` footer line |
+| AIPass message body | ⬜ Encouraged, not required (add a `## Model Footprint` line in `## DIVERGENCES` if easy) |
+| `_agent/` file artifacts | ⬜ Optional internal detail |
+| `no_agent` heartbeat stdout (no LLM run) | ✅ Minimal: one line `[no-LLM heartbeat — $0]` |
+
+### 15.5 Pitfalls
+
+- Do not omit the footprint because the model is "obvious" — Michael's requirement is the audit trail, not the surprise.
+- Do not paste OpenRouter API keys or token values — report counts only.
+- Subscription models still get a footprint line; "$0 marginal" is the cost string.
+- The footprint is appended **after** the main message body — never before it, never mid-message.
+- `no_agent` cron scripts that POST to Discord must pipe the `[no-LLM heartbeat — $0]` line into their POST body. Shell signal scripts (`fleet_signal.sh`, `alert_signal.sh`) should append it automatically; update those scripts if they do not.
