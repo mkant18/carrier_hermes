@@ -244,5 +244,12 @@ print((cfg or {}).get('model', {}).get('provider', ''))
   fi
 done
 
+# GitHub auth (never prints tokens)
+if bash "$ROOT/scripts/smoke_github_auth.sh" --quiet; then
+  pass "github_auth"
+else
+  failc "github_auth" "run: bash scripts/smoke_github_auth.sh for full report"
+fi
+
 echo "=== done fail=$fail ==="
 exit "$fail"
