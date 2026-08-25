@@ -147,5 +147,13 @@ else
   skip "lockbox_hmac_key" "key not generated yet"
 fi
 
+# 10 GitHub auth smoke
+echo ""
+if bash "$ROOT/scripts/smoke_github_auth.sh" --quiet; then
+  pass "github_auth (see smoke_github_auth.sh for details)"
+else
+  failc "github_auth" "run: bash scripts/smoke_github_auth.sh for full report"
+fi
+
 echo "=== done fail=$fail ==="
 exit "$fail"
