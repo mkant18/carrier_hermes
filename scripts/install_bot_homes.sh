@@ -51,6 +51,8 @@ FLEET_CH="1541866443765977138"    # #fleet
 ALERTS_CH="1541866423427801148"   # #alerts
 DRAFTS_CH="1541866401432871002"   # #drafts
 COMMAND_CH="1541866378255011980"  # #command
+READY_CH="1541919952599130132"    # #ready-room (coding crew standup)
+CATAPULT_CH="1541919999894229053" # #catapult (Wrench dispatches to Mate)
 
 wire_discord_env() {
   # wire_discord_env <bot_id> <home_channel_id> [allowed_channels_csv]
@@ -83,7 +85,8 @@ wire_discord_env api_watcher          "$COMMAND_CH" "$COMMAND_CH,$ALERTS_CH"
 wire_discord_env lockbox "$ALERTS_CH" "$ALERTS_CH"
 
 # Lts — post DISPATCH/ACK/TRAP to #fleet; Deck also reads #drafts
-wire_discord_env coding_lt    "$FLEET_CH" "$FLEET_CH"
+# Wrench additionally posts job launches to #catapult and standups to #ready-room
+wire_discord_env coding_lt    "$READY_CH" "$FLEET_CH,$READY_CH,$CATAPULT_CH"
 wire_discord_env ops_lt       "$FLEET_CH" "$FLEET_CH,$DRAFTS_CH"
 wire_discord_env knowledge_lt "$FLEET_CH" "$FLEET_CH"
 
@@ -92,11 +95,13 @@ wire_discord_env hermes_ai_explorer "$FLEET_CH" "$FLEET_CH"
 wire_discord_env passive_watch      "$FLEET_CH" "$FLEET_CH"
 
 # Specialists — all use #fleet for TRAP confirmations via fleet_signal.sh
-for bot_id in firstmate email_reader email_drafter calendar_manager \
+# Mate (firstmate) also posts to #ready-room (standup) and #catapult (job receipt)
+for bot_id in email_reader email_drafter calendar_manager \
               todoist_manager vault_librarian obsidian_archivist \
               research_agent finance_reader; do
   wire_discord_env "$bot_id" "$FLEET_CH" "$FLEET_CH"
 done
+wire_discord_env firstmate "$READY_CH" "$FLEET_CH,$READY_CH,$CATAPULT_CH"
 
 # Quill also posts to #drafts
 wire_discord_env email_drafter "$FLEET_CH" "$FLEET_CH,$DRAFTS_CH"

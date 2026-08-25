@@ -5,7 +5,7 @@ mission: {{slug}}
 status: unread
 ---
 
-## REPORT
+## REPORT — {{Callsign Emoji}} → {{Callsign Emoji}}
 
 {{what happened; no secrets — paths only}}
 

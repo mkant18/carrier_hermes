@@ -12,6 +12,8 @@ Names are frozen. **Do not invent snowflake IDs.**
 | Drafts (Quill) | `#drafts` | `1541866401432871002` |
 | Alerts (Vigil + Ledger hard/soft caps, breaches) | `#alerts` | `1541866423427801148` |
 | Fleet ops & handoffs (Dispatch/receipt confirmations, Chart/Sonar tips) | `#fleet` | `1541866443765977138` |
+| Coding crew standup (Mate, Wrench) | `#ready-room` | `1541919952599130132` |
+| Job launch board (Wrench dispatches to Mate here) | `#catapult` | `1541919999894229053` |
 
 ### Routing rules (frozen intent)
 
@@ -66,7 +68,15 @@ their own gateway or become user-facing:
 | `finance` | `1541155307860795503` |
 | `audit` | `1541155342833025114` |
 | `urgent` | `1541155373371621507` |
+| `ready-room` | `1541919952599130132` |
+| `catapult` | `1541919999894229053` |
 
 Guild: Carrier Ops (`1541154515841974294`). Text category parent: `1541154516811120760`.
 
-Webhook for `#alerts` (optional, scripts): set `CARRIER_ALERTS_WEBHOOK` in `~/.hermes/.env` — never commit.
+Webhooks:
+| name | channel | id |
+|---|---|---|
+| `Fleet Alerts` | `#alerts` | `1541919986682040331` |
+| `Captain Hook` | `#audit` | `1541155583036624971` |
+
+`CARRIER_ALERTS_WEBHOOK` is set in `~/.hermes/.env` — `alert_signal.sh` uses it (webhook path, no token exposure). Never commit the URL.

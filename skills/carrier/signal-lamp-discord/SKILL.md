@@ -262,10 +262,10 @@ Helm never holds raw token values. LockBox never sends token values to Helm. Thi
 |---|---|
 | `#command` | `1541866378255011980` |
 | `#drafts` | `1541866401432871002` |
-| `#alerts` | `1541866423427801148` |
 | `#fleet` | `1541866443765977138` |
-
-Coding crew channels: see `docs/CODING_CREW_CHANNELS.md` (IDs TBD by Michael).
+| `#alerts` | `1541866423427801148` |
+| `#ready-room` | `1541919952599130132` |
+| `#catapult` | `1541919999894229053` |
 
 ---
 

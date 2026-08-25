@@ -1,59 +1,49 @@
 # CODING_CREW_CHANNELS.md — Coding Crew Discord Presence
 
-**Status:** Proposed. Channel IDs to be filled by Michael after creating in Discord.  
-**Companion:** `docs/DISCORD_BOT_IDENTITY_MATRIX.md`, `bots/BOT_MATRIX.md`
+**Status:** LIVE — `#ready-room` and `#catapult` created and wired (2026-08-25).  
+**Companion:** `docs/DISCORD_BOT_IDENTITY_MATRIX.md`, `bots/BOT_MATRIX.md`, `docs/DISCORD_CHANNELS.md`
 
 ---
 
 ## Purpose
 
-Dedicated Discord channels for the coding crew (`firstmate` / Mate, and any future coding sub-roles). Named in naval-aviation style — the coding crew works the flight deck.
+Dedicated Discord channels for the coding wing (Wrench / `coding_lt` and Mate / `firstmate`). Named in naval-aviation style — the coding crew works the flight deck.
 
 ---
 
-## Proposed Channels
+## Live Channels
 
 | Channel name | Purpose | Discord ID |
 |---|---|---|
-| `#ready-room` | Mate's primary outbound channel: task summaries, PR status, completion notices. Equivalent of the aircrew briefing room. | _(to be filled)_ |
-| `#catapult` | Launch: CI/CD pipeline starts, deploy triggers, build kick-offs. Short automated posts only. | _(to be filled)_ |
-| `#hangar-deck` | Work in progress: active branches, worktree status, mid-task check-ins. Longer-running background jobs report here. | _(to be filled)_ |
-| `#lso-notes` | Landing signal officer notes: code review feedback, PR comments, post-merge retrospectives, quality flags. | _(to be filled)_ |
-| `#wire-room` | (Optional) Inter-bot coordination notes for coding sub-roles: codex, opencode, sub-agents. Low-volume. | _(to be filled)_ |
+| `#ready-room` | **Coding wing home.** Wrench standup, Mate task summaries, PR status, completion notices. Wrench and Mate's `DISCORD_HOME_CHANNEL`. | `1541919952599130132` |
+| `#catapult` | **Launch board.** Wrench posts DISPATCH lines here when slinging jobs to Mate. CI/CD kicks, deploy triggers, build starts. | `1541919999894229053` |
+
+## Proposed (not yet created — Michael's call)
+
+| Channel name | Purpose | Discord ID |
+|---|---|---|
+| `#hangar-deck` | Work in progress: active branches, worktree status, mid-task check-ins. | _(TBD)_ |
+| `#lso-notes` | LSO notes: code review feedback, PR comments, post-merge retros. | _(TBD)_ |
 
 ---
 
 ## Routing Rules
 
-1. **Mate posts to `#ready-room` by default** via First Watch REST send (no new Discord App needed; see `DISCORD_BOT_IDENTITY_MATRIX.md` Option A).
-2. **CI/CD scripts** post build events to `#catapult` via webhook (no token needed).
-3. **Long-running jobs** checkpoint to `#hangar-deck` with job ID so Michael can correlate with Kanban.
-4. **`#lso-notes`** is the code review surface — Mate writes there after `/review` or `github-code-review` skill runs.
-5. **Helm narrates** coding crew hand-offs in `#command` as before; `#ready-room` is *supplement*, not replacement.
+1. **Wrench (`coding_lt`) home is `#ready-room`** — standups and wing coordination land there.
+2. **Wrench DISPATCHes to `#catapult`** when launching a job to Mate (`fleet_signal.sh DISPATCH`).
+3. **Mate (`firstmate`) home is `#ready-room`** — task summaries, PR notices, ACK/TRAP confirmations.
+4. **Mate ACKs in `#catapult`** when it picks up a job; TRAPs back to `#fleet` on completion.
+5. **Helm narrates** coding wing hand-offs in `#command` as before — `#ready-room` is the crew's own space.
 
 ---
 
-## Bot Wiring
-
-No new Discord Application is required for Option A (recommended):
+## Bot Wiring (live)
 
 ```
-Mate (firstmate) → First Watch REST send → #ready-room
-CI scripts       → Webhook               → #catapult
+Wrench (coding_lt) → First Watch REST → #ready-room (home), #fleet, #catapult
+Mate (firstmate)   → First Watch REST → #ready-room (home), #fleet, #catapult
 ```
 
-If Option B (gateway for `#ready-room`) is approved later, create one new Discord App named **"First Mate"** and record its App ID in `docs/DISCORD_CHANNELS.md`.
-
----
-
-## Next Steps for Michael
-
-1. Create the above channels in the Carrier Ops Discord server (Text category `1541154516811120760`).
-2. Paste the snowflake IDs into this table.
-3. Cross-reference `docs/DISCORD_CHANNELS.md` with the new IDs.
-4. Wire `#catapult` webhook: Discord channel settings → Integrations → Webhooks → copy URL → add to Doppler as `CARRIER_CATAPULT_WEBHOOK`.
-5. Confirm Option A or B for Mate's inbound capability.
-
----
-
-*Channel names are frozen pending Michael's approval. Do not create the channels or register snowflake IDs without Michael's sign-off.*
+`DISCORD_HOME_CHANNEL` and `DISCORD_ALLOWED_CHANNELS` are set in each bot's `.env`
+by `scripts/install_bot_homes.sh`. No new Discord Application needed — both use
+First Watch (outbound REST, no gateway).

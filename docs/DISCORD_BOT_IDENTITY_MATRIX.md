@@ -96,18 +96,21 @@ No bot token needed. No gateway poller. Channel-scoped.
 
 ## 6. First Watch — Shared REST Send
 
-First Watch token is already in Doppler. Any bot with the appropriate LockBox grant can POST via REST:
+First Watch token is already in Doppler. Any bot with the appropriate LockBox grant can POST via REST. **Every message MUST open with `**Callsign Emoji**`** — this is the only visual identity separation on a shared token (see `docs/INTER_AGENT_PROTOCOL.md §1b` for the full table).
 
 ```bash
 # hermes discord send (if configured on bot home):
-hermes -p <bot_id> discord send --channel 1541866443765977138 "**[Callsign]** message"
+hermes -p <bot_id> discord send --channel 1541866443765977138 "**Mate ⚙️** message body"
 
 # Or via REST (requires FIRST_WATCH_TOKEN from LockBox):
 curl -s -X POST "https://discord.com/api/v10/channels/$CHANNEL_ID/messages" \
-  -H "Authorization: Bot $FIRST_WATCH_TOKEN" \
+  -H "Authorization: Bot $FIRST...OKEN" \
   -H "Content-Type: application/json" \
-  -d '{"content": "**[Callsign]** message body"}'
+  -d '{"content": "**Mate ⚙️** message body"}'
 ```
+
+**Prefix reference (copy-paste):**
+`Helm ⚓️` · `Vigil 📡` · `Ledger 📒` · `LockBox 🗝️` · `Wrench 🔧` · `Mate ⚙️` · `Deck 🛫` · `Inbox 📬` · `Quill 🪶` · `Chronos 🕰️` · `Tasker ✅` · `Purse 👛` · `Stacks 📚` · `Librarian 📖` · `Clerk 🗄️` · `Chart 🗺️` · `Sonar 🌊` · `Probe 🔭`
 
 **Never open a gateway WebSocket with First Watch token.** REST send only.
 
@@ -165,7 +168,7 @@ any other non-Helm bot. Helm remains the only inbound face.
 | Lt | bot_id | Mark | Discord surface |
 |---|---|---|---|
 | Wrench | `coding_lt` | 🔧 | First Watch REST → `#fleet` (and `#ready-room` if/when created) |
-| Deck | `ops_lt` | 🗂️ | First Watch REST → `#fleet`; reads `#drafts` to surface approvals |
+| Deck | `ops_lt` | 🛫 | First Watch REST → `#fleet`; reads `#drafts` to surface approvals |
 | Stacks | `knowledge_lt` | 📚 | First Watch REST → `#fleet` |
 
 Per the §2 decision tree: Lts do **not** need to receive Discord messages (they are fed by

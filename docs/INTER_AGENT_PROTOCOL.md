@@ -20,6 +20,42 @@
 
 ---
 
+## 1b. Discord Identity Prefix (PROTOCOL — mandatory)
+
+Every bot that posts to Discord via First Watch **MUST** open its message with its callsign+emoji prefix. This is the only mechanism distinguishing identities on the shared First Watch token.
+
+| Bot | Callsign | Emoji | Prefix |
+|---|---|---|---|
+| `chief_of_staff` | Helm | ⚓️ | `**Helm ⚓️**` |
+| `subscription_watcher` | Vigil | 📡 | `**Vigil 📡**` |
+| `api_watcher` | Ledger | 📒 | `**Ledger 📒**` |
+| `lockbox` | LockBox | 🗝️ | `**LockBox 🗝️**` |
+| `coding_lt` | Wrench | 🔧 | `**Wrench 🔧**` |
+| `firstmate` | Mate | ⚙️ | `**Mate ⚙️**` |
+| `ops_lt` | Deck | 🛫 | `**Deck 🛫**` |
+| `email_reader` | Inbox | 📬 | `**Inbox 📬**` |
+| `email_drafter` | Quill | 🪶 | `**Quill 🪶**` |
+| `calendar_manager` | Chronos | 🕰️ | `**Chronos 🕰️**` |
+| `todoist_manager` | Tasker | ✅ | `**Tasker ✅**` |
+| `finance_reader` | Purse | 👛 | `**Purse 👛**` |
+| `knowledge_lt` | Stacks | 📚 | `**Stacks 📚**` |
+| `vault_librarian` | Librarian | 📖 | `**Librarian 📖**` |
+| `obsidian_archivist` | Clerk | 🗄️ | `**Clerk 🗄️**` |
+| `hermes_ai_explorer` | Chart | 🗺️ | `**Chart 🗺️**` |
+| `passive_watch` | Sonar | 🌊 | `**Sonar 🌊**` |
+| `research_agent` | Probe | 🔭 | `**Probe 🔭**` |
+
+**Format rule:** Every First Watch REST POST and Helm Discord message MUST begin with the bold `Callsign Emoji` prefix. No exceptions — it is the only visual identity separation on a shared token.
+
+**Example POST body:**
+```json
+{"content": "**Mate ⚙️** Branch `hermes/carrier/emoji-ids` pushed. Tests green. Awaiting Helm review."}
+```
+
+**AIPass messages** between bots use the same prefix in the `## REPORT` header line for readability (not required by protocol, but strongly encouraged).
+
+---
+
 ## 2. Identities (all 18 bots)
 
 Each bot: **bot_id**, **callsign**, **voice**, **never-be**, **authority**, **model**, **speaks to**, **knowledge**, **tools**, **write roots**, **return contract**.
@@ -257,7 +293,7 @@ Each bot: **bot_id**, **callsign**, **voice**, **never-be**, **authority**, **mo
                             │
               ┌─────────────┼─────────────┬──────────────┐
               ▼             ▼             ▼              ▼
-         Wrench 🔧      Deck 🗂️      Stacks 📚       Chart 🗺️
+         Wrench 🔧      Deck 🛫      Stacks 📚       Chart 🗺️
          Coding Lt       Ops Lt     Knowledge Lt      Recon Lt
               │             │             │              │
               ▼      ┌──────┼──────┬────┐ │        ┌─────┴─────┐
@@ -365,12 +401,14 @@ See `docs/HERMES_CAPABILITY_NOTES.md` for API facts. Priority is **frozen**:
 
 ### 4.2 Discord (human-facing only)
 
-| Channel | Who posts | Purpose |
-|---|---|---|
-| inbound / home | Michael ↔ Helm | Commands |
-| `#drafts` | Quill | Draft approval |
-| `#alerts` | Vigil, Ledger, **LockBox (redacted)** | Locks, spend, stalls, grant replay/forgery |
-| `#fleet` | Chart/Sonar (optional) | ≤5 bullet tips |
+Every message on Discord opens with `**Callsign Emoji**` — see §1b for the full table. This is mandatory; it is the only identity signal on the shared First Watch token.
+
+| Channel | Who posts | Prefix format | Purpose |
+|---|---|---|---|
+| `#command` | Michael ↔ Helm ⚓️ | `**Helm ⚓️**` | Commands, strategy, dispatch narration |
+| `#drafts` | Quill 🪶 | `**Quill 🪶**` | Draft approval previews |
+| `#alerts` | Vigil 📡, Ledger 📒, LockBox 🗝️ (redacted) | `**Vigil 📡**` etc. | Locks, spend halts, stalls, grant replay/forgery |
+| `#fleet` | Any non-command bot | `**Callsign Emoji**` | Dispatch 🛫, ACK, TRAP handoff confirmations; ≤5 bullets |
 
 IDs: `docs/DISCORD_CHANNELS.md` (blank until Michael fills). Specialists do not argue on Discord.
 
@@ -664,17 +702,18 @@ Retries: **one** adjusted brief, then escalate.
 ## 12. Roster card (Helm skill)
 
 ```text
-Helm=classify/dispatch | Vigil=LOCK all sessions | Ledger=SPEND_HALT all sessions
-LockBox=Doppler secrets + CoS handshake redeem
-Mate=coding (claude-code→codex→opencode) | Chart=hermes_ai_explorer synthesis | Sonar=passive_watch signals
-Inbox=email triage DeepSeek | Quill=drafts Sonnet no-send
-Chronos=calendar only | Tasker=Todoist only
-Librarian=vault OUT | Clerk=vault IN + Helm keep/discard | Probe=web research
-Recon Wing: Chart=hermes_ai_explorer synthesis | Sonar=passive_watch signals | Probe=research_agent on-demand
+Helm ⚓️=classify/dispatch | Vigil 📡=LOCK all sessions | Ledger 📒=SPEND_HALT all sessions
+LockBox 🗝️=Doppler secrets + CoS handshake redeem
+Mate ⚙️=coding (claude-code→codex→opencode) | Chart 🗺️=hermes_ai_explorer synthesis | Sonar 🌊=passive_watch signals
+Inbox 📬=email triage DeepSeek | Quill 🪶=drafts Sonnet no-send
+Chronos 🕰️=calendar only | Tasker ✅=Todoist only
+Librarian 📖=vault OUT | Clerk 🗄️=vault IN + Helm keep/discard | Probe 🔭=web research
+Recon Wing: Chart 🗺️=hermes_ai_explorer synthesis | Sonar 🌊=passive_watch signals | Probe 🔭=research_agent on-demand
 Channels: Kanban P1 · cron P2 · AIPass P3 · bot-chat P4 · delegate_task DENIED named ops
 Locks: ~/.hermes/carrier/DISPATCH_LOCK | SPEND_HALT
 Mail: $OBSIDIAN_VAULT_PATH/_agent/mailbox/<bot_id>/{inbox,outbox}
 Board: carrier
+Discord prefix: **Callsign Emoji** mandatory on every First Watch POST (§1b)
 ```
 
 ---
