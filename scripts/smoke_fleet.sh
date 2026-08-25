@@ -183,15 +183,44 @@ else
   skip "lockbox_hmac_key" "key not generated yet"
 fi
 
-# 10 fleet_signal.sh — First Watch outbound REST smoke
+# 10 fleet_signal.sh — identity-aware smoke (Helm posting to #fleet)
 if [[ -f "$ROOT/scripts/fleet_signal.sh" ]]; then
-  if bash "$ROOT/scripts/fleet_signal.sh" RAW "**[smoke]** fleet_signal smoke — $(date -u +%Y-%m-%dT%H:%M:%SZ)" 2>/tmp/fleet_signal_smoke.err; then
+  if bash "$ROOT/scripts/fleet_signal.sh" RAW chief_of_staff \
+      "**[smoke]** fleet_signal identity smoke — $(date -u +%Y-%m-%dT%H:%M:%SZ)" fleet \
+      2>/tmp/fleet_signal_smoke.err; then
     pass "fleet_signal_post"
   else
     failc "fleet_signal_post" "$(cat /tmp/fleet_signal_smoke.err)"
   fi
 else
   failc "fleet_signal_post" "scripts/fleet_signal.sh not found"
+fi
+
+# 10b identity registry — all 18 bots registered in bot_identities.py
+if [[ -f "$ROOT/scripts/bot_identities.py" ]]; then
+  reg_count=$(python3 -c "
+import sys; sys.path.insert(0, '$ROOT/scripts')
+from bot_identities import BOTS
+print(len(BOTS))
+" 2>/dev/null || echo "0")
+  if [[ "$reg_count" == "18" ]]; then
+    pass "bot_identities_registry (18 bots)"
+  else
+    failc "bot_identities_registry" "expected 18, got $reg_count"
+  fi
+else
+  failc "bot_identities_registry" "scripts/bot_identities.py not found"
+fi
+
+# 10c gateway guard — no unauthorized gateways, guardrails in place
+if [[ -f "$ROOT/scripts/gateway_guard.sh" ]]; then
+  if bash "$ROOT/scripts/gateway_guard.sh" 2>/tmp/gw_guard.err; then
+    pass "gateway_guard"
+  else
+    failc "gateway_guard" "$(grep FAIL /tmp/gw_guard.err 2>/dev/null | head -3 | tr '\n' ' ')"
+  fi
+else
+  failc "gateway_guard" "scripts/gateway_guard.sh not found"
 fi
 
 # 11 Lt model pins on disk (direct YAML read — bypasses serve clobber)
