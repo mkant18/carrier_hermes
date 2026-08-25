@@ -82,7 +82,9 @@ Pick the **lowest-cost durable** channel that fits. Never skip down the table be
 
 **MCP (default desktop home may keep more; specialists must not inherit):** hugging_face, kiwi (search-flight only), todoist (template import/export excluded; **Tasker only** on fleet), vercel (Mate), obsidian-second-brain (Clerk write; Librarian/Stacks/Chart read-only writers excluded: `obsidian_save_note`, `obsidian_capture`, `obsidian_update_note`), dropbox disabled.
 
-**MCP ECO decisions (2026-08-25):** Consensus MCP = **ADOPT draft** for Probe + Chart only after Helm OAuth (`integrations/mcp-consensus.md`). Obsidian Local REST API MCP = **REJECT** fleet (prefer OSB). Granola = **DEFER**. Monarch as Hermes MCP = **DEFER** (Purse stays narrow terminal).
+**MCP ECO decisions (2026-08-25):** Consensus MCP = **ADOPT draft** for Probe + Chart only after Helm OAuth (`integrations/mcp-consensus.md`). Obsidian Local REST API MCP = **REJECT** fleet (prefer OSB). Granola = **DEFER**. Monarch as Hermes MCP = **DEFER** (Purse stays narrow terminal). Todoist = Tasker only (tighten excludes). Per-bot include/exclude draft: operator `_agent/coding/mcp/POLICY.md` (not committed).
+
+**Live drift note (B-MCP-3):** `chief_of_staff` apply path may still carry SUPER-AGENT domain MCP (OSB/todoist/hf/kiwi/vercel) while BOT_MATRIX says **none domain**. Helm decides matrix vs apply; this docs pass does not expand Helm power.
 
 Per-bot enablement is **structural** in each bot home (`bots/BOT_MATRIX.md`). Default home staying fully tooled is fine; specialists must not inherit that set.
 
@@ -129,6 +131,7 @@ Mission handoff: `docs/HANDOFF_2026-08-25_ECOSYSTEM_INTEGRATION.md`. Integration
 | 11 | Consensus MCP prod enable | **DEFER** until Helm OAuth grant on Probe + Chart only. |
 | 12 | AIPass / Kanban | **FROZEN primary** — no 42-evey bridge replacement. |
 | 13 | SkillClaw | **REJECT** on all live bot homes. |
+| 14 | Helm domain MCP vs BOT_MATRIX | **OPEN** — live SUPER-AGENT MCP may exceed matrix "none domain"; Helm picks matrix or apply, then Wrench packet. |
 
 ---
 

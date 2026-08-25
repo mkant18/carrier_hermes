@@ -2,10 +2,12 @@
 
 - job_id: ECO-20260825-EPIC
 - epic: t_1abdb103
-- filled_by: firstmate (Mate) on DOC-01 t_377a0ffc
+- filled_by: firstmate (Mate) on DOC-01 t_0e87548e (parent-gated; initial draft t_377a0ffc)
 - skeleton_by: coding_lt (Wrench)
 - written_at: 2026-08-25
+- parents_folded: WS-01 t_6fca67b3, TEL-01 t_94ba0f76, PLG-01 t_508cc8e3, SKL-01 t_8eb18474, MCP-01 t_8ba4a9be, MOB-01 t_5d1f33a9
 - status: COMPLETE (docs handoff) — production enablement of deferred items still needs Helm
+- docs_pr: https://github.com/mkant18/carrier_hermes/pull/1
 
 ---
 
@@ -30,7 +32,7 @@ Eval artifacts (local, under gitignored `_agent/coding/` on the operator machine
 | TEL-01 | `_agent/coding/cost/EVAL.md`, `draft_budget.yaml`, `SMOKE_PLAN.md` |
 | PLG-01 | `_agent/coding/interop/BRIDGE_VS_AIPASS.md` |
 | SKL-01 | `_agent/coding/skills/POLICY.md` |
-| MCP-01 | `_agent/coding/mcp/MCP_CANDIDATES.md`, `SMOKE_MCP.md` |
+| MCP-01 | `_agent/coding/mcp/POLICY.md`, `samples/*`, `SMOKE_obsidian-second-brain.md`, Chart `MCP_CANDIDATES.md` / `SMOKE_MCP.md` |
 | MOB-01 | `_agent/coding/mobile/FEASIBILITY.md` |
 
 ---
@@ -100,17 +102,20 @@ Eval artifacts (local, under gitignored `_agent/coding/` on the operator machine
 | godmode, agentmail, web-pentest (unauthz), mass install | — | **REJECT** | Safety / constitution |
 | ML/creative packs, email-inbox-triage, etc. | P2+ | **DEFER** | Propose to Helm first |
 
-### MCP-01 — MCP include/exclude (Phase 4) — Chart t_08b88b53 (+ Mate twin gated on WS)
+### MCP-01 — MCP include/exclude (Phase 4) — Chart t_08b88b53 + Mate t_8ba4a9be
+
+Authority: `_agent/coding/mcp/POLICY.md` (Mate formalize) + Chart research. **No permanent enablement** this pass. OSB throwaway smoke list+test+rollback PASS.
 
 | Candidate | Priority | Decision | bot_ids | Rationale |
 |---|---|---|---|---|
-| OSB `obsidian-second-brain` | P0 | **ADOPT** | Clerk write; Librarian/Stacks/Chart read-only; optional Quill People/ read | Existing fleet vault path + TL2 filters |
+| OSB `obsidian-second-brain` | P0 | **ADOPT** | Clerk **ON-W**; Librarian/Stacks/Chart **ON-R**; optional Quill People/ ON-R | Fleet vault path + TL2 write-tool excludes; samples in `mcp/samples/` |
 | Obsidian Local REST API MCP | P1 | **REJECT** (fleet) | none | Duplicates OSB; secret surface; full CRUD |
-| Consensus MCP | P1 | **ADOPT (draft)** | `research_agent`, `hermes_ai_explorer` | Read-only papers; **Helm OAuth grant before prod** |
-| Todoist MCP | P0 | **ADOPT keep + tighten** | `todoist_manager` only | Include/exclude tighter than prose via tools.include |
+| Consensus MCP | P1 | **ADOPT (draft)** | `research_agent`, `hermes_ai_explorer` | Read-only `search`; **Helm OAuth grant before prod** (`samples/consensus_recon.yaml`) |
+| Todoist MCP | P0 | **ADOPT keep + tighten** | `todoist_manager` only | Expand excludes (search/fetch) or pin include — `samples/todoist_tasker.yaml` |
 | Monarch as Hermes MCP | P1 | **DEFER / REJECT-as-MCP** | none as MCP | Keep Purse narrow terminal |
 | Granola MCP | P2 | **DEFER** | none this pass | Browser OAuth only; headless bots cannot complete |
 | Default desktop MCP sprawl on specialists | P0 | **REJECT inherit** | apply_bot_matrix mcp_off | Specialists must not inherit default home |
+| Helm live SUPER-AGENT MCP vs matrix "none domain" | P0 drift | **FLAG only** (not expanded this PR) | `chief_of_staff` | Live apply has OSB+todoist+hf+kiwi+vercel; BOT_MATRIX says none domain — Helm decides matrix vs apply |
 
 ### MOB-01 — Mobile / phone (Phase 5) — t_5d1f33a9
 
@@ -164,13 +169,13 @@ No other matrix rows changed by ECO phase decisions. Purse/Tasker/Lt/OSB rows we
 1. **Workspace RO hardening** — before daily-drive hermes-workspace: GET-only proxy or viewer profile; strip domain MCP from workspace process; close B1/B2 from SMOKE.md.
 2. **LockBox ACCESS_REQUEST** — permanent gateway `API_SERVER_KEY` for `:8642` (and any workspace remote password); never commit keys.
 3. **Raise Trust Level + golden smokes** — unlock Clerk permanent vault writes, Tasker real mutations, Chronos calendar mutations (SHADOW_MODE).
-4. **Consensus OAuth grant** — if paper search wanted on Probe/Chart; then enable draft YAML from MCP_CANDIDATES only on those two homes.
+4. **Consensus OAuth grant** — if paper search wanted on Probe/Chart; enable `samples/consensus_recon.yaml` only on those two homes after HANDSHAKE (never commit tokens).
 5. **Optional hermes-telemetry pilot** — single non-specialist or Mate scratch home only after budget.yaml maps to spend-state soft/hard; no SPEND_HALT ownership transfer; no evey-cost-guard.
 6. **Ledger analytics ticket (optional)** — reimplement per-model token analytics against OpenRouter observation; do not install 42-evey plugins.
 7. **SKL smoke** — Wrench packet for `carrier-roster` → `chief_of_staff` only; then P0 signal-lamp / boatswain one-at-a-time.
-8. **OSB matrix apply gaps** — ensure Librarian/Stacks/Chart actually have OSB read-only entries (Chart MCP_CANDIDATES §3).
+8. **OSB matrix apply gaps + Helm MCP drift** — Librarian/Chart ON-R missing live; Helm SUPER-AGENT domain MCP vs BOT_MATRIX none-domain (POLICY §5) — Helm pick matrix or apply, then Wrench packet.
 9. **Mobile ADOPT-LATER** — pick one companion (Relay Play or hermes-android) over Tailscale for Michael only; no bot MCP; Device Control remains DEFER.
-10. **Merge hygiene** — Wrench reviews this docs PR; Helm approves merge; do not self-merge. Parallel Google Workspace PR stays separate.
+10. **Merge hygiene** — Wrench reviews PR #1; Helm approves merge; do not self-merge. Parallel Google Workspace PR stays separate.
 
 ---
 
@@ -188,9 +193,11 @@ No other matrix rows changed by ECO phase decisions. Purse/Tasker/Lt/OSB rows we
 
 | Blocker | Owner | Notes |
 |---|---|---|
-| Workspace RO FAIL | Helm / Mate follow-on | Blocks daily-drive ADOPT |
-| API_SERVER_KEY permanent | Michael + LockBox | ACCESS_REQUEST |
-| Canonical DOC parent twins PLG/MCP Mate cards may still be todo | Dispatcher | Sibling artifacts already on disk; this handoff uses those |
+| Workspace RO FAIL (B1/B2) | Helm / Mate follow-on | Blocks daily-drive ADOPT |
+| API_SERVER_KEY permanent | Michael + LockBox | ACCESS_REQUEST for `:8642` |
+| Consensus prod (B-MCP-1) | Helm | Interactive OAuth on Probe/Chart |
+| OSB ON-R gaps (B-MCP-2) | Wrench apply packet | Librarian (+ Chart) live enable |
+| Helm matrix vs SUPER-AGENT MCP (B-MCP-3) | Helm | Documented drift; not changed in this docs PR |
 | Discord Manage Messages for pins | Michael | t_30ba3166 |
 | Shadow TL gates | Michael | Clerk / Tasker / Chronos writes |
 
@@ -207,9 +214,9 @@ No other matrix rows changed by ECO phase decisions. Purse/Tasker/Lt/OSB rows we
 | SKL-01 | t_8eb18474 / t_67aac972 | hermes_ai_explorer | Skills policy |
 | MCP-01 | t_08b88b53 / t_8ba4a9be | Chart / Mate | MCP candidates |
 | MOB-01 | t_5d1f33a9 | hermes_ai_explorer | Mobile feasibility |
-| DOC-01 | t_377a0ffc / t_0e87548e | firstmate | This handoff + docs PR |
+| DOC-01 | t_0e87548e (canonical) / t_377a0ffc (early draft) | firstmate | This handoff + docs PR #1 |
 | DOC skeleton | t_0d748ab0 | coding_lt | Handoff framework |
 
 ---
 
-*Mate DOC-01 — plain external English. Internal voice not used in this file.*
+*Mate DOC-01 t_0e87548e — plain external English. Internal voice not used in this file.*
