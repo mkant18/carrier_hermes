@@ -83,3 +83,17 @@ Webhooks:
 | `Captain Hook` | `#audit` | `1541155583036624971` |
 
 `CARRIER_ALERTS_WEBHOOK` is set in `~/.hermes/.env` — `alert_signal.sh` uses it (webhook path, no token exposure). Never commit the URL.
+
+### Kanban visibility (fleet PM)
+
+Fleet/bot project management is **Hermes Kanban** (board `carrier`) — **not Todoist** and not a separate PM SaaS.
+
+There is **no #kanban Discord channel**. If Michael creates one later, paste its snowflake here and subscribe cards with:
+`hermes kanban notify-subscribe --platform discord --chat-id <snowflake> --chat-type channel --notifier-profile chief_of_staff --delivery-mode notify <task_id>`
+
+| Surface | How to access |
+|---|---|
+| **Human board UI** | Hermes Dashboard → Kanban tab: **http://127.0.0.1:9119** (loopback only). Start with `hermes dashboard --no-open --host 127.0.0.1`. Navigate to the Kanban tab in the left sidebar. |
+| **Event mirror** | Open cards subscribe to **#command** (`1541866378255011980`) via `notify-subscribe`. Terminal state changes (claimed, done, blocked, review) post a brief message in `#command` via the `chief_of_staff` gateway. |
+| **#tasks** (`1541155241746239658`) | Legacy ops lane — **not** the Hermes Kanban board. Not subscribed; not widened in Helm allowed_channels. |
+| **CLI** | `hermes kanban list` · `hermes kanban notify-list` · `hermes kanban show <id>` |
