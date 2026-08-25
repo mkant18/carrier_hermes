@@ -58,10 +58,20 @@ carrier_hermes/
 └── .hermes/plans/                 # hardening + cost-optimal plans
 ```
 
+## Inter-agent protocol (read this)
+
+**How CoS talks to other bots** (identities, relationships, knowledge bases, tools, job/result packets, forbidden edges) lives in:
+
+[`docs/INTER_AGENT_PROTOCOL.md`](docs/INTER_AGENT_PROTOCOL.md)
+
+IMPLEMENT_PROMPT **Phase A** must refine and freeze that document **before** any fleet build (Phase B).
+
 ## Quickstart
 
-1. **Full fleet build (preferred):** paste `prompts/IMPLEMENT_PROMPT.md` into a fresh Hermes session with full tool access. It implements the cost-optimal plan + explorer + OSB.
-2. **Legacy bootstrap:** `prompts/SETUP_PROMPT.md` (may lag the plan — prefer IMPLEMENT_PROMPT).
+1. **Full fleet build (preferred):** paste `prompts/IMPLEMENT_PROMPT.md` into a fresh Hermes session with full tool access.
+   - **Phase A** = deepen protocol + templates + SOUL contracts (no infra yet)
+   - **Phase B** = cost-optimal plan + explorer + OSB + crons + smokes
+2. **Legacy bootstrap:** `prompts/SETUP_PROMPT.md` (deprecated for full builds).
 3. **OSB only:** follow `integrations/obsidian-second-brain.md`.
 
 ## Profiles (summary)
