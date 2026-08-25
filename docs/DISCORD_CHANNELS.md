@@ -26,8 +26,8 @@ Names are frozen. **Do not invent snowflake IDs.**
    - Whenever Helm, FirstMate, or any bot dispatches a job or handoff (via Kanban, AIPass, or cron), a short confirmation line is posted to `#fleet` (e.g., `🛫 DISPATCH | Helm → Mate | [JOB-ID] Implementing auth refactor`).
    - Whenever the receiving bot picks up or completes the handoff/operation, it posts an ack/receipt line to `#fleet` (e.g., `⚓ ACK | Mate | [JOB-ID] On station — working task` / `🛬 TRAP | Mate | [JOB-ID] Complete — PR #14 opened`).
    - Specialists without their own gateway use `hermes send --to discord:fleet` via the shared First Watch voice.
-4. **Ledger + Vigil** may post brief status/watch notes in `#command`; hard spend/breach alerts still go to `#alerts` (and optional webhook).
-4. **Specialists** (Inbox, Chronos, Tasker, Quill drafts, Chart/Sonar tips) do **not** become general user-facing Discord bots. CoS dispatches; results funnel back via CoS to `#command` unless a role channel applies (`#drafts`, `#fleet`).
+4. **Ledger + Vigil** may post brief status/watch notes in `#fleet` via First Watch; hard spend/breach alerts go to `#alerts`. **Neither Ledger, Vigil, nor any First Watch user ever posts to `#command` — `#command` is Carrier Ops (Helm gateway token) only.**
+4. **Specialists** (Inbox, Chronos, Tasker, Quill drafts, Chart/Sonar tips) do **not** become general user-facing Discord bots. CoS dispatches; results go to role channels (`#tasks`, `#drafts`, `#fleet`) via First Watch. Helm summarises to `#command` using Carrier Ops token only.
 5. Existing ops lanes stay available: `#email`, `#calendar`, `#tasks`, `#vault`, `#finance`, `#audit`, `#urgent`, `#general` — not the default human home.
 
 ### Verified live (2026-08-25, via Discord REST API)
@@ -38,7 +38,7 @@ All four core channels confirmed present with the IDs above. Single-gateway rule
 | Token env var | Discord app | Identity confirmed | Role | Gateway |
 |---|---|---|---|---|
 | `DISCORD_BOT_TOKEN` on `~/.hermes/profiles/chief_of_staff/.env` | **Carrier Ops** `1541150313405480970` | `Carrier Ops` | Helm inbound, owns `#command` (home channel set to `1541866378255011980`) | **YES — the only poller** |
-| `DISCORD_FLEET_BOT_TOKEN` on `~/.hermes/.env` | **First Watch** `1541881948660568116` | `FirstWatch` | Shared outbound for all non-Helm bots → `#fleet`, `#alerts`, `#drafts` | **NO — REST send only** |
+| `DISCORD_FLEET_BOT_TOKEN` on `~/.hermes/.env` | **First Watch** `1541881948660568116` | `FirstWatch` | Shared outbound for all non-Helm bots → `#fleet`, `#alerts`, `#drafts`, wing channels. **NEVER `#command`** | **NO — REST send only** |
 
 The two tokens are confirmed **distinct**, and the Carrier Ops token is **not** present on
 the default home — so no double-poll. First Watch REST send smoke-tested green against all

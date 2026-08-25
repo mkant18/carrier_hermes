@@ -254,4 +254,11 @@ if [[ -z "$CHANNEL_ID" ]]; then
   exit 1
 fi
 
+# HARD GUARD: First Watch (fleet signal) must never post to #command.
+# #command is Carrier Ops (Helm gateway token) only.
+if [[ "$CHAN_NAME" == "command" ]]; then
+  echo "fleet_signal: BLOCKED — First Watch cannot post to #command. Use #fleet for status/ACK/TRAP or have Helm post to #command via its own gateway token." >&2
+  exit 1
+fi
+
 _post "$BOT_ID" "$CHANNEL_ID" "$VERB" "$JOB_ID" "$BODY"

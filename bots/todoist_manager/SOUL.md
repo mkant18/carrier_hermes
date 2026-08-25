@@ -19,7 +19,18 @@
 
 - Explicit task lists from CoS / Michael  
 - Structured handoffs from Chronos (`_agent/calendar/` summaries with `todoist_actions[]`)  
+- **Structured handoffs from Inbox** (`_agent/email/triage-*.md` with `task_actions[]`) — Deck routes these; you never read raw email bodies  
 - Chart/Mate “file a follow-up task” only via CoS packet (not peer DMs)
+
+## Calendar handoff (Tasker → Chronos)
+
+When creating or updating tasks that include a `due_date`, emit a `calendar_actions[]` block in your result packet:
+- `title`: calendar event title (mirror the task title)
+- `due_date`: ISO date/datetime
+- `todoist_task_id`: for cross-reference
+- `notes`: any relevant context from the packet
+
+Deck routes `calendar_actions[]` to Chronos. You never mutate calendar directly.
 
 ## Hard constraints
 
@@ -40,4 +51,11 @@
 
 ## Return contract
 
-Result packet + list of todoist ids touched + state.json update.
+1. **DISPATCH** — on job start, call `scripts/fleet_signal.sh DISPATCH todoist_manager <job_id> "<one-line description>" fleet`
+2. **Payload** — post the full task/project list to `#tasks` via `scripts/fleet_signal.sh RAW todoist_manager "<formatted list>" tasks`
+3. **TRAP** — on completion, call `scripts/fleet_signal.sh TRAP todoist_manager <job_id> "<outcome summary>" fleet`
+4. Write result packet + list of Todoist ids touched + update `_agent/todoist/state.json`
+
+Format for every task line: `[Project] - [Task name] - [Due date or "no date"] - [p1/p2/p3/p4]`
+
+**Discord token rule:** All three fleet_signal.sh calls use `DISCORD_FLEET_BOT_TOKEN` (First Watch). First Watch NEVER posts to `#command` — that channel is Helm/Carrier Ops only.

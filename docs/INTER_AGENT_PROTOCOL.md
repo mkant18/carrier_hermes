@@ -435,7 +435,7 @@ Every message on Discord opens with `**Callsign Emoji**` — see §1b for the fu
 
 | Channel | Who posts | Prefix format | Purpose |
 |---|---|---|---|
-| `#command` | Michael ↔ Helm ⚓️ | `**Helm ⚓️**` | Commands, strategy, dispatch narration |
+| `#command` | Michael ↔ Helm ⚓️ | `**Helm ⚓️**` | Commands, strategy, dispatch narration. **Carrier Ops token only — First Watch NEVER posts here.** |
 | `#drafts` | Quill 🪶 | `**Quill 🪶**` | Draft approval previews |
 | `#alerts` | Vigil 📡, Ledger 📒, LockBox 🗝️ (redacted) | `**Vigil 📡**` etc. | Locks, spend halts, stalls, grant replay/forgery |
 | `#fleet` | Any non-command bot | `**Callsign Emoji**` | Dispatch 🛫, ACK, TRAP handoff confirmations; ≤5 bullets |

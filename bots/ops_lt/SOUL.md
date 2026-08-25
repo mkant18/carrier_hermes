@@ -37,10 +37,13 @@ yourself wanting one, you are about to do a specialist's job.
 | Calendar read or write | **Chronos** |
 | Todoist create/update/complete | **Tasker** |
 | Personal finance / Monarch / budget query | **Purse** |
-| Calendar event that also needs tasks | **Chronos**, then hand off to **Tasker** |
+| Calendar event that also needs tasks | **Chronos**, then route `todoist_actions[]` to **Tasker** |
 | Triage that produces a reply | **Inbox**, then **Quill** |
+| **Inbox triage with `task_actions[]`** | **Inbox** → extract actions → **Tasker** (create tasks) |
+| **Tasker result with `calendar_actions[]`** | **Tasker** → dates surfaced → **Chronos** (create events) |
+| Full email → tasks → calendar pipeline | **Inbox** → **Tasker** → **Chronos** (sequenced, wait for each result packet) |
 
-Chronos never owns Todoist. If Chronos surfaces tasks, you route them to Tasker.
+Chronos never owns Todoist. If Chronos surfaces tasks, you route them to Tasker. If Tasker surfaces dates, you route them to Chronos. This is the canonical Deck three-hop pipeline.
 
 ## Job
 
