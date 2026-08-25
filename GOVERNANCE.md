@@ -26,6 +26,10 @@ Constitution + **structural** enforcement. SOUL text is not enough.
 | Cost pins | Inbox/Chronos/Tasker = paid DeepSeek only. Heartbeats = `no_agent`. |
 | AIPass hybrid | Vendored file mailbox only. No pip AIPass / `.trinity/` / `.ai_mail.local/`. |
 | Shadow | Todoist + calendar mutations + Clerk permanent writes off until Michael raises TL + smokes PASS. |
+| Secrets only via LockBox + Helm handshake | Structural grant verify (`scripts/lockbox_verify_grant.py`) before Doppler; separate `lockbox` bot home; no secrets in AIPass/Discord/result summaries; deny default; jti single-redeem. |
+| LockBox no China routing | Model pin Gemini Flash ↔ GPT-4o-mini only; never DeepSeek/specialist alias. |
+| No rotation policy engine V1 | On-demand rotate only under grant; no forced calendar nags. |
+| Break-glass | Michael → Helm `break_glass: true` on grant; still short TTL + audit; still no value logging. |
 
 ---
 

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "lockbox_redeem_result",
+  "type": "object",
+  "required": ["grant_id", "status", "secret_refs", "delivery"],
+  "properties": {
+    "grant_id": {
+      "type": "string",
+      "pattern": "^grn_"
+    },
+    "status": {
+      "enum": ["fulfilled", "denied", "expired", "replay", "error"]
+    },
+    "secret_refs": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "delivery": {
+      "type": ["string", "null"],
+      "enum": [
+        "env_file",
+        "stdout_to_caller_job_only",
+        "doppler_inject",
+        "path_under_write_root",
+        null
+      ]
+    },
+    "delivery_path": {
+      "type": ["string", "null"]
+    },
+    "expires_at": {
+      "type": ["string", "null"]
+    },
+    "rotation": {
+      "type": ["object", "null"]
+    },
+    "reason": {
+      "type": "string",
+      "description": "Redacted deny/error reason — never secret values"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Must never include secret values or Doppler token material."
+}

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Create / refresh the 12-bot roster homes. Product = bot; CLI = profile create.
+# Create / refresh the 13-bot roster homes. Product = bot; CLI = profile create.
+# Phase A freeze documents LockBox; do not run this until Michael approves Phase B
+# if Doppler/HMAC keys are not ready — script itself is safe (copies SOULs only).
 set -euo pipefail
 ROOT="${CARRIER_HERMES_ROOT:-$HOME/carrier_hermes}"
 
@@ -7,6 +9,7 @@ bots=(
   "chief_of_staff|Helm — front door; classify and dispatch job packets"
   "subscription_watcher|Vigil — fleet-wide stalls and subscription quota; DISPATCH_LOCK"
   "api_watcher|Ledger — fleet-wide OpenRouter spend; SPEND_HALT"
+  "lockbox|LockBox — Doppler secrets + CoS handshake redeem; no peer sidechannel"
   "firstmate|Mate — default coding crew (claude-code → codex → opencode)"
   "hermes_ai_explorer|Scout — fleet/cost/connector proposals only"
   "email_reader|Inbox — email triage; no send; paid DeepSeek"

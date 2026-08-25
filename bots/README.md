@@ -9,6 +9,7 @@ In Carrier Hermes, every agent is a **Bot** — a named roster member with its o
 | `chief_of_staff` | **Helm** | Command | Front door; classify; dispatch job packets |
 | `subscription_watcher` | **Vigil** | Command (beside Helm) | Fleet-wide stalls + subscription quota; DISPATCH_LOCK |
 | `api_watcher` | **Ledger** | Command (beside Helm) | Fleet-wide $ spend (OpenRouter etc.); SPEND_HALT |
+| `lockbox` | **LockBox** | Command / security (beside Helm) | Doppler secrets + permission grants; CoS handshake only |
 | `firstmate` | **Mate** | Coding | Default coding crew |
 | `hermes_ai_explorer` | **Scout** | Meta | Optimize workflow/cost/connectors (advisory) |
 | `email_reader` | **Inbox** | Ops | Email triage (no send) |
@@ -19,7 +20,7 @@ In Carrier Hermes, every agent is a **Bot** — a named roster member with its o
 | `obsidian_archivist` | **Clerk** | Knowledge (in) | Intake: triage artifacts → file into OSB with CoS |
 | `research_agent` | **Probe** | Research | General web research briefs |
 
-**Watchers sit next to Helm**, not under Mate: they monitor **all** bots’ sessions and spend.
+**13 bots.** Watchers + **LockBox** sit next to Helm, not under Mate: Vigil/Ledger monitor **all** sessions/spend; LockBox stewards secrets only via Helm handshake.
 
 Install path: copy each `bots/<bot_id>/SOUL.md` → bot home SOUL; set description/callsign for Bot Mode roster.
 

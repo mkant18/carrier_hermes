@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "access_request",
+  "type": "object",
+  "required": [
+    "request_id",
+    "from_bot",
+    "created_at",
+    "priority",
+    "use_case",
+    "secret_refs",
+    "scope",
+    "blast_radius",
+    "untrusted_input_involved"
+  ],
+  "properties": {
+    "request_id": {
+      "type": "string",
+      "pattern": "^arq_"
+    },
+    "from_bot": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "priority": {
+      "enum": ["low", "normal", "high", "critical"]
+    },
+    "use_case": {
+      "type": "string",
+      "minLength": 1
+    },
+    "secret_refs": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 0
+    },
+    "permission_refs": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "scope": {
+      "type": "object",
+      "required": ["actions", "ttl_seconds", "delivery"],
+      "properties": {
+        "actions": {
+          "type": "array",
+          "items": {
+            "enum": ["read_once", "read_ttl", "rotate", "create", "delete_meta"]
+          },
+          "minItems": 1
+        },
+        "ttl_seconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "delivery": {
+          "enum": [
+            "env_file",
+            "stdout_to_caller_job_only",
+            "doppler_inject",
+            "path_under_write_root"
+          ]
+        },
+        "write_paths_allowed": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        }
+      },
+      "additionalProperties": true
+    },
+    "justification_links": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "blast_radius": {
+      "type": "string"
+    },
+    "untrusted_input_involved": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": true
+}

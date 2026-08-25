@@ -38,6 +38,7 @@ $OBSIDIAN_VAULT_PATH/_agent/mailbox/
   chief_of_staff/{inbox,outbox}/
   subscription_watcher/{inbox,outbox}/
   api_watcher/{inbox,outbox}/
+  lockbox/{inbox,outbox}/
   firstmate/{inbox,outbox}/
   hermes_ai_explorer/{inbox,outbox}/
   email_reader/{inbox,outbox}/
@@ -56,7 +57,7 @@ $OBSIDIAN_VAULT_PATH/_agent/mailbox/
 2. Delivering mail = write into **recipient** `inbox/` (or CoS copies/moves). Prefer helper script `scripts/aipass_send.py`.
 3. `to: chief_of_staff` for escalations; `to: obsidian_archivist` for intake candidates after runs.
 4. Status lifecycle: unread → read → folded (done/archived).
-5. No secrets in mailbox bodies (use paths to redacted `_agent/` artifacts).
+5. No secrets in mailbox bodies (use paths to redacted `_agent/` artifacts). LockBox: grant paths + audit only — never secret values.
 6. Mail is not a send-email channel. No external SMTP.
 
 ## Helm (CoS) duties
@@ -65,15 +66,15 @@ $OBSIDIAN_VAULT_PATH/_agent/mailbox/
 - Drain own inbox each turn (or cron): convert unread mail into Kanban/bot jobs.
 - Clerk: after multi-bot runs, CoS may batch `to: obsidian_archivist` with artifact paths.
 
-## Ledger / Vigil
+## Ledger / Vigil / LockBox
 
-May post `to: chief_of_staff` mail on budget/stall events in addition to Discord + lock files (mail is durable audit).
+May post `to: chief_of_staff` mail on budget/stall/**security** events in addition to Discord + lock files (mail is durable audit). LockBox bodies: grant_id / status / refs only — **never** secret values.
 
 ## Setup snippet
 
 ```bash
 VAULT="${OBSIDIAN_VAULT_PATH:-$HOME/Desktop/Existing Folders/OBSIDIAN}"
-BOTS=(chief_of_staff subscription_watcher api_watcher firstmate hermes_ai_explorer
+BOTS=(chief_of_staff subscription_watcher api_watcher lockbox firstmate hermes_ai_explorer
       email_reader email_drafter calendar_manager todoist_manager vault_librarian
       obsidian_archivist research_agent michael)
 for b in "${BOTS[@]}"; do

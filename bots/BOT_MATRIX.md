@@ -12,9 +12,10 @@ MCP filters are **include/exclude on that bot home**. Default desktop home may k
 
 | bot_id | Callsign | Model | Toolsets ON | Toolsets OFF | MCP |
 |---|---|---|---|---|---|
-| `chief_of_staff` | Helm | `smart` Grok 4.5; fallback `quality` | kanban, cronjob, discord/gateway as configured, memory, session_search, todo, clarify, skills (roster) | terminal, file, web, browser, code_execution, computer_use, delegation (keep off unless scratch explicitly enabled) | **none** domain. No todoist, no OSB, no mail. |
+| `chief_of_staff` | Helm | `smart` Grok 4.5; fallback `quality` | kanban, cronjob, discord/gateway as configured, memory, session_search, todo, clarify, skills (roster) | terminal, file, web, browser, code_execution, computer_use, delegation (keep off unless scratch explicitly enabled); **no Doppler / no secrets** | **none** domain. No todoist, no OSB, no mail, no Doppler. |
 | `subscription_watcher` | Vigil | heartbeat none; summary `watcher-summary` | (cron script only). Summary job: session_search, file (narrow), discord | web, browser, terminal (except script), delegation, todoist, OSB | none |
 | `api_watcher` | Ledger | heartbeat none; narrative specialist | script/terminal **narrow** (curl OpenRouter + lock scripts), file `_agent/api_watcher/`, discord, session_search | web browse, browser, delegation, domain MCP | none |
+| `lockbox` | LockBox | `lockbox` / `security-cheap` (Gemini 2.5 Flash); fallback GPT-4o-mini only; rare `quality` | file `_agent/lockbox/**` + `~/.hermes/carrier/lockbox/**`; terminal **narrow** (doppler CLI / curl Doppler API / `lockbox_verify_grant.py`); memory (non-secret ops); session_search (audit); discord `#alerts` only (redacted); skills (own security scripts) | web browse, browser, computer_use, delegation, mail, todoist, calendar, OSB write, kanban-as-CoS, code_execution broad, any send | **Doppler CLI/REST only**; no todoist/OSB/mail MCP |
 
 ## Coding / meta
 

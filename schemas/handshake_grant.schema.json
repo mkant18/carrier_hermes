@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "handshake_grant",
+  "type": "object",
+  "required": [
+    "grant_id",
+    "jti",
+    "request_id",
+    "from",
+    "to_lockbox",
+    "subject_bot",
+    "decided_at",
+    "decision",
+    "expires_at",
+    "secret_refs_allowed",
+    "actions_allowed",
+    "ttl_seconds",
+    "delivery",
+    "constraints",
+    "decision_rationale",
+    "integrity"
+  ],
+  "properties": {
+    "grant_id": {
+      "type": "string",
+      "pattern": "^grn_"
+    },
+    "jti": {
+      "type": "string",
+      "minLength": 8
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^arq_"
+    },
+    "from": {
+      "const": "chief_of_staff"
+    },
+    "to_lockbox": {
+      "const": "lockbox"
+    },
+    "subject_bot": {
+      "type": "string",
+      "minLength": 1
+    },
+    "decided_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "decision": {
+      "enum": ["approve", "deny", "narrow"]
+    },
+    "expires_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "secret_refs_allowed": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "actions_allowed": {
+      "type": "array",
+      "items": {
+        "enum": ["read_once", "read_ttl", "rotate", "create", "delete_meta"]
+      }
+    },
+    "ttl_seconds": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "delivery": {
+      "enum": [
+        "env_file",
+        "stdout_to_caller_job_only",
+        "doppler_inject",
+        "path_under_write_root"
+      ]
+    },
+    "write_paths_allowed": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "break_glass": {
+      "type": "boolean",
+      "default": false
+    },
+    "constraints": {
+      "type": "object",
+      "required": ["max_redeems", "no_log_values", "no_discord", "no_aipass_body_secrets"],
+      "properties": {
+        "max_redeems": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1
+        },
+        "no_log_values": {
+          "const": true
+        },
+        "no_discord": {
+          "const": true
+        },
+        "no_aipass_body_secrets": {
+          "const": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "decision_rationale": {
+      "type": "string"
+    },
+    "integrity": {
+      "type": "object",
+      "required": ["alg", "key_id", "signature"],
+      "properties": {
+        "alg": {
+          "enum": ["HMAC-SHA256", "ed25519"]
+        },
+        "key_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

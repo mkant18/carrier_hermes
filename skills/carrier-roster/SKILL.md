@@ -1,7 +1,7 @@
 ---
 name: carrier-roster
 description: Helm roster, classify tree, and dispatch channels.
-version: 0.1.0
+version: 0.2.0
 author: Michael Kanter (mkant18), Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -21,7 +21,7 @@ Load in **Helm** sessions. Classifies Michael’s request onto a **bot** and a *
 - Any “who should do this?” moment
 - Before opening Kanban, cron, AIPass, or bot-chat
 
-Don’t use for: implementing code, reading mail, writing vault notes.
+Don’t use for: implementing code, reading mail, writing vault notes, fetching secrets (coordinate LockBox grant only).
 
 ## Prerequisites
 
@@ -29,6 +29,7 @@ Don’t use for: implementing code, reading mail, writing vault notes.
 - Matrix: `bots/BOT_MATRIX.md`
 - Golden: `docs/CLASSIFICATION_GOLDEN.md`
 - Packets: `templates/job_packet.md`, `templates/result_packet.md`, `templates/aipass_message.md`
+- Secrets: `templates/access_request.md`, `templates/handshake_grant.md`
 
 ## Procedure
 
@@ -38,14 +39,15 @@ Don’t use for: implementing code, reading mail, writing vault notes.
    2. Fleet optimize / connectors / cost *strategy* → **Scout**
    3. Live spend / OpenRouter $ → **Ledger**
    4. Stalls / sub quota / lock → **Vigil**
-   5. Email triage → **Inbox**
-   6. Draft reply → **Quill**
-   7. Calendar (+ optional tasks) → **Chronos** (then **Tasker**)
-   8. Todoist-only → **Tasker**
-   9. Vault question / find in notes → **Librarian**
-   10. File / save / intake → **Clerk** (Helm keep/discard)
-   11. General web research → **Probe**
-   12. Hard non-coding → Helm / MoA
+   5. Secrets / tokens / API keys / Doppler / permission grant / rotate credential → **ACCESS_REQUEST → Helm grant/deny → LockBox** (Helm never holds secrets)
+   6. Email triage → **Inbox**
+   7. Draft reply → **Quill**
+   8. Calendar (+ optional tasks) → **Chronos** (then **Tasker**)
+   9. Todoist-only → **Tasker**
+   10. Vault question / find in notes → **Librarian**
+   11. File / save / intake → **Clerk** (Helm keep/discard)
+   12. General web research → **Probe**
+   13. Hard non-coding → Helm / MoA
 3. **Channel** (frozen): Kanban P1 → cron P2 → AIPass P3 → bot-chat P4. `delegate_task` **denied** for named ops/command bots.
 4. **Packet.** Paste a full job packet. Bots have zero Helm history.
 5. **Demand** a result packet (`status` + artifact or blocker) before saying “done.”
@@ -54,6 +56,7 @@ Don’t use for: implementing code, reading mail, writing vault notes.
 
 ```text
 Helm=classify/dispatch | Vigil=LOCK all sessions | Ledger=SPEND_HALT all sessions
+LockBox=Doppler secrets + CoS handshake redeem
 Mate=coding (claude-code→codex→opencode) | Scout=proposals only
 Inbox=email triage DeepSeek | Quill=drafts Sonnet no-send
 Chronos=calendar only | Tasker=Todoist only
@@ -65,14 +68,17 @@ Mail: $OBSIDIAN_VAULT_PATH/_agent/mailbox/<bot_id>/{inbox,outbox}
 ## Pitfalls
 
 - Saying “profile” to Michael — say **bot**
-- `delegate_task` to Inbox/Tasker/Clerk (wrong tools)
+- `delegate_task` to Inbox/Tasker/Clerk/LockBox (wrong tools)
 - Chronos owning Todoist
 - Librarian filing intake
 - bot-chat when AIPass would do
 - Ignoring lock/halt files
+- Fetching or pasting secrets yourself — issue HANDSHAKE_GRANT only
+- Peer asks LockBox without grant — DENY / educate
 
 ## Verification
 
 - Golden set callsigns match `docs/CLASSIFICATION_GOLDEN.md`
 - Every job has `job_id` + `to:` bot_id
 - No send, no TL>0 without Michael
+- No secret values in packets/mail/Discord

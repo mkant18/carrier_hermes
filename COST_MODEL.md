@@ -26,6 +26,9 @@ Subscription-first. Pay-per-token only for high-volume structured ops. **Never**
 | Email triage, calendar, Todoist | OpenRouter **paid** stable | `openrouter/deepseek/deepseek-chat-v3-0324` (`specialist` / `rote` / `cheap`) | `:free` rotate |
 | Aux (titles, compression) | Free or cheapest paid | one pinned aux + DeepSeek fallback | Subscription main model |
 | Vigil / Ledger heartbeat | **$0 LLM** | bash `no_agent` | Gemma every 5m |
+| LockBox judgment / redeem | OpenRouter **paid** non-China | `openrouter/google/gemini-2.5-flash` (`lockbox` / `security-cheap`); fallback `openrouter/openai/gpt-4o-mini` | DeepSeek, Moonshot, Qwen CN, PRC-primary, `:free` |
+| LockBox high-blast deny | Claude Max rare | short `quality` Sonnet | Cheap PRC models |
+| LockBox Doppler health | **$0 LLM** | bash `no_agent` | LLM heartbeat |
 | Coding implementer/reviewer | Claude Max (or Grok if limited) | `quality` | Free models writing prod code |
 | Coding janitor/docs | Paid DeepSeek **or** Max | `specialist` | Rotating free as merge gate |
 | MoA references | Free/cheap OK | 2 refs max | Free ref as sole decider |
@@ -41,11 +44,15 @@ frontier-quality               → anthropic/claude-opus-4-8
 specialist, rote, cheap        → openrouter/deepseek/deepseek-chat-v3-0324
 specialist-coding              → anthropic/claude-sonnet-4-6
 watcher-summary                → openrouter/deepseek/deepseek-chat-v3-0324
+lockbox, security-cheap        → openrouter/google/gemini-2.5-flash
+lockbox-fallback               → openrouter/openai/gpt-4o-mini
 ```
 
 **Remove** any `:free` from specialist/rote/cheap.
 
-**Fallback (human-facing quality path):** Sonnet Max → paid DeepSeek. Never free as last resort for Helm.
+**LockBox must not reuse** `specialist`/`rote`/`cheap` while those point at DeepSeek.
+
+**Fallback (human-facing quality path):** Sonnet Max → paid DeepSeek. Never free as last resort for Helm. **Exception:** LockBox fallback is GPT-4o-mini only (never DeepSeek).
 
 **MoA frontier:** ref1 paid DeepSeek (or one free if budget-tight); ref2 free maverick/scout as reference only; aggregator Grok 4.5.
 
@@ -70,6 +77,9 @@ Ledger daily/monthly soft/hard caps live in `_agent/api_watcher/spend-state.json
 - LLM every 5m for Vigil
 - Chronos pinned free “because calendar is easy”
 - Using bot-chat (P4) when AIPass (P3) or Kanban (P1) suffices
+- **DeepSeek (or any PRC-primary / `:free` pool) on LockBox**
+- LockBox 5-minute LLM heartbeat
+- Secret values in result packets / AIPass / Discord
 
 ---
 

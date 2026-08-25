@@ -13,8 +13,10 @@ GOLDEN = ROOT / "docs" / "CLASSIFICATION_GOLDEN.md"
 RULES: list[tuple[str, str]] = [
     (r"\b(fix|failing test|open a pr|pull request|implement|coding)\b|carrier_hermes|lock script", "Mate"),
     (r"cut fleet cost|which mcp|optimize.*fleet|connectors", "Scout"),
-    (r"openrouter|burning cash|over budget|metered|spend", "Ledger"),
+    (r"openrouter is burning|burning cash|over budget|metered|spend halt|halt new paid|api_budget", "Ledger"),
     (r"stuck|stall|supergrok|quota|dispatch_lock", "Vigil"),
+    # secrets before generic openrouter (rotate key ≠ spend halt)
+    (r"gh_token|doppler|handshake|permission grant|rotate.*key|rotate the openrouter|all secrets|mail password|api keys?|secret", "LockBox"),
     (r"unread email|important mail|triage my", "Inbox"),
     (r"draft a reply|draft.*email", "Quill"),
     (r"todoist", "Tasker"),
@@ -23,11 +25,15 @@ RULES: list[tuple[str, str]] = [
     (r"what.?s in my notes|search the vault|vault for people", "Librarian"),
     (r"research comparable|on the web", "Probe"),
     (r"multi-perspective|raise tl", "Helm"),
+    (r"asks lockbox directly|educate", "Helm"),
 ]
 
 
 def classify(prompt: str) -> str:
     p = prompt.lower()
+    # Direct peer secret ask → Helm educate/deny (not LockBox auto path)
+    if re.search(r"asks lockbox directly|wants all secrets", p):
+        return "Helm"
     # Todoist-only beats calendar if both (golden: "Add buy milk to Todoist")
     if re.search(r"todoist", p) and not re.search(r"calendar|meeting|tuesday", p):
         return "Tasker"
