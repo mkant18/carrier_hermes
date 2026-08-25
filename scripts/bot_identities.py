@@ -70,6 +70,13 @@ BOTS = {
         "color": 0x7289da,                              # softer blurple — crew
         "avatar_url": None,
     },
+    "git_yeoman": {
+        "callsign": "git-Yeoman",
+        "emoji": "📋",
+        "wing_token_env": "CODING_WING_DISCORD_TOKEN",
+        "color": 0x99aab5,                              # grey — records / admin
+        "avatar_url": None,
+    },
 
     # ── Ops Wing ────────────────────────────────────────────────────────────
     "ops_lt": {

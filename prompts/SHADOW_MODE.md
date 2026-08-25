@@ -7,8 +7,8 @@
 | Surface | Bot | Authority | Gate |
 |---|---|---|---|
 | **Todoist API writes** | Tasker (`todoist_manager`) | `unshadow Todoist` | Job/idempotency via `_agent/todoist/state.json`; no bulk destructive without packet flags |
-| **Calendar writes** | Chronos (`calendar_manager`) | `unshadow calendar` | Calendar MCP when wired; Todoist still → Tasker |
-| **Clerk permanent intake** | Clerk (`obsidian_archivist`) | `unshadow intake` + **vault TL2** | Job packet `trust_override: intake_enabled` (or CoS grant). File new notes to **`Inbox/`** (TL2). Stage under `_agent/archivist/` without grant. |
+| **Calendar writes** | Chronos (`calendar_manager`) | `unshadow calendar` | Personal Google via `gapi_fleet.py chronos` / google-workspace skill; Todoist still → Tasker |
+| **Clerk permanent intake** | Clerk (`obsidian_archivist`) | `unshadow intake` + **vault TL2** | Job packet `trust_override: intake_enabled` (or CoS grant). File new notes to **`Inbox/`** (TL2). Stage under `_agent/archivist/` without grant. TL3 scoped-folder raises should route through LockBox HANDSHAKE_GRANT (not direct CLAUDE.md edit by Clerk) — lesson from helm-20260825-clerk-ingest-001. |
 
 Audit: `_agent/audit/events.jsonl` (helm `unshadow` + `raise_tl`).
 
