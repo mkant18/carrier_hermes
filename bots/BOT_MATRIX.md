@@ -12,7 +12,7 @@ MCP filters are **include/exclude on that bot home**. Default desktop home may k
 
 | bot_id | Callsign | Model | Toolsets ON | Toolsets OFF | MCP |
 |---|---|---|---|---|---|
-| `marshal` | Marshal 🎖️ | `quality` Sonnet Max; fallback Grok 4.5 | kanban (owner — all lanes), todo, session_search, memory, file `_agent/marshal/**`, aipass, discord `#command`+`#fleet` via First Watch, clarify | terminal, code_execution, browser, web, computer_use, mail, mail_send, todoist MCP, calendar, OSB write, delegation | **none** |
+| `marshal` | Marshal 🎖️ | `quality` Sonnet Max; fallback Grok 4.5 | kanban (owner — all lanes), todo, session_search, memory, file `_agent/marshal/**`, aipass, discord **`#fleet`** via First Watch (**never `#command`**), clarify | terminal, code_execution, browser, web, computer_use, mail, mail_send, todoist MCP, calendar, OSB write, delegation | **none** |
 | `chief_of_staff` | Helm ⚓️ | `smart` Grok 4.5; fallback `quality` | kanban, cronjob, discord/gateway as configured, memory, session_search, todo, clarify, skills (roster) | terminal, file, web, browser, code_execution, computer_use, delegation (keep off unless scratch explicitly enabled); **no Doppler / no secrets** | **none** domain. No todoist, no OSB, no mail, no Doppler. |
 | `subscription_watcher` | Vigil 📡 | heartbeat none; summary `watcher-summary` | (cron script only). Summary job: session_search, file (narrow), discord | web, browser, terminal (except script), delegation, todoist, OSB | none |
 | `api_watcher` | Ledger 📒 | heartbeat none; narrative specialist | script/terminal **narrow** (curl OpenRouter + lock scripts), file `_agent/api_watcher/`, discord, session_search | web browse, browser, delegation, domain MCP | none |
@@ -57,9 +57,9 @@ or queries Monarch has violated its SOUL. Route it to the specialist instead.
 
 | bot_id | Callsign | Model | Toolsets ON | Toolsets OFF | MCP |
 |---|---|---|---|---|---|
-| `email_reader` | Inbox 📬 | `specialist` **paid DeepSeek only** | file (email root), mail-read when wired | web/browser preferred off, discord, todoist, calendar, terminal, send | mail read only if added; **never** send |
+| `email_reader` | Inbox 📬 | `specialist` **paid DeepSeek only** | file (`_agent/email/`), skills, terminal **narrow** (`gapi_fleet.py inbox` / Gmail read) | web/browser preferred off, discord spam, todoist, calendar, send | **google-workspace** skill; Gmail **read only**; **never** send |
 | `email_drafter` | Quill 🪶 | `quality` | file, memory, skills, discord | terminal, send, todoist, calendar, browser | OSB **read** People/ only if needed |
-| `calendar_manager` | Chronos 🕰️ | `specialist` paid DeepSeek | file (`_agent/calendar/`), calendar **read+write** (live 2026-08-25) | todoist (Tasker exists), mail, vault write, terminal | calendar MCP when wired; **todoist excluded** |
+| `calendar_manager` | Chronos 🕰️ | `specialist` paid DeepSeek | file (`_agent/calendar/`), skills, terminal **narrow** (`gapi_fleet.py chronos`), calendar **read+write** (live) | todoist (Tasker exists), mail, vault write, send | **google-workspace** skill; calendar only; **todoist excluded** |
 | `todoist_manager` | Tasker ✅ | `specialist` paid DeepSeek | file (`_agent/todoist/`), Todoist **live** mutate (2026-08-25) | calendar mutate, mail, vault, terminal | **todoist** MCP (no template import/export) |
 | `finance_reader` | Purse | `quality` Sonnet 4.6 | narrow terminal (Monarch queries), file `_agent/finance/**`, memory, session_search | broad terminal, browser, computer_use, delegation, mail, todoist, calendar, OSB write, Monarch write paths | Monarch read-only tools; no todoist/OSB write |
 

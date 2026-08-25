@@ -71,7 +71,7 @@ bot's `.env`. Channels per bot:
 | Tier | Home | Allowed |
 |---|---|---|
 | Helm | `#command` | `#command`, `#fleet`, `#alerts`, `#drafts` |
-| Vigil, Ledger | `#command` | `#command`, `#alerts` |
+| Vigil, Ledger | **`#fleet`** via First Watch | `#alerts` (hard breaches). **Never `#command` via First Watch.** |
 | LockBox | `#alerts` | `#alerts` only |
 | Lts (Wrench, Stacks) | `#fleet` | `#fleet` |
 | Deck (Ops Lt) | `#fleet` | `#fleet`, `#drafts` |
