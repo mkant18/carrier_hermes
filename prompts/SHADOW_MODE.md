@@ -26,3 +26,11 @@
 4. Standing override logged in `_agent/audit/events.jsonl`.
 
 No automatic end date. Absence of protest ≠ exit.
+
+## LockBox go-live (2026-08-25)
+
+- **Live** Doppler redeem/rotate under Helm `HANDSHAKE_GRANT` only.
+- Bot home: `LOCKBOX_SHADOW_MODE=false` in `~/.hermes/profiles/lockbox/.env`.
+- Project/config: `carrier-ops` / `prd` (dev token read-only available).
+- Still forbidden: secret values in Discord, AIPass bodies, result packets, Clerk intake.
+- Structural gate: `scripts/lockbox_verify_grant.py` before any `doppler secrets get/set`.
