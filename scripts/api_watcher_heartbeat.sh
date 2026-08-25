@@ -8,13 +8,19 @@ STATE="$VAULT/_agent/api_watcher/spend-state.json"
 HALT_HELPER="$ROOT/scripts/spend_halt.sh"
 mkdir -p "$(dirname "$STATE")"
 
-# Load .env without printing
+# Load .env without printing.
+# Prefer a line-export loop over `source <(grep …)`: process substitution can be
+# scrubbed by agent sandboxes and leave a truncated/empty key.
 ENV_FILE="${HERMES_HOME:-$HOME/.hermes}/.env"
 if [[ -f "$ENV_FILE" ]]; then
-  set -a
-  # shellcheck disable=SC1090
-  source <(grep -E '^(OPENROUTER_API_KEY|OPENROUTER_MANAGEMENT_KEY)=' "$ENV_FILE" | sed 's/\r$//' || true)
-  set +a
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
+    case "$line" in
+      OPENROUTER_API_KEY=*|OPENROUTER_MANAGEMENT_KEY=*)
+        export "$line"
+        ;;
+    esac
+  done < "$ENV_FILE"
 fi
 
 SOFT_DAILY="${CARRIER_OR_SOFT_DAILY:-8}"
