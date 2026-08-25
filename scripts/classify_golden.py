@@ -11,6 +11,19 @@ GOLDEN = ROOT / "docs" / "CLASSIFICATION_GOLDEN.md"
 
 # first-match tree (same order as skills/carrier-roster)
 RULES: list[tuple[str, str]] = [
+    # --- Lieutenant (Wing Lead) layer FIRST ---------------------------------
+    # Lts are dispatch/review/routing nodes. A prompt that asks to *route*,
+    # *sequence*, *coordinate*, or *review* a wing's work belongs to that
+    # wing's Lt, not to the specialist who would execute it. These must be
+    # matched before the specialist rules or "triage"/"calendar"/"coding"
+    # would steal them.
+    (r"sequence.*worktree|worktree.*sequence|orchestrate.*(coding|worktree)", "Wrench"),
+    (r"review .*(result packet|mate).*(blocker|surface)|review mate|surface blockers", "Wrench"),
+    (r"route .*(ops )?pipeline|triage then draft|sequence.*(inbox|triage).*draft", "Deck"),
+    (r"coordinate the calendar and task|coordinate.*calendar.*handoff|route.*chronos.*tasker", "Deck"),
+    (r"route this intake|keep/discard gate|enforce.*(intake|keep/discard)", "Stacks"),
+    (r"vault health|route the knowledge queue|knowledge queue", "Stacks"),
+    # --- specialists --------------------------------------------------------
     (r"\b(fix|failing test|open a pr|pull request|implement|coding)\b|carrier_hermes|lock script", "Mate"),
     (r"cut fleet cost|which mcp|optimize.*fleet|connectors", "Chart"),
     (r"openrouter is burning|burning cash|over budget|metered|spend halt|halt new paid|api_budget", "Ledger"),

@@ -150,6 +150,32 @@ See `docs/CODING_CREW_CHANNELS.md` for full channel list.
 | `FIRST_WATCH_DISCORD_TOKEN` | Fleet (outbound) | REST send to fleet channels |
 | `CARRIER_ALERTS_WEBHOOK` | Scripts / Vigil / Ledger | Webhook → `#alerts` (optional) |
 
+**Runtime env var names** (what the bots actually read — distinct from the Doppler storage
+keys above): `DISCORD_BOT_TOKEN` (Carrier Ops, on the `chief_of_staff` home only) and
+`DISCORD_FLEET_BOT_TOKEN` (First Watch, on the default home for shared outbound).
+
+---
+
+## 9. Lieutenant layer — Discord posture
+
+The three Wing Lts get **no new Discord application and no gateway**. They post
+dispatch/ack/trap lines to `#fleet` through the shared First Watch REST send, exactly like
+any other non-Helm bot. Helm remains the only inbound face.
+
+| Lt | bot_id | Mark | Discord surface |
+|---|---|---|---|
+| Wrench | `coding_lt` | 🔧 | First Watch REST → `#fleet` (and `#ready-room` if/when created) |
+| Deck | `ops_lt` | 🗂️ | First Watch REST → `#fleet`; reads `#drafts` to surface approvals |
+| Stacks | `knowledge_lt` | 📚 | First Watch REST → `#fleet` |
+
+Per the §2 decision tree: Lts do **not** need to receive Discord messages (they are fed by
+Kanban/AIPass from Helm) and only need to post → **Share First Watch token**. Adding a
+gateway for a Lt would evict every other First Watch user and violate rule zero.
+
+**Verified 2026-08-25:** Carrier Ops (`1541150313405480970`, identity `Carrier Ops`) and
+First Watch (`1541881948660568116`, identity `FirstWatch`) confirmed as two distinct tokens;
+Carrier Ops confined to the Helm home; First Watch REST `POST` to `#fleet` returned `200`.
+
 ---
 
 *Maintained by Boatswain automation. Do not add snowflake IDs here — see `docs/DISCORD_CHANNELS.md`.*

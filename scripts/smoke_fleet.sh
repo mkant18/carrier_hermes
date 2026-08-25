@@ -111,32 +111,64 @@ else
   grep -q 'Tasker' "$ROOT/bots/calendar_manager/SOUL.md" && pass "chronos_handoff_tasker" || failc "chronos_handoff_tasker" "Chronos SOUL missing Tasker handoff"
 fi
 
-# 7 fifteen bots defined
+# 7 eighteen bots defined
 n=$(ls "$ROOT"/bots/*/SOUL.md | wc -l | tr -d ' ')
-[[ "$n" == "15" ]] && pass "fifteen_souls" || failc "fifteen_souls" "count=$n"
+[[ "$n" == "18" ]] && pass "eighteen_souls" || failc "eighteen_souls" "count=$n"
+
+# 7b no SOUL left as an unfilled scaffold stub
+stubs=$(grep -l "TODO: fill in purpose" "$ROOT"/bots/*/SOUL.md 2>/dev/null | wc -l | tr -d ' ')
+[[ "$stubs" == "0" ]] && pass "no_stub_souls" || failc "no_stub_souls" "$stubs scaffold SOUL(s) unfilled"
 
 # 8 bot homes
 homes=0
+missing_homes=""
 while read -r id; do
-  [[ -d "$HOME/.hermes/profiles/$id" ]] && homes=$((homes + 1))
+  if [[ -d "$HOME/.hermes/profiles/$id" ]]; then
+    homes=$((homes + 1))
+  else
+    missing_homes="$missing_homes $id"
+  fi
 done <<'IDS'
 chief_of_staff
 subscription_watcher
 api_watcher
 lockbox
+coding_lt
 firstmate
 hermes_ai_explorer
 passive_watch
+ops_lt
 email_reader
 email_drafter
 calendar_manager
 todoist_manager
+knowledge_lt
 vault_librarian
 obsidian_archivist
 research_agent
 finance_reader
 IDS
-[[ "$homes" == "15" ]] && pass "fifteen_bot_homes" || failc "fifteen_bot_homes" "homes=$homes"
+[[ "$homes" == "18" ]] && pass "eighteen_bot_homes" || failc "eighteen_bot_homes" "homes=$homes missing:$missing_homes"
+
+# 8b Lieutenants pinned to an advanced model and barred from execution tools
+for lt in coding_lt ops_lt knowledge_lt; do
+  m=$(hermes -p "$lt" config get model.default 2>/dev/null \
+    || hermes -p "$lt" config get model 2>/dev/null || true)
+  if [[ "$m" == *"claude-sonnet-4-6"* ]]; then
+    pass "lt_model_$lt"
+  else
+    failc "lt_model_$lt" "expected claude-sonnet-4-6, got '$m'"
+  fi
+done
+
+# 8c Lt SOULs must declare their squadron (routing node, not executor)
+if grep -q 'firstmate' "$ROOT/bots/coding_lt/SOUL.md" \
+  && grep -q 'email_reader' "$ROOT/bots/ops_lt/SOUL.md" \
+  && grep -q 'vault_librarian' "$ROOT/bots/knowledge_lt/SOUL.md"; then
+  pass "lt_squadrons_declared"
+else
+  failc "lt_squadrons_declared" "an Lt SOUL is missing its squadron refs"
+fi
 
 # 9 lockbox grant verify (shadow fixture if present)
 if [[ -f "$HOME/.hermes/carrier/lockbox/keys/helm-grant-v1" ]]; then

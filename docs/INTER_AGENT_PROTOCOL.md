@@ -20,7 +20,7 @@
 
 ---
 
-## 2. Identities (all 15 bots)
+## 2. Identities (all 18 bots)
 
 Each bot: **bot_id**, **callsign**, **voice**, **never-be**, **authority**, **model**, **speaks to**, **knowledge**, **tools**, **write roots**, **return contract**.
 
@@ -255,21 +255,32 @@ Each bot: **bot_id**, **callsign**, **voice**, **never-be**, **authority**, **mo
                             │
            Kanban (P1) · cron (P2) · AIPass (P3) · bot-chat (P4)
                             │
-     ┌──────────┬───────────┼───────────┬──────────┬─────────┐
-     ▼          ▼           ▼           ▼          ▼         ▼
-   Mate       Chart       Inbox       Quill     Chronos    Tasker
-     │          ↑                       │          │          ▲
-     │        Sonar                     │          └── mail/job ┘
-     │       (signals)                  └── Probe (on-demand research)
-     ▼
-  workers
-     │
-     ▼          ▼
- Librarian    Clerk ◄── post-run candidates (Helm keep/discard)
-     ▲          ▲
-     │          │
-   Probe ───────┘  (artifacts, not peer tool calls)
+              ┌─────────────┼─────────────┬──────────────┐
+              ▼             ▼             ▼              ▼
+         Wrench 🔧      Deck 🗂️      Stacks 📚       Chart 🗺️
+         Coding Lt       Ops Lt     Knowledge Lt      Recon Lt
+              │             │             │              │
+              ▼      ┌──────┼──────┬────┐ │        ┌─────┴─────┐
+            Mate     ▼      ▼      ▼    ▼ │        ▼           ▼
+              │    Inbox  Quill Chronos Tasker   Sonar       Probe
+              ▼      │              │     ▲    (signals)  (on-demand)
+           workers   └── draft ─────┘     │
+                                   mail/job┘
+                            Purse 👛 (read-only finance, under Deck)
+                                        │
+                            ┌───────────┴───────────┐
+                            ▼                       ▼
+                        Librarian                 Clerk ◄── keep/discard
+                       (query out)             (intake in, grant-gated)
 ```
+
+**Lt tier rules.** Each Wing Lt is a routing node between Helm and its squadron: it holds
+the Marshal stack for that wing, dispatches self-contained packets, reviews result packets,
+and escalates blockers. Lts run advanced models but hold **no execution tools** — a Lt that
+writes code, reads mail, mutates a calendar, or files a vault note has violated its SOUL.
+
+**Command tier is co-equal beside Helm, never under a Lt.** Vigil, Ledger, and LockBox
+answer to Helm/Michael directly; their locks and halts bind every wing including the Lts.
 
 ### Command triangle (fleet-wide)
 
@@ -444,7 +455,7 @@ Helm **must** see `status` + (artifact **or** blocker) before telling Michael �
 
 `$OBSIDIAN_VAULT_PATH/_agent/mailbox/<bot_id>/{inbox,outbox}/`
 
-All 12 bot_ids plus optional `michael/inbox/`.
+All 18 bot_ids plus optional `michael/inbox/`.
 
 ### Send
 

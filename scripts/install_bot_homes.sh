@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Create / refresh the 13-bot roster homes. Product = bot; CLI = profile create.
+# Create / refresh the 18-bot roster homes. Product = bot; CLI = profile create.
+# Command tier (4) + Recon Wing (3) + Ops Wing (6) + Coding Wing (2) + Knowledge Wing (3).
 # Phase A freeze documents LockBox; do not run this until Michael approves Phase B
 # if Doppler/HMAC keys are not ready — script itself is safe (copies SOULs only).
 set -euo pipefail
@@ -10,13 +11,16 @@ bots=(
   "subscription_watcher|Vigil — fleet-wide stalls and subscription quota; DISPATCH_LOCK"
   "api_watcher|Ledger — fleet-wide OpenRouter spend; SPEND_HALT"
   "lockbox|LockBox — Doppler secrets + CoS handshake redeem; no peer sidechannel"
+  "coding_lt|Wrench — Coding Wing lead; routes coding jobs to Mate, reviews results"
   "firstmate|Mate — default coding crew (claude-code → codex → opencode)"
   "hermes_ai_explorer|Chart — Recon Wing lead; fleet intelligence synthesis + proposals"
   "passive_watch|Sonar — Recon Wing passive watcher; daily ecosystem signals for Chart"
+  "ops_lt|Deck — Ops Wing lead; routes email, calendar, task and finance traffic"
   "email_reader|Inbox — email triage; no send; paid DeepSeek"
   "email_drafter|Quill — drafts only to #drafts; never sends"
   "calendar_manager|Chronos — calendar only; hands tasks to Tasker"
   "todoist_manager|Tasker — all Todoist mutations"
+  "knowledge_lt|Stacks — Knowledge Wing lead; intake gate and vault routing"
   "vault_librarian|Librarian — vault query/health out; not intake"
   "obsidian_archivist|Clerk — vault intake in; Helm keep/discard"
   "research_agent|Probe — Recon Wing on-demand web research"
@@ -31,8 +35,9 @@ for spec in "${bots[@]}"; do
   fi
   mkdir -p "$HOME/.hermes/profiles/$id"
   cp -f "$ROOT/bots/$id/SOUL.md" "$HOME/.hermes/profiles/$id/SOUL.md"
-  hermes -p "$id" profile describe --text "$desc" >/dev/null || \
-    hermes profile describe "$id" --text "$desc" >/dev/null || true
+  # Correct form is `hermes profile describe <bot_id> --text` — the `-p <id> ...
+  # profile describe --text` form fails with "profile name is required".
+  hermes profile describe "$id" --text "$desc" >/dev/null 2>&1 || true
   echo "bot home ready: $id"
 done
 

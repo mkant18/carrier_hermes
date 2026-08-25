@@ -37,6 +37,12 @@ Use in smoke: `scripts/smoke_fleet.sh classify` (Phase B) should print callsign 
 | 30 | Monitor OpenRouter pricing daily for changes | **Sonar** | passive signal watch; not Chart or Probe |
 | 31 | How much did I spend on dining in Monarch this month? | **Purse** | personal finance read-only |
 | 32 | Check outstanding reimbursements in Monarch | **Purse** | Monarch query |
+| 33 | Sequence the parallel worktrees for the coding crew | **Wrench** | Coding Lt routes; does not implement |
+| 34 | Review Mate's result packet and surface blockers to me | **Wrench** | Lt review gate, not a second implementer |
+| 35 | Route this ops pipeline: triage then drafts | **Deck** | Ops Lt sequences Inbox→Quill |
+| 36 | Coordinate the calendar and task handoff for next week | **Deck** | Ops Lt routes Chronos→Tasker |
+| 37 | Route this intake and enforce the keep/discard gate | **Stacks** | Knowledge Lt gate; Clerk executes |
+| 38 | Report vault health and route the knowledge queue | **Stacks** | Lt reports; Librarian answers |
 
 **Negative tests (must not misroute)**
 
@@ -52,4 +58,4 @@ Use in smoke: `scripts/smoke_fleet.sh classify` (Phase B) should print callsign 
 | Inbox asks LockBox for password | LockBox without Helm (must hit Helm educate/deny) |
 | Probe wants all secrets | LockBox auto-fulfill |
 
-Minimum size: **18** prompts in the main table — this file has **26**.
+Minimum size: **18** prompts in the main table — this file has **38** (includes the Lieutenant routing rows 33–38 and Purse rows 31–32).

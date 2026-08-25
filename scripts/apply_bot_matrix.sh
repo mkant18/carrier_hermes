@@ -2,11 +2,82 @@
 # Apply BOT_MATRIX model pins + toolset disables to each bot home.
 set -euo pipefail
 
+# ---------------------------------------------------------------------------
+# PITFALL (2026-08-25): a live `hermes --profile <id> serve` process holds that
+# bot's config.yaml in memory and writes it back on its own cadence. Pinning a
+# model while one is running gets silently CLOBBERED seconds later — pins
+# reverted to the global grok-4.5 default and smokes failed with
+# "expected claude-sonnet-4-6, got grok-4.5".
+#
+# Hermes Desktop auto-respawns these serve processes, which is fine: a respawn
+# reads the fresh config. We only need them out of the way DURING the write.
+# So: stop every roster serve process first, then pin. Do not "fix" this by
+# re-running the script — the second run gets clobbered exactly the same way.
+# ---------------------------------------------------------------------------
+ROSTER_IDS="chief_of_staff subscription_watcher api_watcher lockbox \
+coding_lt firstmate hermes_ai_explorer passive_watch ops_lt email_reader \
+email_drafter calendar_manager todoist_manager knowledge_lt vault_librarian \
+obsidian_archivist research_agent finance_reader"
+
+quiesce_serves() {
+  local stopped=0 id pids
+  for id in $ROSTER_IDS; do
+    pids=$(pgrep -f "profile $id serve" 2>/dev/null || true)
+    if [[ -n "$pids" ]]; then
+      kill $pids 2>/dev/null || true
+      stopped=$((stopped + 1))
+    fi
+  done
+  [[ "$stopped" -gt 0 ]] && sleep 3
+  echo "quiesced $stopped serve process(es) before pinning"
+}
+
+verify_pin() {
+  local id="$1" want="$2" got
+  got=$(python3 - "$id" <<'PY'
+import sys, yaml, pathlib
+p = pathlib.Path.home() / ".hermes/profiles" / sys.argv[1] / "config.yaml"
+try:
+    print(((yaml.safe_load(p.read_text()) or {}).get("model") or {}).get("default", ""))
+except Exception:
+    print("")
+PY
+)
+  if [[ "$got" != "$want" ]]; then
+    echo "WARN  $id pin drifted: wanted '$want' got '$got' (stale serve process?)" >&2
+    return 1
+  fi
+  return 0
+}
+
+quiesce_serves
+
 pin() {
-  local id="$1" model="$2" provider="$3"
-  hermes -p "$id" config set model "$model" >/dev/null
-  hermes -p "$id" config set model.provider "$provider" --force >/dev/null
-  echo "pinned $id -> $provider/$model"
+  local id="$1" model="$2" provider="$3" attempt got
+  # Quiesce THIS bot's serve immediately before writing. Quiescing once up-front
+  # is not enough: Desktop respawns serves mid-run, so a bot pinned late in the
+  # script gets clobbered by a process that came back while earlier bots pinned.
+  for attempt in 1 2 3; do
+    pkill -f "profile $id serve" 2>/dev/null || true
+    sleep 1
+    hermes -p "$id" config set model "$model" >/dev/null
+    hermes -p "$id" config set model.provider "$provider" --force >/dev/null
+    got=$(python3 - "$id" <<'PY'
+import sys, yaml, pathlib
+p = pathlib.Path.home() / ".hermes/profiles" / sys.argv[1] / "config.yaml"
+try:
+    print(((yaml.safe_load(p.read_text()) or {}).get("model") or {}).get("default", ""))
+except Exception:
+    print("")
+PY
+)
+    if [[ "$got" == "$model" ]]; then
+      echo "pinned $id -> $provider/$model"
+      return 0
+    fi
+  done
+  echo "WARN  $id would not hold pin $model (got '$got') after 3 attempts" >&2
+  return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -294,3 +365,33 @@ off research_agent computer_use image_gen video video_gen tts delegation cronjob
 mcp_off research_agent todoist hugging_face kiwi vercel dropbox
 
 echo "BOT_MATRIX applied"
+
+# ---------------------------------------------------------------------------
+# Verify every pin actually stuck. A live serve process can clobber a write,
+# so never trust the "pinned ..." lines alone — read the files back.
+# ---------------------------------------------------------------------------
+drift=0
+verify_pin chief_of_staff       grok-4.6                          || drift=1
+verify_pin subscription_watcher deepseek/deepseek-chat-v3-0324    || drift=1
+verify_pin api_watcher          deepseek/deepseek-chat-v3-0324    || drift=1
+verify_pin lockbox              google/gemini-2.5-flash           || drift=1
+verify_pin coding_lt            claude-sonnet-4-6                 || drift=1
+verify_pin ops_lt               claude-sonnet-4-6                 || drift=1
+verify_pin knowledge_lt         claude-sonnet-4-6                 || drift=1
+verify_pin firstmate            claude-sonnet-4-6                 || drift=1
+verify_pin hermes_ai_explorer   claude-sonnet-4-6                 || drift=1
+verify_pin passive_watch        deepseek/deepseek-chat-v3-0324    || drift=1
+verify_pin email_reader         deepseek/deepseek-chat-v3-0324    || drift=1
+verify_pin email_drafter        claude-sonnet-4-6                 || drift=1
+verify_pin calendar_manager     deepseek/deepseek-chat-v3-0324    || drift=1
+verify_pin todoist_manager      deepseek/deepseek-chat-v3-0324    || drift=1
+verify_pin finance_reader       claude-sonnet-4-6                 || drift=1
+verify_pin vault_librarian      claude-sonnet-4-6                 || drift=1
+verify_pin obsidian_archivist   claude-sonnet-4-6                 || drift=1
+verify_pin research_agent       claude-sonnet-4-6                 || drift=1
+
+if [[ "$drift" -ne 0 ]]; then
+  echo "FAIL: one or more pins drifted — check for live 'serve' processes." >&2
+  exit 1
+fi
+echo "all 18 pins verified on disk"

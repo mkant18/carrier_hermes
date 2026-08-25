@@ -25,6 +25,35 @@ Names are frozen. **Do not invent snowflake IDs.**
 4. **Specialists** (Inbox, Chronos, Tasker, Quill drafts, Chart/Sonar tips) do **not** become general user-facing Discord bots. CoS dispatches; results funnel back via CoS to `#command` unless a role channel applies (`#drafts`, `#fleet`).
 5. Existing ops lanes stay available: `#email`, `#calendar`, `#tasks`, `#vault`, `#finance`, `#audit`, `#urgent`, `#general` — not the default human home.
 
+### Verified live (2026-08-25, via Discord REST API)
+
+Guild **Carrier Ops** `1541154515841974294`, text category `1541154516811120760`.
+All four core channels confirmed present with the IDs above. Single-gateway rule verified:
+
+| Token env var | Discord app | Identity confirmed | Role | Gateway |
+|---|---|---|---|---|
+| `DISCORD_BOT_TOKEN` on `~/.hermes/profiles/chief_of_staff/.env` | **Carrier Ops** `1541150313405480970` | `Carrier Ops` | Helm inbound, owns `#command` (home channel set to `1541866378255011980`) | **YES — the only poller** |
+| `DISCORD_FLEET_BOT_TOKEN` on `~/.hermes/.env` | **First Watch** `1541881948660568116` | `FirstWatch` | Shared outbound for all non-Helm bots → `#fleet`, `#alerts`, `#drafts` | **NO — REST send only** |
+
+The two tokens are confirmed **distinct**, and the Carrier Ops token is **not** present on
+the default home — so no double-poll. First Watch REST send smoke-tested green against all
+four channels (`GET` 200) and a live `POST` to `#fleet` returned `200`.
+
+> Note: the env var names in use are `DISCORD_BOT_TOKEN` / `DISCORD_FLEET_BOT_TOKEN`, not the
+> `CARRIER_OPS_DISCORD_TOKEN` / `FIRST_WATCH_DISCORD_TOKEN` names in the identity matrix's
+> Doppler inventory table. The Doppler names are the storage keys; these are the runtime vars.
+
+### Wing lanes (Lt layer)
+
+Lieutenants post dispatch/ack/trap lines to `#fleet` via First Watch — they do **not** get
+their own gateway or become user-facing:
+
+| Lt | Mark | Posts to |
+|---|---|---|
+| Wrench (`coding_lt`) | 🔧 | `#fleet` (+ `#ready-room` when created) |
+| Deck (`ops_lt`) | 🗂️ | `#fleet`, reads `#drafts` for approval surfacing |
+| Stacks (`knowledge_lt`) | 📚 | `#fleet` |
+
 ### Already on server (gateway / API)
 
 | name | id |
