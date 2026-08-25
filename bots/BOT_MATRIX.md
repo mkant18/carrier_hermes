@@ -22,7 +22,14 @@ MCP filters are **include/exclude on that bot home**. Default desktop home may k
 | bot_id | Callsign | Model | Toolsets ON | Toolsets OFF | MCP |
 |---|---|---|---|---|---|
 | `firstmate` | Mate | `quality` implementer; `specialist` janitor/docs | terminal, file, code_execution, skills (claude-code, codex, opencode), delegation, session_search, memory, web (opt), kanban worker | mail, todoist, calendar, OSB write | vercel/github as needed for coding; **no** todoist/OSB write |
-| `hermes_ai_explorer` | Scout | `quality` | web, session_search, memory, file, skills, OSB **read** | terminal destructive, delegation as CoS, todoist, mail | OSB read-only filter; no todoist |
+
+## Recon Wing
+
+| bot_id | Callsign | Model | Toolsets ON | Toolsets OFF | MCP |
+|---|---|---|---|---|---|
+| `hermes_ai_explorer` | Chart | `quality` Sonnet Max | web (selective — prefer Sonar digest), session_search, memory, file (`_agent/explorer/`), skills, OSB **read**, discord `#fleet` (≤5 bullets) | terminal destructive, delegation as Helm, todoist, mail | OSB read-only filter; no todoist |
+| `passive_watch` | Sonar | heartbeat `no_agent`; LLM pass `specialist` DeepSeek | terminal **narrow** (curl/hash fixed URLs, state r/w), file (`_agent/signal_watch/`), discord `#fleet` (≤3 signals, HIGH only) | browser interactive, computer_use, delegation, mail, todoist, calendar, OSB write, web browse, kanban-as-Helm | none |
+| `research_agent` | Probe | `quality` Sonnet Max | web, browser (read-only), file `_agent/research/`, memory | mail, todoist, calendar, OSB write, discord spam, terminal | none required |
 
 ## Ops
 
@@ -33,13 +40,12 @@ MCP filters are **include/exclude on that bot home**. Default desktop home may k
 | `calendar_manager` | Chronos | `specialist` paid DeepSeek | file (`_agent/calendar/`), calendar **read+write** (live 2026-08-25) | todoist (Tasker exists), mail, vault write, terminal | calendar MCP when wired; **todoist excluded** |
 | `todoist_manager` | Tasker | `specialist` paid DeepSeek | file (`_agent/todoist/`), Todoist **live** mutate (2026-08-25) | calendar mutate, mail, vault, terminal | **todoist** MCP (no template import/export) |
 
-## Knowledge / research
+## Knowledge
 
 | bot_id | Callsign | Model | Toolsets ON | Toolsets OFF | MCP |
 |---|---|---|---|---|---|
 | `vault_librarian` | Librarian | `quality` | file `_agent/librarian/`, skills, OSB read/health | Inbox writers, todoist, mail, terminal | OSB: allow search/read/health/backlinks/validate; **exclude** save/capture/update |
 | `obsidian_archivist` | Clerk | `quality` | file `_agent/archivist/` + `Inbox/` when grant, skills, OSB read+write on **this home** | todoist, mail, calendar, terminal | OSB writers on Clerk home only; use with `trust_override: intake_enabled`; vault **TL2** |
-| `research_agent` | Probe | `quality` | web, browser (read-only), file `_agent/research/`, memory | mail, todoist, calendar, OSB write, discord spam | none required |
 
 ---
 

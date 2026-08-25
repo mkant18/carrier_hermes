@@ -21,10 +21,66 @@ mcp_off() {
   done
 }
 
-# Command
-pin chief_of_staff grok-4.5 xai-oauth
-off chief_of_staff browser computer_use image_gen video video_gen x_search tts web terminal file code_execution vision
-mcp_off chief_of_staff todoist hugging_face kiwi vercel dropbox
+# Command — Helm is SUPER-AGENT (near-user perms). Never free tier.
+# Do NOT strip tools/MCP here — Helm needs full hermes-cli surface.
+pin chief_of_staff grok-4.6 xai-oauth
+hermes -p chief_of_staff tools enable web browser terminal file code_execution vision image_gen x_search tts skills todo memory session_search clarify delegation cronjob computer_use --platform cli >/dev/null || true
+# Prefer hermes-cli meta bundle if present
+python3 - <<'PY'
+from pathlib import Path
+import yaml, copy
+default = yaml.safe_load((Path.home()/".hermes/config.yaml").read_text()) or {}
+p = Path.home() / ".hermes/profiles/chief_of_staff/config.yaml"
+cfg = yaml.safe_load(p.read_text()) or {}
+m = cfg.setdefault("model", {})
+m["default"] = "grok-4.6"
+m["provider"] = "xai-oauth"
+bu = str(m.get("base_url") or "")
+if "opencode" in bu or ":free" in bu or bu.strip() == "":
+    m.pop("base_url", None)
+cfg["fallback_providers"] = [
+    {"provider": "openrouter", "model": "google/gemini-3.7-flash"},
+    {"provider": "openrouter", "model": "deepseek/deepseek-chat-v3-0324"},
+    {"provider": "anthropic", "model": "claude-sonnet-4-6"},
+    {"provider": "xai-oauth", "model": "grok-4.5"},
+]
+# Super-agent tool surface
+cfg["platform_toolsets"] = {"cli": ["hermes-cli"]}
+# MCP: mirror default useful servers; Helm gets FULL OSB including write tools
+mcp = copy.deepcopy(default.get("mcp_servers") or {})
+osb = mcp.get("obsidian-second-brain") or {}
+if osb:
+    osb = copy.deepcopy(osb)
+    osb["enabled"] = True
+    # Strip vault-write excludes so Helm can save/capture/update like Michael
+    tools = osb.get("tools") or {}
+    if isinstance(tools, dict) and tools.get("exclude"):
+        write_tools = {
+            "obsidian_save_note",
+            "obsidian_capture",
+            "obsidian_update_note",
+            "save_note",
+            "capture",
+            "update_note",
+        }
+        tools["exclude"] = [x for x in tools["exclude"] if x not in write_tools]
+        if not tools["exclude"]:
+            tools.pop("exclude", None)
+        if tools:
+            osb["tools"] = tools
+        else:
+            osb.pop("tools", None)
+    mcp["obsidian-second-brain"] = osb
+for name in ("todoist", "hugging_face", "kiwi", "vercel"):
+    if name in mcp:
+        mcp[name]["enabled"] = True
+if "dropbox" in mcp:
+    mcp["dropbox"]["enabled"] = False
+cfg["mcp_servers"] = mcp
+p.write_text(yaml.safe_dump(cfg, sort_keys=False, default_flow_style=False))
+print("chief_of_staff SUPER-AGENT locked (full tools + OSB writes, no free model)")
+PY
+# No off/mcp_off for Helm — specialists stay constrained below.
 
 pin subscription_watcher deepseek/deepseek-chat-v3-0324 openrouter
 off subscription_watcher browser computer_use image_gen video video_gen x_search tts web delegation code_execution vision
@@ -48,6 +104,11 @@ mcp_off firstmate todoist kiwi dropbox
 pin hermes_ai_explorer claude-sonnet-4-6 anthropic
 off hermes_ai_explorer computer_use image_gen video video_gen tts delegation
 mcp_off hermes_ai_explorer todoist kiwi vercel
+
+# Recon Wing: Sonar — passive signal watcher; LLM pass on diff only
+pin passive_watch deepseek/deepseek-chat-v3-0324 openrouter
+off passive_watch browser computer_use image_gen video video_gen x_search tts web delegation code_execution vision cronjob
+mcp_off passive_watch todoist hugging_face kiwi vercel dropbox obsidian-second-brain
 
 # Ops
 pin email_reader deepseek/deepseek-chat-v3-0324 openrouter

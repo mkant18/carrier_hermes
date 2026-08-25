@@ -36,7 +36,7 @@ Don’t use for: implementing code, reading mail, writing vault notes, fetching 
 1. **Preflight.** If `~/.hermes/carrier/DISPATCH_LOCK` or `SPEND_HALT` exists → tell Michael; no new metered dispatch. Done when Michael has the reason text.
 2. **Classify** (first match):
    1. Coding / repo / PR / fix / test → **Mate**
-   2. Fleet optimize / connectors / cost *strategy* → **Scout**
+   2. Fleet optimize / connectors / cost *strategy* → **Chart**
    3. Live spend / OpenRouter $ → **Ledger**
    4. Stalls / sub quota / lock → **Vigil**
    5. Secrets / tokens / API keys / Doppler / permission grant / rotate credential → **ACCESS_REQUEST → Helm grant/deny → LockBox** (Helm never holds secrets)
@@ -47,7 +47,8 @@ Don’t use for: implementing code, reading mail, writing vault notes, fetching 
    10. Vault question / find in notes → **Librarian**
    11. File / save / intake → **Clerk** (Helm keep/discard)
    12. General web research → **Probe**
-   13. Hard non-coding → Helm / MoA
+   13. Ecosystem signals / price watch → **Sonar**
+   14. Hard non-coding → Helm / MoA
 3. **Channel** (frozen): Kanban P1 → cron P2 → AIPass P3 → bot-chat P4. `delegate_task` **denied** for named ops/command bots.
 4. **Packet.** Paste a full job packet. Bots have zero Helm history.
 5. **Demand** a result packet (`status` + artifact or blocker) before saying “done.”
@@ -57,7 +58,7 @@ Don’t use for: implementing code, reading mail, writing vault notes, fetching 
 ```text
 Helm=classify/dispatch | Vigil=LOCK all sessions | Ledger=SPEND_HALT all sessions
 LockBox=Doppler secrets + CoS handshake redeem
-Mate=coding (claude-code→codex→opencode) | Scout=proposals only
+Mate=coding (claude-code→codex→opencode)
 Inbox=email triage DeepSeek | Quill=drafts Sonnet no-send
 Chronos=calendar only | Tasker=Todoist only
 Librarian=vault OUT | Clerk=vault IN + Helm keep/discard | Probe=web research

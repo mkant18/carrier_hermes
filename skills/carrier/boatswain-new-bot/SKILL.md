@@ -37,9 +37,9 @@ Before cutting steel, answer these questions:
 | Field | Rules |
 |---|---|
 | `bot_id` | `lowercase_underscore`, unique, matches intended specialization (e.g. `finance_reader`) |
-| Callsign | One word, Title case, naval flavor (e.g. `Ledger`, `Probe`, `Scout`) — this is the bot's voice identity |
+| Callsign | One word, Title case, naval flavor (e.g. `Ledger`, `Probe`, `Chart`) — this is the bot's voice identity |
 
-Callsigns already in use: `Helm`, `Vigil`, `Ledger`, `LockBox`, `Mate`, `Scout`, `Inbox`, `Quill`, `Chronos`, `Tasker`, `Librarian`, `Clerk`, `Probe`.
+Callsigns already in use: `Helm`, `Vigil`, `Ledger`, `LockBox`, `Mate`, `Chart`, `Sonar`, `Probe`, `Inbox`, `Quill`, `Chronos`, `Tasker`, `Librarian`, `Clerk`.
 
 ---
 

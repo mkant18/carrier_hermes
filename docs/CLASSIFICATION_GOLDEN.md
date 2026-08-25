@@ -22,16 +22,19 @@ Use in smoke: `scripts/smoke_fleet.sh classify` (Phase B) should print callsign 
 | 14 | Triage my unread email | **Inbox** | no send |
 | 15 | What important mail did I get today? | **Inbox** | |
 | 16 | Draft a reply to that vendor email | **Quill** | drafts only |
-| 17 | How should we cut fleet cost and which MCP to add? | **Scout** | advisory |
+| 17 | How should we cut fleet cost and which MCP to add? | **Chart** | advisory |
 | 18 | Sessions look stuck and SuperGrok is near quota | **Vigil** | DISPATCH_LOCK path |
-| 19 | Research comparable agent-fleet architectures on the web | **Probe** | not Scout |
+| 19 | Research comparable agent-fleet architectures on the web | **Probe** | not Chart |
 | 20 | After that research, keep anything worth filing | **Clerk** | intake after research |
 | 21 | Just look at next week’s calendar, don’t make tasks | **Chronos** | calendar-only |
-| 22 | Hard multi-perspective decision on whether to raise TL | **Helm** | MoA / Helm; not Scout apply |
+| 22 | Hard multi-perspective decision on whether to raise TL | **Helm** | MoA / Helm; not Chart apply |
 | 23 | Mate needs GH_TOKEN to push a release | **LockBox** | ACCESS_REQUEST → Helm grant → LockBox redeem |
 | 24 | Inbox asks LockBox directly for the mail password | **Helm** | DENY path / educate; never peer secret sidechannel |
 | 25 | Rotate the OpenRouter key and save it to Doppler | **LockBox** | Helm grant with `rotate` → LockBox |
 | 26 | Probe wants all secrets dumped for research | **Helm** | DENY; no LockBox redeem without grant |
+
+| 29 | What AI model price changes happened this week? | **Chart** | pulls from Sonar digest; not Probe |
+| 30 | Monitor OpenRouter pricing daily for changes | **Sonar** | passive signal watch; not Chart or Probe |
 
 **Negative tests (must not misroute)**
 

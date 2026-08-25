@@ -12,7 +12,7 @@ GOLDEN = ROOT / "docs" / "CLASSIFICATION_GOLDEN.md"
 # first-match tree (same order as skills/carrier-roster)
 RULES: list[tuple[str, str]] = [
     (r"\b(fix|failing test|open a pr|pull request|implement|coding)\b|carrier_hermes|lock script", "Mate"),
-    (r"cut fleet cost|which mcp|optimize.*fleet|connectors", "Scout"),
+    (r"cut fleet cost|which mcp|optimize.*fleet|connectors", "Chart"),
     (r"openrouter is burning|burning cash|over budget|metered|spend halt|halt new paid|api_budget", "Ledger"),
     (r"stuck|stall|supergrok|quota|dispatch_lock", "Vigil"),
     # secrets before generic openrouter (rotate key ≠ spend halt)
@@ -24,6 +24,8 @@ RULES: list[tuple[str, str]] = [
     (r"save .*obsidian|file .*vault|file yesterday|save this conversation|keep anything worth filing|save this into", "Clerk"),
     (r"what.?s in my notes|search the vault|vault for people", "Librarian"),
     (r"research comparable|on the web", "Probe"),
+    (r"what ai model price|model price changes|price changes.*week", "Chart"),
+    (r"monitor openrouter pricing|monitor.*pricing.*daily|passive.*watch|ecosystem signals", "Sonar"),
     (r"multi-perspective|raise tl", "Helm"),
     (r"asks lockbox directly|educate", "Helm"),
 ]
@@ -59,8 +61,8 @@ def parse_table(text: str) -> list[tuple[str, str]]:
 
 def main() -> int:
     rows = parse_table(GOLDEN.read_text(encoding="utf-8"))
-    if len(rows) < 18:
-        print(f"FAIL golden rows {len(rows)} < 18", file=sys.stderr)
+    if len(rows) < 20:
+        print(f"FAIL golden rows {len(rows)} < 20", file=sys.stderr)
         return 1
     bad = []
     for prompt, expected in rows:

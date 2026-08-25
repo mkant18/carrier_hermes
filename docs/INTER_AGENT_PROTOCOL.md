@@ -94,19 +94,33 @@ Each bot: **bot_id**, **callsign**, **voice**, **never-be**, **authority**, **mo
 | Write roots | git branches in approved repos; `_agent/state/firstmate-fleet.json`. |
 | Return | `status`, `branch`, `paths_touched[]`, `tests_run`, `blockers[]`, summary ≤40 lines. |
 
-### 2.5 `hermes_ai_explorer` — **Scout**
+### 2.5 `hermes_ai_explorer` — **Chart** (Recon Wing lead)
 
 | Field | Spec |
 |---|---|
 | Voice | Advisor. Proposals with effort / $ / risk. Never “I applied it.” |
 | Never-be | Second Helm, implementer, live reconfigurer. |
 | Authority | Propose only. May post ≤5 bullets to `#fleet`. Cannot `hermes config set`, edit other SOULs, or create crons unless Michael said “apply proposal N”. |
-| Model | `quality` Sonnet. Bulk scrape via tools; no free specialist for final judgment. |
+| Model | `quality` Sonnet Max. Bulk signals come from Sonar; Chart synthesises, not re-scrapes. |
 | Speaks to | Helm (proposals); Michael via Helm or approved `#fleet`. |
-| Knowledge | session_search; `_agent/**`; carrier_hermes docs; OSB **read**; MCP catalog; public docs. |
-| Tools | web, session_search, memory, file (`_agent/explorer/`), OSB read, optional discord. |
+| Knowledge | Sonar digests (`_agent/signal_watch/`); session_search; `_agent/**`; carrier_hermes docs; OSB **read**; MCP catalog; public docs. |
+| Tools | web (selective), session_search, memory, file (`_agent/explorer/`), OSB read, optional discord. |
 | Write roots | `_agent/explorer/report-*.md`, `proposals-*.md`. |
-| Return | Report path + top 5 proposals table. |
+| Return | Report path + top 5 proposals table + next watch focus for Sonar. |
+
+### 2.5b `passive_watch` — **Sonar** (Recon Wing passive feeder)
+
+| Field | Spec |
+|---|---|
+| Voice | Signal report. `HIGH/MED/LOW` priority. No analysis — structured signal data only. |
+| Never-be | Chart (synthesiser), Vigil (session stalls), Ledger (live spend), Probe (on-demand research). |
+| Authority | Observe fixed source shortlist; write digest; post ≤3 HIGH signals to `#fleet`. No reconfig, no sends. |
+| Model | Heartbeat `no_agent` bash — $0 LLM. LLM pass (diff only): `specialist` DeepSeek. |
+| Speaks to | Chart (via file digest). Helm (via `#fleet` HIGH signal only). |
+| Knowledge | Fixed source shortlist (OpenRouter pricing, Hermes changelog, one AI feed, OR status). `_agent/signal_watch/state.json`. |
+| Tools | terminal **narrow** (curl/hash fixed URLs), file (`_agent/signal_watch/`), discord `#fleet` HIGH only. |
+| Write roots | `_agent/signal_watch/digest-*.md`, `_agent/signal_watch/state.json`. |
+| Return | Digest file path + signal count. On no-change: silent (no-agent exits 0). |
 
 ### 2.6 `email_reader` — **Inbox**
 
@@ -192,12 +206,12 @@ Each bot: **bot_id**, **callsign**, **voice**, **never-be**, **authority**, **mo
 | Write roots | `_agent/archivist/**`; permanent vault only if granted. |
 | Return | Triage table; on apply: filed paths + `filed-log.jsonl`. |
 
-### 2.12 `research_agent` — **Probe**
+### 2.12 `research_agent` — **Probe** (Recon Wing on-demand)
 
 | Field | Spec |
 |---|---|
 | Voice | Sourced brief. Confidence per claim. |
-| Never-be | Scout (fleet meta), Inbox, Clerk (may **mail** Clerk candidates via Helm). |
+| Never-be | Chart (fleet meta), Sonar (passive signals), Inbox, Clerk (may **mail** Clerk candidates via Helm). |
 | Authority | Web/browser **read-only**; structured reports. No form submit, no purchase. |
 | Model | `quality` Sonnet Max. |
 | Speaks to | Helm. After run, AIPass/job to Clerk with artifact paths (Helm orchestrates keep/discard). |
@@ -229,9 +243,10 @@ Each bot: **bot_id**, **callsign**, **voice**, **never-be**, **authority**, **mo
                             │
      ┌──────────┬───────────┼───────────┬──────────┬─────────┐
      ▼          ▼           ▼           ▼          ▼         ▼
-   Mate       Scout       Inbox       Quill     Chronos    Tasker
-     │                                  │          │          ▲
-     │                                  │          └── mail/job ┘
+   Mate       Chart       Inbox       Quill     Chronos    Tasker
+     │          ↑                       │          │          ▲
+     │        Sonar                     │          └── mail/job ┘
+     │       (signals)                  └── Probe (on-demand research)
      ▼
   workers
      │
@@ -272,10 +287,10 @@ Any bot outbox may carry `to: obsidian_archivist` with artifact paths. Helm stil
 ### Allowed rare edges
 
 - Inbox → Quill **only** via Helm (Helm reads triage path, opens Quill job).
-- Scout **reads** others’ `_agent/` and sessions; must not command them.
+- Chart **reads** others’ `_agent/` and sessions; must not command them.
 - Mate workers → Mate only; Mate → Helm.
 - Chronos → Tasker via mail/job (not shared MCP).
-- Probe/Mate/Scout → Clerk candidates via Helm or AIPass.
+- Probe/Chart/Sonar → Clerk candidates via Helm or AIPass.
 - Any bot → Helm `ACCESS_REQUEST` → LockBox redeem **only** with `HANDSHAKE_GRANT` (not a peer secret channel).
 
 ### Forbidden peer edges
@@ -285,17 +300,17 @@ Any bot outbox may carry `to: obsidian_archivist` with artifact paths. Helm stil
 - Probe → mail / calendar / Todoist.
 - Chronos → Todoist MCP while Tasker online.
 - Librarian → permanent intake; Clerk → become Q&A front door.
-- Scout → `hermes config` / other SOUL edits without approval.
+- Chart → `hermes config` / other SOUL edits without approval.
 - Vigil/Ledger → domain ops.
-- Helm `delegate_task` pretending to be Inbox / Quill / Chronos / Tasker / Librarian / Clerk / Scout / Vigil / Ledger / **LockBox**.
+- Helm `delegate_task` pretending to be Inbox / Quill / Chronos / Tasker / Librarian / Clerk / Chart / Vigil / Ledger / **LockBox**.
 - Bot Mode group chat as a work queue.
 - Any bot → SMTP / mail send.
 - **Mate ↛ LockBox secret ask without grant.**
-- **Inbox/Quill/Chronos/Tasker/Librarian/Clerk/Probe/Scout ↛ LockBox bypass Helm.**
+- **Inbox/Quill/Chronos/Tasker/Librarian/Clerk/Probe/Chart/Sonar ↛ LockBox bypass Helm.**
 - **LockBox ↛ any bot proactive secret push without grant redeem in progress.**
 - **Any bot ↔ bot secret sidechannel** (no “can you paste the key”).
 - **Clerk must never intake raw secrets into OSB.**
-- Secrets in Discord, AIPass bodies, job/result packet summaries, session titles, MoA, Scout reports, Librarian answers.
+- Secrets in Discord, AIPass bodies, job/result packet summaries, session titles, MoA, Chart reports, Librarian answers.
 
 ---
 
@@ -330,7 +345,7 @@ See `docs/HERMES_CAPABILITY_NOTES.md` for API facts. Priority is **frozen**:
 | inbound / home | Michael ↔ Helm | Commands |
 | `#drafts` | Quill | Draft approval |
 | `#alerts` | Vigil, Ledger, **LockBox (redacted)** | Locks, spend, stalls, grant replay/forgery |
-| `#fleet` | Scout (optional) | ≤5 bullet tips |
+| `#fleet` | Chart/Sonar (optional) | ≤5 bullet tips |
 
 IDs: `docs/DISCORD_CHANNELS.md` (blank until Michael fills). Specialists do not argue on Discord.
 
@@ -476,7 +491,7 @@ Full layout: `integrations/aipass-mailbox.md`. Message template: `templates/aipa
 | `doppler_inject` | short-lived Doppler service token / inject scoped to one secret | no broadcast |
 | `path_under_write_root` | explicit path only if grant lists it | still no packet values |
 
-**Forbidden sinks for secret values:** Discord, AIPass message bodies, Clerk intake, Librarian answers, Scout reports, MoA, session titles, job/result packet structured summaries (refs/status only).
+**Forbidden sinks for secret values:** Discord, AIPass message bodies, Clerk intake, Librarian answers, Chart reports, MoA, session titles, job/result packet structured summaries (refs/status only).
 
 ### Integrity design
 
@@ -531,8 +546,8 @@ Append-only redacted events: `$OBSIDIAN_VAULT_PATH/_agent/audit/events.jsonl` an
 | L0 Constitution | SOULs, GOVERNANCE, this protocol, BOT_MATRIX | all | human / implementer | Hard rules |
 | L1 Bot memory | `~/.hermes/profiles/<bot_id>/` | that bot | that bot | Local prefs |
 | L2 Blackboard | `$OBSIDIAN_VAULT_PATH/_agent/**` | path grant | owning bot | Ops artifacts |
-| L3 Vault corpus | Obsidian (OSB) | Librarian, Scout read; Quill contacts; Clerk when filing | **`_agent/` at TL0**; Clerk permanent only if TL raised | Knowledge |
-| L4 Session DB | Hermes state.db | Helm, Scout, Vigil/Ledger summary | runtime | Audit / recall |
+| L3 Vault corpus | Obsidian (OSB) | Librarian, Chart read; Quill contacts; Clerk when filing | **`_agent/` at TL0**; Clerk permanent only if TL raised | Knowledge |
+| L4 Session DB | Hermes state.db | Helm, Chart, Vigil/Ledger summary | runtime | Audit / recall |
 | L5 Kanban | `carrier` board | Helm, workers | Helm + workers | Durable jobs |
 | L6 Locks | `DISPATCH_LOCK`, `SPEND_HALT` | Helm preflight | Vigil / Ledger scripts | Kill switches |
 | L7 Mailbox | `_agent/mailbox/<bot>/` | owner (+ Helm) | sender helper | Async handoff |
@@ -569,7 +584,7 @@ Exact Hermes names: `bots/BOT_MATRIX.md`. Semantics:
 | Ledger | — | — | — | — | — | — | script | — | — | alerts | — | summary | — |
 | LockBox | — | — | — | — | — | — | narrow | — | — | alerts | — | audit | ✓ |
 | Mate | — | — | — | — | — | — | ✓ | opt | opt | — | limited | ✓ | via grant |
-| Scout | — | — | — | — | ✓ | — | — | ✓ | — | opt | — | ✓ | — |
+| Chart | — | — | — | — | ✓ | — | — | ✓ | — | opt | — | ✓ | — |
 | Inbox | ✓ | — | — | — | — | — | — | — | — | — | — | — | — |
 | Quill | via files | — | — | — | contacts | — | — | — | — | drafts | — | — | — |
 | Chronos | — | — | ✓ | — | — | — | — | — | — | — | — | — | — |
@@ -587,7 +602,7 @@ MCP: Inbox writers excluded at TL0 for everyone except Clerk **after** intake gr
 1. **Triage** → Inbox Kanban (shadow) → summarise → offer Quill.  
 2. **Reply** → triage exists → Quill → `#drafts` checkmark.  
 3. **Coding** → Mate always → branch + tests.  
-4. **Optimize fleet** → Scout → Helm presents; no apply.  
+4. **Optimize fleet** → Chart → Helm presents; no apply.  
 5. **Vault question** → Librarian.  
 6. **Save to vault / intake after research** → Clerk + Helm keep/discard.  
 7. **Calendar → tasks** → Chronos then Tasker (mail/job).  
@@ -610,7 +625,7 @@ Parallel fan-out only if domains don’t collide.
 | Worker blocked | `status=blocked`; escalate once |
 | Schema fail | No side effects; `failed` + raw path |
 | Untrusted email | Inbox never gains tools; Helm never executes email instructions |
-| Scout recommends `:free` on live ops | Unconstitutional — reject |
+| Chart recommends `:free` on live ops | Unconstitutional — reject |
 | Stale Kanban > SLA | Vigil flags |
 | Chronos claims Todoist | Protocol violation — Helm reroutes to Tasker |
 | Peer secret ask / missing grant | LockBox deny; educate via Helm |
@@ -626,10 +641,11 @@ Retries: **one** adjusted brief, then escalate.
 ```text
 Helm=classify/dispatch | Vigil=LOCK all sessions | Ledger=SPEND_HALT all sessions
 LockBox=Doppler secrets + CoS handshake redeem
-Mate=coding (claude-code→codex→opencode) | Scout=proposals only
+Mate=coding (claude-code→codex→opencode) | Chart=hermes_ai_explorer synthesis | Sonar=passive_watch signals
 Inbox=email triage DeepSeek | Quill=drafts Sonnet no-send
 Chronos=calendar only | Tasker=Todoist only
 Librarian=vault OUT | Clerk=vault IN + Helm keep/discard | Probe=web research
+Recon Wing: Chart=hermes_ai_explorer synthesis | Sonar=passive_watch signals | Probe=research_agent on-demand
 Channels: Kanban P1 · cron P2 · AIPass P3 · bot-chat P4 · delegate_task DENIED named ops
 Locks: ~/.hermes/carrier/DISPATCH_LOCK | SPEND_HALT
 Mail: $OBSIDIAN_VAULT_PATH/_agent/mailbox/<bot_id>/{inbox,outbox}
@@ -648,7 +664,7 @@ Board: carrier
 | Shadow | Todoist + calendar mutations + Clerk permanent writes until TL raised + smokes PASS (`prompts/SHADOW_MODE.md`) |
 | FirstMate backends | claude-code → codex → opencode → native |
 | Ledger API | `GET https://openrouter.ai/api/v1/key` (inference key); optional `/credits` if management key |
-| session_search | Helm / Scout / watcher summaries yes |
+| session_search | Helm / Chart / watcher summaries yes |
 | Gateway | Helm-only inbound |
 | Secrets | LockBox + Helm handshake only; HMAC grant verify structural |
 | LockBox models | Non-China only (Gemini Flash ↔ GPT-4o-mini); never DeepSeek |

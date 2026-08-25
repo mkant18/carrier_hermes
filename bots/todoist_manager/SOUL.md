@@ -19,7 +19,7 @@
 
 - Explicit task lists from CoS / Michael  
 - Structured handoffs from Chronos (`_agent/calendar/` summaries with `todoist_actions[]`)  
-- Scout/Mate “file a follow-up task” only via CoS packet (not peer DMs)
+- Chart/Mate “file a follow-up task” only via CoS packet (not peer DMs)
 
 ## Hard constraints
 

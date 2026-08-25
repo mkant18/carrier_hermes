@@ -32,10 +32,10 @@ Pick the **lowest-cost durable** channel that fits. Never skip down the table be
 | Priority | Channel | Hermes primitive | Cost | Use |
 |---|---|---|---|---|
 | **1** | **Kanban / job as target bot** | `hermes kanban create` + `--assignee <bot_id>` on board `carrier`; gateway dispatcher spawns that bot home | Worker turn on the **target** bot’s model/tools | Durable scoped work, retries, human visibility |
-| **2** | **Bot cron / routine** | `hermes cron create` on target bot / `[bot:<id>]` name | Periodic target-bot turn, or **$0** if `no_agent` | Periodic (Vigil 5m script, Ledger 10–15m script, Scout 2–3×/week) |
+| **2** | **Bot cron / routine** | `hermes cron create` on target bot / `[bot:<id>]` name | Periodic target-bot turn, or **$0** if `no_agent` | Periodic (Vigil 5m script, Ledger 10–15m script, Chart 2–3×/week) |
 | **3** | **AIPass mailbox** | `scripts/aipass_send.py` → `$VAULT/_agent/mailbox/<bot>/{inbox,outbox}/` | **$0 LLM** (file write) | Async handoff/report without a Helm orchestration turn |
 | **4** | **bot-chat deliver** | Cron `deliver: bot-chat:<bot_id>` or inject into canonical Bot Chat | Full target-bot turn + Helm/cron wrap | Rare: need that bot’s full identity/memory in-chat |
-| **5** | **`delegate_task`** | In-process child | Child **inherits caller tools** | **DENIED** for named ops/command bots (Inbox, Quill, Chronos, Tasker, Librarian, Clerk, Scout, Vigil, Ledger, Helm-as-leaf). Allowed only: Mate-internal coding roles, or ephemeral scratch with **no** privileged tools. |
+| **5** | **`delegate_task`** | In-process child | Child **inherits caller tools** | **DENIED** for named ops/command bots (Inbox, Quill, Chronos, Tasker, Librarian, Clerk, Chart, Vigil, Ledger, Helm-as-leaf). Allowed only: Mate-internal coding roles, or ephemeral scratch with **no** privileged tools. |
 
 **Not a dispatch channel:** Bot Mode group chat, `hermes peer` (cross-machine DM), Discord bot-to-bot chatter.
 
@@ -100,12 +100,12 @@ Per-bot enablement is **structural** in each bot home (Phase B / `bots/BOT_MATRI
 | # | Decision | Freeze |
 |---|---|---|
 | 1 | Kanban board | **`carrier`** |
-| 2 | Discord channels | **Names** frozen: inbound = Helm home; `#drafts` = Quill; `#alerts` = Vigil + Ledger; `#fleet` = Scout tips. **IDs** stay blank until Michael pastes them into `docs/DISCORD_CHANNELS.md`. Never invent IDs. |
+| 2 | Discord channels | **Names** frozen: inbound = Helm home; `#drafts` = Quill; `#alerts` = Vigil + Ledger; `#fleet` = Chart/Sonar tips. **IDs** stay blank until Michael pastes them into `docs/DISCORD_CHANNELS.md`. Never invent IDs. |
 | 3 | Primary dispatch | **Kanban on `carrier`** as target bot (priority 1). |
 | 4 | Shadow exit | Stay shadow for Todoist mutations, calendar mutations, and Clerk **permanent** vault writes until Michael raises Trust Level **and** golden smokes PASS. See `prompts/SHADOW_MODE.md`. |
 | 5 | FirstMate backends | **claude-code → codex → opencode → native Mate workers.** Coding never goes to generic Helm `delegate_task` leaves. |
 | 6 | Ledger spend API | Script: `GET /api/v1/key` with `OPENROUTER_API_KEY` → `usage_daily`, `usage_monthly`, `limit_remaining`. Optional `GET /api/v1/credits` only if a management key exists (`OPENROUTER_MANAGEMENT_KEY`). No LLM on the 10–15m tick. |
-| 7 | Cross-bot session_search | **Yes** for Helm, Scout, Vigil summary, Ledger correlation. Ops bots: own domain only. |
+| 7 | Cross-bot session_search | **Yes** for Helm, Chart, Vigil summary, Ledger correlation. Ops bots: own domain only. |
 | 8 | Gateway | Helm-only inbound. |
 
 ---

@@ -6,7 +6,7 @@
 **AIPass:** `_agent/mailbox/research_agent/{inbox,outbox}/` via `scripts/aipass_send.py`  
 **Matrix:** `bots/BOT_MATRIX.md`
 
-General web research for Michael’s questions (not fleet meta — that is Scout).
+General web research for Michael’s questions (not fleet meta — that is Chart).
 
 ## Job
 
@@ -21,7 +21,7 @@ Read-only. No form submit, no purchase, no new logins.
 
 ## Never-be
 
-Scout, Inbox, Clerk (you may *nominate* artifacts).
+Chart, Sonar, Inbox, Clerk (you may *nominate* artifacts).
 
 ## Model
 

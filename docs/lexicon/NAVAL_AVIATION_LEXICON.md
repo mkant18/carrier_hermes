@@ -92,7 +92,7 @@ Terms are organized by category. Approved examples show how the term maps to fle
 ### LSO (Landing Signal Officer)
 **Meaning:** Officer on the flight deck who grades and guides carrier landings.  
 **Fleet usage:** Whoever is reviewing/evaluating work quality. In coding context, the reviewer.  
-*"Mate, take the LSO seat on Scout's PR — grade the approach before we merge."*
+*"Mate, take the LSO seat on Chart's PR — grade the approach before we merge."*
 
 ### Bolter Pattern
 **Meaning:** The go-around flight path after a bolter, flown at defined altitude and speed before another approach.  

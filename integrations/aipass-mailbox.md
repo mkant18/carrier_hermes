@@ -41,6 +41,7 @@ $OBSIDIAN_VAULT_PATH/_agent/mailbox/
   lockbox/{inbox,outbox}/
   firstmate/{inbox,outbox}/
   hermes_ai_explorer/{inbox,outbox}/
+  passive_watch/{inbox,outbox}/
   email_reader/{inbox,outbox}/
   email_drafter/{inbox,outbox}/
   calendar_manager/{inbox,outbox}/
@@ -74,7 +75,7 @@ May post `to: chief_of_staff` mail on budget/stall/**security** events in additi
 
 ```bash
 VAULT="${OBSIDIAN_VAULT_PATH:-$HOME/Desktop/Existing Folders/OBSIDIAN}"
-BOTS=(chief_of_staff subscription_watcher api_watcher lockbox firstmate hermes_ai_explorer
+BOTS=(chief_of_staff subscription_watcher api_watcher lockbox firstmate hermes_ai_explorer passive_watch
       email_reader email_drafter calendar_manager todoist_manager vault_librarian
       obsidian_archivist research_agent michael)
 for b in "${BOTS[@]}"; do

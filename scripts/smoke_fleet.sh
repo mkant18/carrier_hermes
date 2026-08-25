@@ -111,9 +111,9 @@ else
   grep -q 'Tasker' "$ROOT/bots/calendar_manager/SOUL.md" && pass "chronos_handoff_tasker" || failc "chronos_handoff_tasker" "Chronos SOUL missing Tasker handoff"
 fi
 
-# 7 thirteen bots defined
+# 7 fourteen bots defined
 n=$(ls "$ROOT"/bots/*/SOUL.md | wc -l | tr -d ' ')
-[[ "$n" == "13" ]] && pass "thirteen_souls" || failc "thirteen_souls" "count=$n"
+[[ "$n" == "14" ]] && pass "fourteen_souls" || failc "fourteen_souls" "count=$n"
 
 # 8 bot homes
 homes=0
@@ -126,6 +126,7 @@ api_watcher
 lockbox
 firstmate
 hermes_ai_explorer
+passive_watch
 email_reader
 email_drafter
 calendar_manager
@@ -134,7 +135,7 @@ vault_librarian
 obsidian_archivist
 research_agent
 IDS
-[[ "$homes" == "13" ]] && pass "thirteen_bot_homes" || failc "thirteen_bot_homes" "homes=$homes"
+[[ "$homes" == "14" ]] && pass "fourteen_bot_homes" || failc "fourteen_bot_homes" "homes=$homes"
 
 # 9 lockbox grant verify (shadow fixture if present)
 if [[ -f "$HOME/.hermes/carrier/lockbox/keys/helm-grant-v1" ]]; then

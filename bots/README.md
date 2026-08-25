@@ -11,16 +11,19 @@ In Carrier Hermes, every agent is a **Bot** — a named roster member with its o
 | `api_watcher` | **Ledger** | Command (beside Helm) | Fleet-wide $ spend (OpenRouter etc.); SPEND_HALT |
 | `lockbox` | **LockBox** | Command / security (beside Helm) | Doppler secrets + permission grants; CoS handshake only |
 | `firstmate` | **Mate** | Coding | Default coding crew |
-| `hermes_ai_explorer` | **Scout** | Meta | Optimize workflow/cost/connectors (advisory) |
+| `hermes_ai_explorer` | **Chart** | Recon Wing lead | Intelligence synthesis + fleet optimization proposals |
+| `passive_watch` | **Sonar** | Recon Wing | Passive ecosystem signals — daily cheap watch; feeds Chart |
 | `email_reader` | **Inbox** | Ops | Email triage (no send) |
 | `email_drafter` | **Quill** | Ops | Drafts only → Discord |
 | `calendar_manager` | **Chronos** | Ops | Calendar read; hand task specs to Tasker |
 | `todoist_manager` | **Tasker** | Ops | All Todoist mutations |
 | `vault_librarian` | **Librarian** | Knowledge (out) | Query / health / answers from vault |
 | `obsidian_archivist` | **Clerk** | Knowledge (in) | Intake: triage artifacts → file into OSB with CoS |
-| `research_agent` | **Probe** | Research | General web research briefs |
+| `research_agent` | **Probe** | Recon Wing | On-demand web research for Michael's questions |
 
-**13 bots.** Watchers + **LockBox** sit next to Helm, not under Mate: Vigil/Ledger monitor **all** sessions/spend; LockBox stewards secrets only via Helm handshake.
+**Recon Wing:** Chart (synthesis lead) + Sonar (cheap passive signals) + Probe (on-demand research). Chart coordinates; Sonar feeds daily ecosystem signals at near-zero cost; Probe runs quality research on request.
+
+**14 bots.** Watchers + **LockBox** sit next to Helm, not under Mate: Vigil/Ledger monitor **all** sessions/spend; LockBox stewards secrets only via Helm handshake.
 
 Install path: copy each `bots/<bot_id>/SOUL.md` → bot home SOUL; set description/callsign for Bot Mode roster.
 

@@ -11,14 +11,15 @@ bots=(
   "api_watcher|Ledger — fleet-wide OpenRouter spend; SPEND_HALT"
   "lockbox|LockBox — Doppler secrets + CoS handshake redeem; no peer sidechannel"
   "firstmate|Mate — default coding crew (claude-code → codex → opencode)"
-  "hermes_ai_explorer|Scout — fleet/cost/connector proposals only"
+  "hermes_ai_explorer|Chart — Recon Wing lead; fleet intelligence synthesis + proposals"
+  "passive_watch|Sonar — Recon Wing passive watcher; daily ecosystem signals for Chart"
   "email_reader|Inbox — email triage; no send; paid DeepSeek"
   "email_drafter|Quill — drafts only to #drafts; never sends"
   "calendar_manager|Chronos — calendar only; hands tasks to Tasker"
   "todoist_manager|Tasker — all Todoist mutations"
   "vault_librarian|Librarian — vault query/health out; not intake"
   "obsidian_archivist|Clerk — vault intake in; Helm keep/discard"
-  "research_agent|Probe — general web research briefs"
+  "research_agent|Probe — Recon Wing on-demand web research"
 )
 
 for spec in "${bots[@]}"; do

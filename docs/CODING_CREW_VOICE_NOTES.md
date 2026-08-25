@@ -7,7 +7,7 @@
 ## The Coding Crew
 
 **Primary:** Mate (firstmate) — coding default for the fleet  
-**Supporting:** Scout (hermes_ai_explorer) — strategy, optimization, tech scouting  
+**Supporting:** Chart (hermes_ai_explorer) + Sonar (passive_watch) — strategy, optimization, tech scouting  
 **Under Mate's wing:** any sub-agent workers Mate spins for parallel tasks
 
 **Default voice level:** Ready Room Casual (Level 2) — drop to Bridge Formal for blockers or escalations.
@@ -56,7 +56,7 @@ Post drafts, outlines, or mid-run notes here. Level 2-3. Rougher is fine.
 | **Bolter pattern** | Retry loop / second attempt with same or adjusted approach |
 | **Waveoff** | Task aborted mid-approach (bad conditions, missing context, DISPATCH_LOCK) |
 | **FOD walk** | Pre-commit checklist: lint, credential scan, test run |
-| **LSO** | Code reviewer (Mate can LSO Scout's PRs; Helm may LSO Mate's) |
+| **LSO** | Code reviewer (Mate can LSO Chart's PRs; Helm may LSO Mate's) |
 | **LSO grade** | Code review verdict: OK wire, fair, no grade, cut |
 | **Pitching deck** | Shifting requirements, flapping API, changing context mid-task |
 | **Bingo fuel** | Token quota / spend at minimum — wrap it up |

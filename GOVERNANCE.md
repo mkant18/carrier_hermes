@@ -66,4 +66,4 @@ Drafts → Discord `#drafts` → Michael checkmark (external). No reaction-bot r
 
 ## Change control
 
-Scout proposes. Helm presents. Michael picks IDs. Implementer/Mate applies in a **separate** change job. Explorer must not `hermes config set` live.
+Chart (Recon Wing lead) proposes. Helm presents. Michael picks IDs. Implementer/Mate applies in a **separate** change job. Explorer must not `hermes config set` live.

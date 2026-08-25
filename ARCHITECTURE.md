@@ -100,12 +100,19 @@ Chief of Staff (grok-4.5 via SuperGrok OAuth, OR claude-opus-4-8/claude-sonnet-4
 - Tools: `web`, `browser`, `file` (write `_agent/research/`)
 - Note: read-only browser use
 
-**hermes_ai_explorer** (meta / optimization)
+**hermes_ai_explorer** (Chart / Recon Wing lead)
 - Model: quality — `anthropic/claude-sonnet-4-6` via Claude Max OAuth
-- Tools: `web`, `session_search`, `memory`, `file` (write `_agent/explorer/` only), OSB MCP read tools, optional `discord` (short fleet tips only)
-- Cron: 2–3× per week (not high-frequency)
-- Role: researches fleet behavior + Hermes/AI ecosystem; proposes workflow, cost, and connector optimizations to CoS/Michael. Never silent reconfig.
-- Boundary: not general research_agent; not CoS; not watcher
+- Tools: `web` (selective — prefer Sonar digest), `session_search`, `memory`, `file` (write `_agent/explorer/` only), OSB MCP read tools, optional `discord` (short fleet tips only)
+- Cron: 2–3× per week (not high-frequency); reads Sonar digests before web scraping
+- Role: intelligence synthesis + fleet/AI optimization proposals. Reads `_agent/signal_watch/` from Sonar. Never silent reconfig.
+- Boundary: not Sonar (passive signals), not Probe (general research), not Helm
+
+**passive_watch** (Sonar / Recon Wing passive feeder)
+- Model: heartbeat `no_agent` bash ($0 LLM); LLM pass `specialist` DeepSeek only on diff detected
+- Tools: `terminal` narrow (curl/hash fixed URLs), `file` (`_agent/signal_watch/`), `discord` `#fleet` HIGH signals only
+- Cron: daily `no_agent` heartbeat; LLM digest only on diff; forced weekly pass
+- Role: passive ecosystem watcher — OpenRouter pricing, Hermes changelog, one AI feed. Writes digest for Chart. Near-zero cost on quiet days.
+- Boundary: not Chart (synthesis), not Probe (on-demand research), not Vigil (session stalls)
 
 ### Knowledge layer
 
@@ -113,7 +120,7 @@ Chief of Staff (grok-4.5 via SuperGrok OAuth, OR claude-opus-4-8/claude-sonnet-4
 1. Native skills under `~/.hermes/skills/obsidian-second-brain/`
 2. MCP stdio server `obsidian-second-brain` (read/search/health; Inbox writes excluded at Trust Level 0)
 3. `OBSIDIAN_VAULT_PATH` → `/Users/michaelkanter/Desktop/Existing Folders/OBSIDIAN`
-4. Primary consumer: `vault_librarian`; secondary: `hermes_ai_explorer`, `email_drafter` (contacts read)
+4. Primary consumer: `vault_librarian`; secondary: `hermes_ai_explorer` (Chart), `email_drafter` (contacts read)
 
 See `integrations/obsidian-second-brain.md`.
 
