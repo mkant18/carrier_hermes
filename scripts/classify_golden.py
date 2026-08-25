@@ -26,6 +26,7 @@ RULES: list[tuple[str, str]] = [
     (r"research comparable|on the web", "Probe"),
     (r"what ai model price|model price changes|price changes.*week", "Chart"),
     (r"monitor openrouter pricing|monitor.*pricing.*daily|passive.*watch|ecosystem signals", "Sonar"),
+    (r"monarch|personal finance|checking balance|credit card balance|reimbursement.*monarch|budget status", "Purse"),
     (r"multi-perspective|raise tl", "Helm"),
     (r"asks lockbox directly|educate", "Helm"),
 ]

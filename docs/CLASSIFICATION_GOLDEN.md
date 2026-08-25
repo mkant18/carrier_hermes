@@ -35,6 +35,8 @@ Use in smoke: `scripts/smoke_fleet.sh classify` (Phase B) should print callsign 
 
 | 29 | What AI model price changes happened this week? | **Chart** | pulls from Sonar digest; not Probe |
 | 30 | Monitor OpenRouter pricing daily for changes | **Sonar** | passive signal watch; not Chart or Probe |
+| 31 | How much did I spend on dining in Monarch this month? | **Purse** | personal finance read-only |
+| 32 | Check outstanding reimbursements in Monarch | **Purse** | Monarch query |
 
 **Negative tests (must not misroute)**
 

@@ -39,6 +39,7 @@ MCP filters are **include/exclude on that bot home**. Default desktop home may k
 | `email_drafter` | Quill | `quality` | file, memory, skills, discord | terminal, send, todoist, calendar, browser | OSB **read** People/ only if needed |
 | `calendar_manager` | Chronos | `specialist` paid DeepSeek | file (`_agent/calendar/`), calendar **read+write** (live 2026-08-25) | todoist (Tasker exists), mail, vault write, terminal | calendar MCP when wired; **todoist excluded** |
 | `todoist_manager` | Tasker | `specialist` paid DeepSeek | file (`_agent/todoist/`), Todoist **live** mutate (2026-08-25) | calendar mutate, mail, vault, terminal | **todoist** MCP (no template import/export) |
+| `finance_reader` | Purse | `quality` Sonnet 4.6 | narrow terminal (Monarch queries), file `_agent/finance/**`, memory, session_search | broad terminal, browser, computer_use, delegation, mail, todoist, calendar, OSB write, Monarch write paths | Monarch read-only tools; no todoist/OSB write |
 
 ## Knowledge
 

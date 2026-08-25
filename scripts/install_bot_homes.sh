@@ -20,6 +20,7 @@ bots=(
   "vault_librarian|Librarian — vault query/health out; not intake"
   "obsidian_archivist|Clerk — vault intake in; Helm keep/discard"
   "research_agent|Probe — Recon Wing on-demand web research"
+  "finance_reader|Purse — personal finance read-only Monarch queries"
 )
 
 for spec in "${bots[@]}"; do

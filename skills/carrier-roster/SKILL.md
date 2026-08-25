@@ -48,7 +48,8 @@ Don’t use for: implementing code, reading mail, writing vault notes, fetching 
    11. File / save / intake → **Clerk** (Helm keep/discard)
    12. General web research → **Probe**
    13. Ecosystem signals / price watch → **Sonar**
-   14. Hard non-coding → Helm / MoA
+   14. Personal finance / Monarch Money query / budget status → **Purse**
+   15. Hard non-coding → Helm / MoA
 3. **Channel** (frozen): Kanban P1 → cron P2 → AIPass P3 → bot-chat P4. `delegate_task` **denied** for named ops/command bots.
 4. **Packet.** Paste a full job packet. Bots have zero Helm history.
 5. **Demand** a result packet (`status` + artifact or blocker) before saying “done.”
@@ -60,7 +61,7 @@ Helm=classify/dispatch | Vigil=LOCK all sessions | Ledger=SPEND_HALT all session
 LockBox=Doppler secrets + CoS handshake redeem
 Mate=coding (claude-code→codex→opencode)
 Inbox=email triage DeepSeek | Quill=drafts Sonnet no-send
-Chronos=calendar only | Tasker=Todoist only
+Chronos=calendar only | Tasker=Todoist only | Purse=finance read-only Monarch
 Librarian=vault OUT | Clerk=vault IN + Helm keep/discard | Probe=web research
 Board: carrier
 Mail: $OBSIDIAN_VAULT_PATH/_agent/mailbox/<bot_id>/{inbox,outbox}

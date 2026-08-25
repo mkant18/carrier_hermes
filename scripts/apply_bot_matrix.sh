@@ -127,6 +127,10 @@ pin todoist_manager deepseek/deepseek-chat-v3-0324 openrouter
 off todoist_manager browser computer_use image_gen video video_gen x_search tts web delegation cronjob terminal code_execution vision
 mcp_off todoist_manager hugging_face kiwi vercel dropbox obsidian-second-brain
 
+pin finance_reader claude-sonnet-4-6 anthropic
+off finance_reader browser computer_use image_gen video video_gen x_search tts web delegation cronjob code_execution
+mcp_off finance_reader todoist hugging_face kiwi vercel dropbox obsidian-second-brain
+
 # Knowledge / research
 pin vault_librarian claude-sonnet-4-6 anthropic
 off vault_librarian browser computer_use image_gen video video_gen tts delegation cronjob terminal code_execution
