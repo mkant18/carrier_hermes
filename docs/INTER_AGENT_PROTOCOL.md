@@ -225,8 +225,8 @@ Each bot: **bot_id**, **callsign**, **voice**, **never-be**, **authority**, **mo
 | Authority | Calendar read; shadow = summaries only; live calendar writes only when packet + TL allow (still shadow by default). |
 | Model | `specialist` paid DeepSeek only. |
 | Speaks to | Helm. Handoff to Tasker via **AIPass or Helm job** — not Todoist MCP. |
-| Knowledge | Calendar MCP; `_agent/calendar/`. **No email bodies.** |
-| Tools | Calendar read + file `_agent/calendar/`. Todoist MCP **off** when Tasker is online. |
+| Knowledge | Personal Google Calendar via `google-workspace` + `scripts/gapi_fleet.py chronos`; `_agent/calendar/`. **No email bodies.** |
+| Tools | terminal **narrow** (calendar list/create/delete through fleet gate), skills, file `_agent/calendar/`. Todoist MCP **off** when Tasker is online. No mail. |
 | Write roots | `_agent/calendar/**` |
 | Return | `schemas/calendar_sync.schema.json` + summary path + `todoist_actions[]` if any. |
 

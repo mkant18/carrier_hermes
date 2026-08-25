@@ -377,9 +377,10 @@ off passive_watch browser computer_use image_gen video video_gen x_search tts we
 mcp_off passive_watch todoist hugging_face kiwi vercel dropbox obsidian-second-brain
 
 # Ops
+# Inbox — terminal ON narrow (gapi_fleet Gmail read); never send
 pin email_reader grok-4.5 xai-oauth
 chain email_reader cheap
-off email_reader browser computer_use image_gen video video_gen x_search tts web delegation cronjob terminal code_execution vision
+off email_reader browser computer_use image_gen video video_gen x_search tts web delegation cronjob code_execution vision
 mcp_off email_reader todoist hugging_face kiwi vercel dropbox obsidian-second-brain
 
 pin email_drafter grok-4.5 xai-oauth
@@ -387,9 +388,10 @@ chain email_drafter cheap
 off email_drafter browser computer_use image_gen video video_gen x_search tts web delegation cronjob terminal code_execution
 mcp_off email_drafter todoist hugging_face kiwi vercel dropbox
 
+# Chronos — terminal ON narrow (gapi_fleet calendar); Todoist stays off
 pin calendar_manager grok-4.5 xai-oauth
 chain calendar_manager cheap
-off calendar_manager browser computer_use image_gen video video_gen x_search tts web delegation cronjob terminal code_execution vision
+off calendar_manager browser computer_use image_gen video video_gen x_search tts web delegation cronjob code_execution vision
 mcp_off calendar_manager todoist hugging_face kiwi vercel dropbox obsidian-second-brain
 
 pin todoist_manager grok-4.5 xai-oauth
