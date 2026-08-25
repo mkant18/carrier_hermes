@@ -1,6 +1,6 @@
 # Shadow mode — live mutation policy
 
-**Updated: 2026-08-25** — Michael exited shadow for named surfaces (this session).
+**Updated: 2026-08-25** — Michael exited shadow for named surfaces and raised vault TL to **2**.
 
 ## Live (unshadowed 2026-08-25)
 
@@ -8,14 +8,18 @@
 |---|---|---|---|
 | **Todoist API writes** | Tasker (`todoist_manager`) | `unshadow Todoist` | Job/idempotency via `_agent/todoist/state.json`; no bulk destructive without packet flags |
 | **Calendar writes** | Chronos (`calendar_manager`) | `unshadow calendar` | Calendar MCP when wired; Todoist still → Tasker |
-| **Clerk permanent intake** | Clerk (`obsidian_archivist`) | `unshadow intake` | **Only** when job packet has `trust_override: intake_enabled` (or equivalent CoS grant). Stage otherwise under `_agent/archivist/`. |
+| **Clerk permanent intake** | Clerk (`obsidian_archivist`) | `unshadow intake` + **vault TL2** | Job packet `trust_override: intake_enabled` (or CoS grant). File new notes to **`Inbox/`** (TL2). Stage under `_agent/archivist/` without grant. |
 
-Audit: `_agent/audit/events.jsonl` (helm `unshadow` events).
+Audit: `_agent/audit/events.jsonl` (helm `unshadow` + `raise_tl`).
+
+## Vault Trust Level (constitution)
+
+- **Current: TL2** (vault `CLAUDE.md`, Michael `raise TL` 2026-08-25).
+- Allowed beyond `_agent/`: **create in `Inbox/`**; **append** under `## Agent Notes` on existing notes.
+- Not yet: create/move/delete in arbitrary non-inbox folders (that’s TL3 + scoped list).
 
 ## Still gated / not open season
 
-- **Vault constitution Trust Level** remains **0** until Michael says `raise TL` and updates vault `CLAUDE.md`.  
-  Fleet intake unshadow ≠ automatic TL raise. Permanent paths outside `_agent/` still require the packet grant **and** a TL raise for full constitutional alignment.
 - OSB Inbox **write** tools stay **excluded** on default MCP and on Librarian / Helm / Scout / non-Clerk homes.
 - Clerk without `trust_override: intake_enabled` → stage only under `_agent/archivist/`.
 - Mate: never push `main`; branches OK.
@@ -36,7 +40,7 @@ Audit: `_agent/audit/events.jsonl` (helm `unshadow` events).
 
 1. Phase A freeze committed.  
 2. Phase B smokes (structural); note DeepSeek ping may flake independently.  
-3. Michael says exact go phrases per surface.  
+3. Michael says exact go phrases per surface / `raise TL`.  
 4. Standing override logged in `_agent/audit/events.jsonl`.
 
 No automatic end date. Absence of protest ≠ exit.

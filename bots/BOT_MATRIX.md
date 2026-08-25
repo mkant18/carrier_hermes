@@ -38,7 +38,7 @@ MCP filters are **include/exclude on that bot home**. Default desktop home may k
 | bot_id | Callsign | Model | Toolsets ON | Toolsets OFF | MCP |
 |---|---|---|---|---|---|
 | `vault_librarian` | Librarian | `quality` | file `_agent/librarian/`, skills, OSB read/health | Inbox writers, todoist, mail, terminal | OSB: allow search/read/health/backlinks/validate; **exclude** save/capture/update |
-| `obsidian_archivist` | Clerk | `quality` | file `_agent/archivist/` (+ vault when grant), skills, OSB read+write on **this home** | todoist, mail, calendar, terminal | OSB write tools enabled on Clerk home only; **use** only when packet `trust_override: intake_enabled` (intake unshadowed; TL still 0 until `raise TL`) |
+| `obsidian_archivist` | Clerk | `quality` | file `_agent/archivist/` + `Inbox/` when grant, skills, OSB read+write on **this home** | todoist, mail, calendar, terminal | OSB writers on Clerk home only; use with `trust_override: intake_enabled`; vault **TL2** |
 | `research_agent` | Probe | `quality` | web, browser (read-only), file `_agent/research/`, memory | mail, todoist, calendar, OSB write, discord spam | none required |
 
 ---

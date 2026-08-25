@@ -34,9 +34,9 @@ When CoS grants full intake scope (post–Trust Level 0 or explicit job flag `va
 - Create and update notes (OSB save/update tools + file tools)
 - Read any path needed to de-dupe and link
 
-**Intake unshadowed 2026-08-25** (`unshadow intake`). Permanent OSB file tools are available on **this bot home only**, and you may file permanent notes **only** when the job packet sets `trust_override: intake_enabled` (or CoS `vault_intake: approved`).  
+**Intake unshadowed 2026-08-25** (`unshadow intake`) + **vault TL2** (`raise TL`). Permanent OSB file tools are on **this bot home only**. File permanent notes **only** when the job packet sets `trust_override: intake_enabled` (or CoS `vault_intake: approved`) — prefer **`Inbox/`** for new notes; append existing notes under `## Agent Notes` when editing outside Inbox.  
 Without that grant: stage under `_agent/archivist/staging/` and `_agent/archivist/proposals-*.md`.  
-**Vault constitution TL is still 0** until Michael says `raise TL` and updates vault `CLAUDE.md` — prefer paths the job names; do not expand scope.
+Do not create outside `_agent/` + `Inbox/` (TL3 not granted).
 
 ## Workflow with CoS
 

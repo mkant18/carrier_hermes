@@ -17,20 +17,22 @@ Also set in `~/.hermes/.env` so every profile inherits it.
 | **Native Hermes skills** | Built via `obsidian-second-brain` Hermes adapter → `~/.hermes/skills/obsidian-second-brain/` | Playbooks (ingest patterns, health, research helpers) |
 | **MCP server** | `integrations/obsidian-mcp-server/server.py` via stdio | Bounded tools: search, read, health, backlinks, validate |
 
-## Trust Level 0 policy (fleet) + Clerk intake unshadow (2026-08-25)
+## Trust Level 2 policy (fleet) + Clerk intake (2026-08-25)
 
-Vault `CLAUDE.md` rules (constitution **still TL0** until Michael says `raise TL`):
+Vault `CLAUDE.md` is **TL2**:
 
 - READ any note
-- WRITE only `_agent/**` by default
-- Never edit/move/delete outside `_agent/` without raised TL + grant
+- WRITE `_agent/**`
+- **Create** new notes in `Inbox/`
+- **Append** under `## Agent Notes` on existing notes
+- No free create/move/delete in arbitrary non-inbox folders (TL3)
 
 **MCP tool filter for Hermes:**
 
 - **Default / Librarian / Scout / Helm / everyone except Clerk — Exclude writes:** `obsidian_save_note`, `obsidian_capture`, `obsidian_update_note`
-- **Clerk (`obsidian_archivist`) home only:** those write tools **enabled** structurally; **use** only when job has `trust_override: intake_enabled` (fleet `unshadow intake` 2026-08-25)
+- **Clerk (`obsidian_archivist`) home only:** those write tools **enabled** structurally; **use** only when job has `trust_override: intake_enabled`
 
-Profiles that write without OSB MCP: use file tools under `$OBSIDIAN_VAULT_PATH/_agent/...` only.
+Profiles that write without OSB MCP: file tools under `$OBSIDIAN_VAULT_PATH/_agent/...` or `Inbox/` per TL2 + job grant.
 
 ## Install skills (from OSB repo)
 

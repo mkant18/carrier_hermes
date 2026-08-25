@@ -12,7 +12,7 @@ Constitution + **structural** enforcement. SOUL text is not enough.
 |---|---|
 | One face to Michael | Gateway inbound = Helm only. Other bots have no Discord consume unless explicitly designed later. |
 | No sends | No mail-send MCP/CLI in any bot `hermes -p <id> tools` dump. Quill writes `_agent/drafts/` + `#drafts` only. |
-| Vault TL0 (constitution) | Default MCP + non-Clerk homes exclude `obsidian_save_note`, `obsidian_capture`, `obsidian_update_note`. **Clerk** may use those tools only when packet has `trust_override: intake_enabled` (fleet intake unshadowed 2026-08-25). Constitution TL still 0 until Michael says `raise TL` + edits vault `CLAUDE.md`. File default: `_agent/**` only. |
+| Vault TL2 (constitution, 2026-08-25) | Default MCP + non-Clerk homes exclude `obsidian_save_note`, `obsidian_capture`, `obsidian_update_note`. **Clerk** may use those tools when packet has `trust_override: intake_enabled`. Constitution: write `_agent/**`, create in `Inbox/`, append under `## Agent Notes`. TL3 folders not open. |
 | Tool scope | Per-bot home toolsets + MCP include/exclude (`bots/BOT_MATRIX.md`). Dispatch via Kanban assignee = that home. |
 | No fake specialists | Helm `delegate_task` **denied** for named ops/command bots (inherits Helm tools). |
 | Idempotency | `_agent/<domain>/state.json` + schema validator before side effects. |
@@ -25,7 +25,7 @@ Constitution + **structural** enforcement. SOUL text is not enough.
 | Calendar vs tasks | Chronos calendar; Tasker Todoist; handoff via job/AIPass. |
 | Cost pins | Inbox/Chronos/Tasker = paid DeepSeek only. Heartbeats = `no_agent`. |
 | AIPass hybrid | Vendored file mailbox only. No pip AIPass / `.trinity/` / `.ai_mail.local/`. |
-| Shadow | **Partial exit 2026-08-25:** Todoist + calendar live; Clerk permanent only with `trust_override: intake_enabled`. See `prompts/SHADOW_MODE.md`. Vault TL raise is separate (`raise TL`). |
+| Shadow | **Partial exit 2026-08-25:** Todoist + calendar live; Clerk permanent with grant + vault **TL2** (`Inbox/` + Agent Notes append). See `prompts/SHADOW_MODE.md`. |
 | Secrets only via LockBox + Helm handshake | Structural grant verify (`scripts/lockbox_verify_grant.py`) before Doppler; separate `lockbox` bot home; no secrets in AIPass/Discord/result summaries; deny default; atomic jti single-redeem; mandatory subject+expiry; subset checks. Signer is `lockbox_sign_grant.py` (Helm-only). |
 | LockBox no China routing | Model pin Gemini Flash ↔ GPT-4o-mini only; never DeepSeek/specialist alias. |
 | No rotation policy engine V1 | On-demand rotate only under grant; no forced calendar nags. |
@@ -49,8 +49,10 @@ Before **any** new metered dispatch:
 
 | TL | Meaning |
 |---|---|
-| **0 (current constitution)** | Read vault; default write `_agent/` only. Fleet: Todoist + calendar live (unshadowed). Clerk permanent file only with packet `trust_override: intake_enabled` + intake unshadow. |
-| Raised by Michael (`raise TL` + vault `CLAUDE.md`) | Constitution allows scoped permanent writes beyond `_agent/` per level table in vault `CLAUDE.md`. |
+| **0** | Read vault; write `_agent/` only. |
+| **1** | + Append under `## Agent Notes` on existing notes. |
+| **2 (current, 2026-08-25)** | + Create new notes in `Inbox/`. Fleet: Todoist/calendar live; Clerk OSB writes only with `trust_override: intake_enabled`. |
+| **3 (future)** | + Create in specific non-inbox folders scoped in vault `CLAUDE.md`. |
 
 Never raise TL in a commit without Michael’s sentence on record.
 
