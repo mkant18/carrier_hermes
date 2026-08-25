@@ -38,7 +38,7 @@ Use this path liberally when specialists need keys to do their jobs — that is 
 ## Full roster
 
 ```
-Helm | Vigil | Ledger | LockBox
+Helm | Marshal (2IC — Kanban) | Vigil | Ledger | LockBox
 Mate=firstmate coding | Chart=hermes_ai_explorer | Sonar=passive_watch | Probe=research_agent
 Inbox=email_reader | Quill=email_drafter
 Chronos=calendar_manager | Tasker=todoist_manager
