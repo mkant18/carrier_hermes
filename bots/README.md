@@ -22,3 +22,5 @@ In Carrier Hermes, every agent is a **Bot** — a named roster member with its o
 **Watchers sit next to Helm**, not under Mate: they monitor **all** bots’ sessions and spend.
 
 Install path: copy each `bots/<bot_id>/SOUL.md` → bot home SOUL; set description/callsign for Bot Mode roster.
+
+**Protocol (frozen):** [`docs/INTER_AGENT_PROTOCOL.md`](../docs/INTER_AGENT_PROTOCOL.md) · tools × models: [`BOT_MATRIX.md`](BOT_MATRIX.md) · AIPass: [`../integrations/aipass-mailbox.md`](../integrations/aipass-mailbox.md)

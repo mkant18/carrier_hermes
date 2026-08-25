@@ -103,17 +103,18 @@ hermes mcp test obsidian-second-brain
 
 | Profile | Access |
 |---|---|
-| vault_librarian | Primary OSB consumer (read + `_agent/` write) |
-| hermes_ai_explorer | Read vault + write `_agent/explorer/` |
-| email_drafter | May read People/ / contacts via search; write drafts under `_agent/drafts/` only |
-| chief_of_staff | No direct vault file tools; routes to librarian |
-| research_agent | May ask librarian or write `_agent/research/` only |
+| vault_librarian (**Librarian**) | Query-out: OSB read/health + `_agent/librarian/` |
+| obsidian_archivist (**Clerk**) | Intake-in: stage `_agent/archivist/`; OSB write tools **only** when intake enabled |
+| hermes_ai_explorer (**Scout**) | Read vault + write `_agent/explorer/` |
+| email_drafter (**Quill**) | May read People/ / contacts; write `_agent/drafts/` only |
+| chief_of_staff (**Helm**) | No vault file tools; routes Librarian vs Clerk |
+| research_agent (**Probe**) | Write `_agent/research/`; Clerk files keepers |
 
 ## _agent tree (create if missing)
 
 ```bash
 VAULT="$OBSIDIAN_VAULT_PATH"
-mkdir -p "$VAULT/_agent"/{email,drafts,calendar,research,watcher,librarian,explorer,state,audit}
+mkdir -p "$VAULT/_agent"/{email,drafts,calendar,todoist,research,watcher,api_watcher,librarian,archivist,explorer,state,audit,mailbox}
 ```
 
 ## Optional OSB crons

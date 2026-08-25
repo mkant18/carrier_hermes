@@ -92,4 +92,4 @@ import mailbox as aipass
 # write Message to recipient inbox path...
 ```
 
-See also `scripts/aipass_send.py` once created in Phase B.
+Sender: `scripts/aipass_send.py` (stdlib `mailbox` clash — load `aipass_mailbox` via importlib).

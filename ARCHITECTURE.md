@@ -1,5 +1,10 @@
 # Architecture: Carrier Hermes
 
+> **Phase A freeze (2026-08-25):** identities, channels, and cost pins live in  
+> [`docs/INTER_AGENT_PROTOCOL.md`](docs/INTER_AGENT_PROTOCOL.md), [`bots/README.md`](bots/README.md), [`COST_MODEL.md`](COST_MODEL.md).  
+> This page still contains **stale** 8-bot / free-rotate diagrams — do not implement from the tier diagram below.  
+> 12 bots; Vigil ≠ Sentry; Ledger fleet-wide; Chronos ≠ Tasker; Librarian ≠ Clerk; hybrid AIPass; no `:free` specialists.
+
 ## Design philosophy
 
 The original Carrier Ops plan required 8+ separate open-source tools, Docker containers, and a WSL2 machine. This implementation achieves the same fleet using Hermes Agent as the single runtime on macOS, with three key principles:

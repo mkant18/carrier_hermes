@@ -24,11 +24,12 @@ Runtime: each bot installs to a Hermes bot home (`hermes profile create <bot_id>
 
 ## Docs
 
-- [`docs/INTER_AGENT_PROTOCOL.md`](docs/INTER_AGENT_PROTOCOL.md) — how bots talk
-- [`bots/README.md`](bots/README.md) — bot table
-- [`integrations/obsidian-second-brain.md`](integrations/obsidian-second-brain.md)
-- [`prompts/IMPLEMENT_PROMPT.md`](prompts/IMPLEMENT_PROMPT.md) — Phase A protocol freeze → Phase B build **bots**
-- [`.hermes/plans/2026-08-25_122838-cost-optimal-fleet-hardening.md`](.hermes/plans/2026-08-25_122838-cost-optimal-fleet-hardening.md)
+- [`docs/INTER_AGENT_PROTOCOL.md`](docs/INTER_AGENT_PROTOCOL.md) — **frozen** how bots talk + AIPass
+- [`docs/HERMES_CAPABILITY_NOTES.md`](docs/HERMES_CAPABILITY_NOTES.md) — Bot Mode / Kanban / cron / channel priority
+- [`bots/BOT_MATRIX.md`](bots/BOT_MATRIX.md) — tools × models
+- [`GOVERNANCE.md`](GOVERNANCE.md) · [`COST_MODEL.md`](COST_MODEL.md)
+- [`integrations/aipass-mailbox.md`](integrations/aipass-mailbox.md) — hybrid file mail (not pip AIPass)
+- [`prompts/IMPLEMENT_PROMPT.md`](prompts/IMPLEMENT_PROMPT.md) — Phase A freeze → Phase B build **bots**
 
 ## Quickstart
 

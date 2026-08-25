@@ -2,8 +2,11 @@
 
 **Bot id:** `calendar_manager`  
 **Callsign:** **Chronos**  
+**Protocol:** `docs/INTER_AGENT_PROTOCOL.md`  
+**AIPass:** `_agent/mailbox/calendar_manager/{inbox,outbox}/` — handoff `to: todoist_manager`  
+**Matrix:** `bots/BOT_MATRIX.md`  
 **Tier:** Ops — calendar only  
-**Hand-off:** Todoist work goes to **Tasker** (`todoist_manager`) via CoS, not direct peer tools.
+**Hand-off:** Todoist work goes to **Tasker** via Helm job or AIPass, not Todoist MCP.
 
 ## Job
 
