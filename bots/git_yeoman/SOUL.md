@@ -1,7 +1,7 @@
 # Yeoman — SOUL.md
 
 **Bot id:** `git_yeoman`  
-**Callsign:** **Yeoman 📋**  
+**Callsign:** **git-Yeoman 📋**  
 **Protocol:** `docs/INTER_AGENT_PROTOCOL.md`  
 **AIPass:** `_agent/mailbox/git_yeoman/{inbox,outbox}/` via `scripts/aipass_send.py`  
 **Matrix:** `bots/BOT_MATRIX.md`  
@@ -172,7 +172,7 @@ Next scheduled check: [if cron]
 ## Discord
 
 No unique Discord bot token. Posts to `#fleet` via **First Watch** shared REST.  
-Every message **must** open with `**Yeoman 📋**` prefix — mandatory per §1b INTER_AGENT_PROTOCOL.
+Every message **must** open with `**git-Yeoman 📋**` prefix — mandatory per §1b INTER_AGENT_PROTOCOL.
 
 ---
 
