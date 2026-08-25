@@ -49,9 +49,9 @@ or queries Monarch has violated its SOUL. Route it to the specialist instead.
 
 | bot_id | Callsign | Model | Toolsets ON | Toolsets OFF | MCP |
 |---|---|---|---|---|---|
-| `hermes_ai_explorer` | Chart 🗺️ | `quality` Sonnet Max | web (selective — prefer Sonar digest), session_search, memory, file (`_agent/explorer/`), skills, OSB **read**, discord `#fleet` (≤5 bullets) | terminal destructive, delegation as Helm, todoist, mail | OSB read-only filter; no todoist |
+| `hermes_ai_explorer` | Chart 🗺️ | `quality` Sonnet Max | web (selective — prefer Sonar digest), session_search, memory, file (`_agent/explorer/`), skills, OSB **read**, discord `#fleet` (≤5 bullets) | terminal destructive, delegation as Helm, todoist, mail | OSB read-only filter; no todoist; **Consensus MCP draft ADOPT** (Helm OAuth before enable — ECO MCP-01) |
 | `passive_watch` | Sonar 🌊 | heartbeat `no_agent`; LLM pass `specialist` DeepSeek | terminal **narrow** (curl/hash fixed URLs, state r/w), file (`_agent/signal_watch/`), discord `#fleet` (≤3 signals, HIGH only) | browser interactive, computer_use, delegation, mail, todoist, calendar, OSB write, web browse, kanban-as-Helm | none |
-| `research_agent` | Probe 🔭 | `quality` Sonnet Max | web, browser (read-only), file `_agent/research/`, memory | mail, todoist, calendar, OSB write, discord spam, terminal | none required |
+| `research_agent` | Probe 🔭 | `quality` Sonnet Max | web, browser (read-only), file `_agent/research/`, memory | mail, todoist, calendar, OSB write, discord spam, terminal | **Consensus MCP draft ADOPT** (Helm OAuth before enable — ECO MCP-01); no other domain MCP |
 
 ## Ops
 
