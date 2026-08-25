@@ -39,10 +39,10 @@ bu = str(m.get("base_url") or "")
 if "opencode" in bu or ":free" in bu or bu.strip() == "":
     m.pop("base_url", None)
 cfg["fallback_providers"] = [
-    {"provider": "openrouter", "model": "google/gemini-3.7-flash"},
-    {"provider": "openrouter", "model": "deepseek/deepseek-chat-v3-0324"},
     {"provider": "anthropic", "model": "claude-sonnet-4-6"},
     {"provider": "xai-oauth", "model": "grok-4.5"},
+    {"provider": "openrouter", "model": "deepseek/deepseek-chat-v3-0324"},
+    {"provider": "openrouter", "model": "google/gemini-3.7-flash"},
 ]
 # Super-agent tool surface
 cfg["platform_toolsets"] = {"cli": ["hermes-cli"]}

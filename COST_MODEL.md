@@ -20,18 +20,25 @@ Subscription-first. Pay-per-token only for high-volume structured ops. **Never**
 
 | Work class | Billing | Model pin | Never |
 |---|---|---|---|
-| Helm classify/dispatch | SuperGrok $0 marginal | `xai-oauth/grok-4.5` (`smart`) | Opus/Sonnet for routing |
+| Helm classify/dispatch | SuperGrok $0 marginal | `xai-oauth/grok-4.6` (`smart`) | Opus/Sonnet for routing |
 | Drafts / vault Q&A / research / Clerk judgment | Claude Max $0 marginal | `anthropic/claude-sonnet-4-6` (`quality`) | Free small models for voice |
-| Hard multi-view | SuperGrok aggregator + cheap refs | MoA `frontier` | Opus on every research ask |
+| Complex multi-perspective thinking | Claude Max / SuperGrok (or Gemini 3.7 Flash **only when subs run out**) | `frontier-quality` / `smart` | Free small models |
 | Email triage, calendar, Todoist | OpenRouter **paid** stable | `openrouter/deepseek/deepseek-chat-v3-0324` (`specialist` / `rote` / `cheap`) | `:free` rotate |
-| Aux (titles, compression) | Free or cheapest paid | one pinned aux + DeepSeek fallback | Subscription main model |
-| Vigil / Ledger heartbeat | **$0 LLM** | bash `no_agent` | Gemma every 5m |
-| LockBox judgment / redeem | OpenRouter **paid** non-China | `openrouter/google/gemini-2.5-flash` (`lockbox` / `security-cheap`); fallback `openrouter/openai/gpt-4o-mini` | DeepSeek, Moonshot, Qwen CN, PRC-primary, `:free` |
+| Aux (titles, compression) | Cheap paid | DeepSeek V3 | Subscription main model |
+| Watcher heartbeats | **$0 LLM** | bash `no_agent` | Gemma every 5m |
+| LockBox judgment / redeem | OpenRouter **paid non-China** | `openrouter/google/gemini-2.5-flash` (`lockbox` / `security-cheap`); fallback `openrouter/openai/gpt-4o-mini` | DeepSeek, Moonshot, Qwen CN, PRC-primary, `:free` |
 | LockBox high-blast deny | Claude Max rare | short `quality` Sonnet | Cheap PRC models |
 | LockBox Doppler health | **$0 LLM** | bash `no_agent` | LLM heartbeat |
 | Coding implementer/reviewer | Claude Max (or Grok if limited) | `quality` | Free models writing prod code |
 | Coding janitor/docs | Paid DeepSeek **or** Max | `specialist` | Rotating free as merge gate |
-| MoA references | Free/cheap OK | 2 refs max | Free ref as sole decider |
+
+---
+
+## Subscription Exhaustion & Fallback Policy
+
+1. **Subscription Tiers First ($0 marginal):** Claude Max (Opus 5 / Sonnet 4.6) & xAI SuperGrok (Grok 4.6 / 4.5).
+2. **Rote / High-Volume Tasks:** Always send directly to cheap paid DeepSeek V3 (`openrouter/deepseek/deepseek-chat-v3-0324`).
+3. **Gemini 3.7 Flash Role:** Gemini 3.7 Flash is strictly a **reserve overflow model for complex thinking** when Claude Max and SuperGrok subscriptions run out of usage. It is **never** used for routine operations, rote execution, or as a default specialist model. Once complex synthesis completes, all downstream rote/execution work returns immediately to DeepSeek V3.
 
 ---
 
