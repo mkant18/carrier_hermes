@@ -82,7 +82,9 @@ def or_fetch(key: str, endpoint: str) -> dict[str, Any]:
 
 def read_profile_db(db_path: Path) -> dict[str, Any]:
     """Read session_model_usage + sessions from one profile state.db."""
-    profile = db_path.parent.name
+    # Default profile lives at ~/.hermes/state.db (parent = .hermes, not a profile name)
+    parent_name = db_path.parent.name
+    profile = "default" if parent_name == ".hermes" else parent_name
     try:
         conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
         conn.row_factory = sqlite3.Row
@@ -135,7 +137,11 @@ def read_profile_db(db_path: Path) -> dict[str, Any]:
 
 def parse_log_tail(profile: str, lines: int = 500) -> list[dict]:
     """Parse recent API call lines from a profile's agent.log."""
-    log_path = PROFILES_DIR / profile / "logs" / "agent.log"
+    # Default profile log lives at ~/.hermes/logs/agent.log
+    if profile == "default":
+        log_path = HOME / ".hermes" / "logs" / "agent.log"
+    else:
+        log_path = PROFILES_DIR / profile / "logs" / "agent.log"
     if not log_path.exists():
         return []
     calls = []
@@ -256,8 +262,11 @@ def run_probe(full: bool = False, live_only: bool = False, fetch_or_activity: bo
                           "Request one via Helm → LockBox to unlock this view.",
             }
 
-    # ── Parse all profile DBs ────────────────────────────────────────────────
+    # ── Parse all profile DBs (including the default profile at ~/.hermes/state.db) ──
     dbs = sorted(glob.glob(str(PROFILES_DIR / "*/state.db")))
+    default_db = HOME / ".hermes" / "state.db"
+    if default_db.exists() and str(default_db) not in dbs:
+        dbs = [str(default_db)] + dbs
     by_profile: dict[str, Any] = {}
     by_model: dict[str, Any] = {}
     by_provider: dict[str, Any] = {}
@@ -348,8 +357,9 @@ def run_probe(full: bool = False, live_only: bool = False, fetch_or_activity: bo
 
     # ── Parse live log calls ────────────────────────────────────────────────
     all_live_calls: list[dict] = []
-    profile_names = [Path(db).parent.name for db in dbs]
-    for profile in profile_names:
+    for db_path in dbs:
+        parent_name = Path(db_path).parent.name
+        profile = "default" if parent_name == ".hermes" else parent_name
         all_live_calls.extend(parse_log_tail(profile, lines=200))
     # Sort by ts desc, keep top 50
     all_live_calls.sort(key=lambda x: x["ts"], reverse=True)

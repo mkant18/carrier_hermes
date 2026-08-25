@@ -49,13 +49,20 @@ BOLD = "\033[1m"
 
 
 def get_log_paths() -> list[Path]:
-    return sorted(Path(p) for p in glob.glob(str(PROFILES_DIR / "*/logs/agent.log")))
+    paths = sorted(Path(p) for p in glob.glob(str(PROFILES_DIR / "*/logs/agent.log")))
+    # Default profile log lives at ~/.hermes/logs/agent.log (not inside profiles/)
+    default_log = HOME / ".hermes" / "logs" / "agent.log"
+    if default_log.exists():
+        paths = [default_log] + paths
+    return paths
 
 
 def parse_calls_from(log_path: Path, from_line: int = 0) -> tuple[list[dict], int]:
     """Read new lines from log_path starting at from_line. Returns (new_calls, new_line_count)."""
     calls = []
-    profile = log_path.parent.parent.name
+    # Default profile log is at ~/.hermes/logs/agent.log
+    parent = log_path.parent.parent.name
+    profile = "default" if parent == ".hermes" else parent
     try:
         lines = log_path.read_text(errors="replace").splitlines()
         new_lines = lines[from_line:]
