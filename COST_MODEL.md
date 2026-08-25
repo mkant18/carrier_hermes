@@ -13,6 +13,12 @@ Subscription-first. Pay-per-token only for high-volume structured ops. **Never**
 5. Never rotate free models on `email_reader`, `calendar_manager`, or `todoist_manager`.
 6. Coding defaults to Mate on subscription tiers.
 7. Helm classification stays on SuperGrok (do not burn Claude on “what is this request?”).
+8. **HARD BILLING LOCK (PERIOD, FULL STOP):** Anthropic/Claude and xAI/Grok are **OAuth/subscription only**.
+   - Allowed providers: `anthropic`, `xai-oauth`.
+   - **OpenRouter / metered aggregators are ALLOWLIST-ONLY** (DeepSeek flash/chat, Gemini Flash/Lite, gpt-oss). Default deny.
+   - **Absolute deny** on metered transports for any model slug matching Claude/Anthropic/Sonnet/Opus/Haiku **or** Grok/x-ai — even if someone edits the allowlist.
+   - **Forbidden:** `ANTHROPIC_API_KEY`, `XAI_API_KEY`, bare provider `xai`, `base_url` openrouter.ai + Claude/Grok.
+   - Enforced by `scripts/or_billing_policy.py` + `scripts/billing_guard.py` + optional `scripts/sync_or_billing_guardrail.py` (OpenRouter workspace allowlist).
 
 ---
 

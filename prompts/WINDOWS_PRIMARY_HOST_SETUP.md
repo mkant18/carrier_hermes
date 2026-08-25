@@ -75,11 +75,18 @@ Clone: `%USERPROFILE%\carrier_hermes` → `$HOME/carrier_hermes`
 1. Full bot roster from repo scripts/matrix (18+ including Lts, LockBox, Marshal/Yeoman if present).
 2. **Helm SUPER-USER** — never strip CoS tools in matrix apply. **No Doppler ST on Helm.**
 3. **LockBox** sole Doppler service-token holder; `LOCKBOX_SHADOW_MODE=true` until Michael enables live redeem.
-4. **HARD BILLING RULE — Anthropic + Grok are OAuth/subscription ONLY:**
-   - Allowed: `provider: anthropic` (Claude Max OAuth), `provider: xai-oauth` (SuperGrok).
-   - **Forbidden forever:** `ANTHROPIC_API_KEY`, `XAI_API_KEY`, `GROK_API_KEY`, bare provider `xai`, any OpenRouter route containing `anthropic/`, `claude-*`, `x-ai/`, `grok`.
-   - OpenRouter **only** for cheap tails: DeepSeek, Gemini Flash/Lite, gpt-oss (LockBox nocn), etc.
-   - Enforce with `scripts/billing_guard.py` (must PASS) after matrix apply and in smokes.
+4. **HARD BILLING RULE — PERIOD, FULL STOP:**
+   - Anthropic/Claude + xAI/Grok = **OAuth/subscription ONLY** (`provider: anthropic`, `provider: xai-oauth`).
+   - **OpenRouter is ALLOWLIST-ONLY (default deny).** Only DeepSeek flash/chat, Gemini Flash/Lite, gpt-oss may ride OR.  
+     Any other OR model — including **every** `anthropic/*`, `x-ai/*`, bare `claude*`, bare `grok*`, GPT-4/5, Gemini Pro — is a hard fail.
+   - Also blocks `base_url: https://openrouter.ai/...` + Claude/Grok even if `provider` is disguised.
+   - Also blocks other metered aggregators (together, fireworks, bedrock, …) for the same families.
+   - **Forbidden env:** `ANTHROPIC_API_KEY`, `XAI_API_KEY`, `GROK_API_KEY`, etc.
+   - SSoT: `scripts/or_billing_policy.py`. Enforce:
+     `python3 scripts/or_billing_policy.py && python3 scripts/billing_guard.py --fix-env --fix-config`
+     (matrix apply + smoke_fleet both gate). Optionally push workspace allowlist:
+     `python3 scripts/sync_or_billing_guardrail.py` (needs `OPENROUTER_MANAGEMENT_KEY`).
+   - If SuperGrok or Claude Max OAuth is broken: **STOP**. Never “fix” via OpenRouter Claude/Grok or API keys.
 5. Named bots via Kanban/cron/AIPass — never CoS `delegate_task` leaves for ops/command bots.
 6. One Discord gateway: Carrier Ops on Helm only. First Watch + wings = REST outbound.
 7. No mail send. Secrets never in git/chat/SOUL. Values with `=` → Doppler REST write (not CLI `KEY=value`).
@@ -239,12 +246,17 @@ lockbox / security-cheap  → openrouter/openai/gpt-oss-120b   # nocn
 If SuperGrok or Claude Max OAuth is broken, **stop and tell Michael**.  
 Do **not** add `ANTHROPIC_API_KEY`, `XAI_API_KEY`, or OpenRouter Claude/Grok routes.
 
-### 4.4 Guard must pass
+### 4.4 Guard must pass (absolute)
 
 ```bash
-python3 "$CARRIER_HERMES_ROOT/scripts/billing_guard.py"
-# expect: billing_guard: PASS
+python3 "$CARRIER_HERMES_ROOT/scripts/or_billing_policy.py"   # self_test OK
+python3 "$CARRIER_HERMES_ROOT/scripts/billing_guard.py" --fix-env --fix-config
+# expect: billing_guard: PASS — OpenRouter allowlist-only; zero Anthropic/Claude/Grok...
+# optional account-level lock (management key):
+python3 "$CARRIER_HERMES_ROOT/scripts/sync_or_billing_guardrail.py" || true
 ```
+
+If FAIL → do not proceed to bot chats. Fix or stop.
 
 ---
 

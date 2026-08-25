@@ -110,15 +110,17 @@ PY
 # ---------------------------------------------------------------------------
 chain() {
   local id="$1" tier="$2" primary_model="${3:-grok-4.5}" primary_provider="${4:-xai-oauth}"
+  CARRIER_HERMES_ROOT="${CARRIER_HERMES_ROOT:-$HOME/carrier_hermes}" \
   CHAIN_ID="$id" CHAIN_TIER="$tier" CHAIN_PRIMARY_MODEL="$primary_model" CHAIN_PRIMARY_PROVIDER="$primary_provider" python3 - <<'PY'
-import os
+import os, sys
 from pathlib import Path
 import yaml
 
-# POLICY: Frontier models (Claude Opus, Grok-4.x) are SUBSCRIPTION-ONLY.
-# They MUST NEVER appear in fallback_providers via openrouter or any per-token provider.
-# Subscription providers for frontier: anthropic (Claude Max), xai-oauth (SuperGrok).
-# OpenRouter is ONLY permitted for cheap non-frontier models below.
+ROOT = Path(os.environ.get("CARRIER_HERMES_ROOT", Path.home() / "carrier_hermes"))
+sys.path.insert(0, str(ROOT / "scripts"))
+from billing_policy import violation_for_route, scrub_aliases
+
+# OpenRouter tails — NEVER Anthropic/Claude or Grok. Guarded by billing_policy.
 TAILS = {
     "command": [
         {"provider": "openrouter", "model": "deepseek/deepseek-chat-v3-0324"},
@@ -134,23 +136,26 @@ TAILS = {
     ],
 }
 
-# Guard: refuse Anthropic/Grok via openrouter or API tokens — OAuth only.
-FORBIDDEN_OR = (
-    "anthropic/", "claude-opus", "claude-sonnet", "claude-haiku", "claude-3", "claude-4",
-    "x-ai/", "xai/", "grok-", "grok/",
-)
 for tier_name, entries in TAILS.items():
     for e in entries:
-        m = e["model"].lower()
-        if e["provider"] == "openrouter" and any(f in m for f in FORBIDDEN_OR):
-            raise ValueError(f"BILLING VIOLATION: {e['provider']}/{e['model']} in TAILS[{tier_name!r}]")
-        if e["provider"] in ("xai",):
-            raise ValueError(f"BILLING VIOLATION: use xai-oauth not {e['provider']}")
+        err = violation_for_route(
+            provider=e["provider"], model=e["model"], where=f"TAILS[{tier_name!r}]"
+        )
+        if err:
+            raise ValueError(err)
 
 bot = os.environ["CHAIN_ID"]
 tier = os.environ["CHAIN_TIER"]
 primary_model = os.environ.get("CHAIN_PRIMARY_MODEL", "grok-4.5")
 primary_provider = os.environ.get("CHAIN_PRIMARY_PROVIDER", "xai-oauth")
+
+# Primary may be anthropic OAuth or xai-oauth — never openrouter+claude/grok
+err = violation_for_route(
+    provider=primary_provider, model=primary_model, where=f"primary:{bot}"
+)
+if err:
+    raise ValueError(err)
+
 p = Path.home() / ".hermes/profiles" / bot / "config.yaml"
 cfg = (yaml.safe_load(p.read_text()) if p.exists() else {}) or {}
 
@@ -161,9 +166,22 @@ m["provider"] = primary_provider
 m.pop("fallback", None)
 cfg.pop("fallback_model", None)
 
-cfg["fallback_providers"] = [
+fb_list = [
     {"provider": "anthropic", "model": "claude-sonnet-5"},
 ] + [dict(x) for x in TAILS[tier]]
+for i, fb in enumerate(fb_list):
+    err = violation_for_route(
+        provider=fb.get("provider"), model=fb.get("model"), where=f"{bot}.fallback[{i}]"
+    )
+    if err:
+        raise ValueError(err)
+cfg["fallback_providers"] = fb_list
+
+# Scrub any pre-existing aliases that smuggle OR+Claude/Grok
+aliases = m.get("aliases")
+if isinstance(aliases, dict):
+    for line in scrub_aliases(aliases):
+        print(line)
 
 p.parent.mkdir(parents=True, exist_ok=True)
 p.write_text(yaml.safe_dump(cfg, sort_keys=False, default_flow_style=False))
@@ -189,8 +207,14 @@ pin chief_of_staff grok-4.5 xai-oauth
 hermes -p chief_of_staff tools enable web browser terminal file code_execution vision image_gen x_search tts skills todo memory session_search clarify delegation cronjob computer_use --platform cli >/dev/null || true
 # Prefer hermes-cli meta bundle if present
 python3 - <<'PY'
+import os, sys, copy
 from pathlib import Path
-import yaml, copy
+import yaml
+
+ROOT = Path(os.environ.get("CARRIER_HERMES_ROOT", Path.home() / "carrier_hermes"))
+sys.path.insert(0, str(ROOT / "scripts"))
+from billing_policy import violation_for_route, scrub_aliases, walk_config_routes
+
 default = yaml.safe_load((Path.home()/".hermes/config.yaml").read_text()) or {}
 p = Path.home() / ".hermes/profiles/chief_of_staff/config.yaml"
 cfg = yaml.safe_load(p.read_text()) or {}
@@ -200,50 +224,40 @@ m["provider"] = "xai-oauth"
 m.pop("fallback", None)
 cfg.pop("fallback_model", None)
 bu = str(m.get("base_url") or "")
-if "opencode" in bu or ":free" in bu or bu.strip() == "":
+if "opencode" in bu or ":free" in bu or bu.strip() == "" or "openrouter" in bu.lower():
     m.pop("base_url", None)
-# Helm keeps the QUALITY paid tail (command tier) — it coordinates the fleet.
-# POLICY: frontier models (Opus, Grok-4) via openrouter are STRICTLY FORBIDDEN.
+# Helm QUALITY paid tail — OpenRouter NEVER carries Claude/Grok
 cfg["fallback_providers"] = [
     {"provider": "anthropic", "model": "claude-sonnet-5"},
     {"provider": "openrouter", "model": "deepseek/deepseek-chat-v3-0324"},
     {"provider": "openrouter", "model": "google/gemini-3.7-flash"},
 ]
-# Hard guard: Anthropic/Grok never via OpenRouter or API-key providers
-FORBIDDEN_OR = (
-    "anthropic/", "claude-opus", "claude-sonnet", "claude-haiku", "claude-3", "claude-4",
-    "x-ai/", "xai/", "grok-", "grok/",
-)
-for fb in cfg["fallback_providers"]:
-    m = str(fb.get("model") or "").lower()
-    if fb.get("provider") == "openrouter" and any(f in m for f in FORBIDDEN_OR):
-        raise ValueError(f"BILLING VIOLATION: {fb['provider']}/{fb['model']} in Helm fallback_providers")
-    if fb.get("provider") in ("xai",):
-        raise ValueError("BILLING VIOLATION: use xai-oauth not xai API key provider")
-# Keep the alias map aligned with the live chain so `smart`/`quality`/`cheap`
-# don't silently route to retired pins.
-aliases = m.get("aliases")
-if isinstance(aliases, dict):
-    aliases.update({
-        "smart": "xai-oauth/grok-4.5",
-        "chief-of-staff": "xai-oauth/grok-4.5",
-        "quality": "anthropic/claude-sonnet-5",
-        # frontier-quality / opus / openrouter claude|grok INTENTIONALLY OMITTED:
-        # Anthropic + Grok are subscription OAuth only — never API tokens / OpenRouter.
-        "specialist": "openrouter/deepseek/deepseek-v4-flash-0731",
-        "rote": "openrouter/deepseek/deepseek-v4-flash-0731",
-        "cheap": "openrouter/deepseek/deepseek-v4-flash-0731",
-        "watcher-summary": "openrouter/deepseek/deepseek-v4-flash-0731",
-        "specialist-coding": "anthropic/claude-sonnet-5",
-        "gemini-flash": "openrouter/google/gemini-2.5-flash-lite",
-        "fallback-flash": "openrouter/google/gemini-2.5-flash-lite",
-    })
-    # Hard guard: strip any alias that would route Anthropic/Grok via openrouter
-    for k, v in list(aliases.items()):
-        vs = str(v or "")
-        if vs.startswith("openrouter/") and any(f in vs.lower() for f in FORBIDDEN_OR):
-            del aliases[k]
-            print(f"BLOCKED alias {k!r} -> {vs!r} (Anthropic/Grok via openrouter)")
+for i, fb in enumerate(cfg["fallback_providers"]):
+    err = violation_for_route(
+        provider=fb.get("provider"), model=fb.get("model"), where=f"Helm.fallback[{i}]"
+    )
+    if err:
+        raise ValueError(err)
+# Alias map — OAuth for Claude/Grok; OpenRouter only non-frontier
+aliases = m.setdefault("aliases", {})
+if not isinstance(aliases, dict):
+    aliases = {}
+    m["aliases"] = aliases
+aliases.update({
+    "smart": "xai-oauth/grok-4.5",
+    "chief-of-staff": "xai-oauth/grok-4.5",
+    "quality": "anthropic/claude-sonnet-5",
+    # NO openrouter/anthropic/*, openrouter/x-ai/*, openrouter/*grok*, openrouter/*claude*
+    "specialist": "openrouter/deepseek/deepseek-v4-flash-0731",
+    "rote": "openrouter/deepseek/deepseek-v4-flash-0731",
+    "cheap": "openrouter/deepseek/deepseek-v4-flash-0731",
+    "watcher-summary": "openrouter/deepseek/deepseek-v4-flash-0731",
+    "specialist-coding": "anthropic/claude-sonnet-5",
+    "gemini-flash": "openrouter/google/gemini-2.5-flash-lite",
+    "fallback-flash": "openrouter/google/gemini-2.5-flash-lite",
+})
+for line in scrub_aliases(aliases):
+    print(line)
 # Super-agent tool surface
 cfg["platform_toolsets"] = {"cli": ["hermes-cli"]}
 # MCP: mirror default useful servers; Helm gets FULL OSB including write tools
@@ -252,7 +266,6 @@ osb = mcp.get("obsidian-second-brain") or {}
 if osb:
     osb = copy.deepcopy(osb)
     osb["enabled"] = True
-    # Strip vault-write excludes so Helm can save/capture/update like Michael
     tools = osb.get("tools") or {}
     if isinstance(tools, dict) and tools.get("exclude"):
         write_tools = {
@@ -277,8 +290,12 @@ for name in ("todoist", "hugging_face", "kiwi", "vercel"):
 if "dropbox" in mcp:
     mcp["dropbox"]["enabled"] = False
 cfg["mcp_servers"] = mcp
+# Final walk before write
+viol = walk_config_routes(cfg, "chief_of_staff")
+if viol:
+    raise ValueError("Helm config would violate billing policy:\n  - " + "\n  - ".join(viol))
 p.write_text(yaml.safe_dump(cfg, sort_keys=False, default_flow_style=False))
-print("chief_of_staff SUPER-AGENT locked (full tools + OSB writes, no free model)")
+print("chief_of_staff SUPER-AGENT locked (full tools + OSB writes; OR never Claude/Grok)")
 PY
 # No off/mcp_off for Helm — specialists stay constrained below.
 
@@ -478,13 +495,18 @@ if [[ "$drift" -ne 0 ]]; then
 fi
 echo "all 18 pins verified on disk"
 
-# Final hard gate: no Anthropic/Grok API tokens or OpenRouter frontier routes
+# Final hard gate: OpenRouter allowlist-only; NEVER Claude/Grok on metered
 ROOT="${CARRIER_HERMES_ROOT:-$HOME/carrier_hermes}"
-if [[ -f "$ROOT/scripts/billing_guard.py" ]]; then
-  python3 "$ROOT/scripts/billing_guard.py" --fix-env || {
+if [[ -f "$ROOT/scripts/or_billing_policy.py" ]]; then
+  python3 "$ROOT/scripts/or_billing_policy.py" || {
+    echo "FAIL: or_billing_policy self_test" >&2
+    exit 1
+  }
+  python3 "$ROOT/scripts/billing_guard.py" --fix-env --fix-config || {
     echo "FAIL: billing_guard violations after matrix apply" >&2
     exit 1
   }
 else
-  echo "WARN: billing_guard.py missing — skip billing audit" >&2
+  echo "FAIL: or_billing_policy.py missing" >&2
+  exit 1
 fi
