@@ -97,3 +97,16 @@ If `OPENROUTER_MANAGEMENT_KEY` is absent from the environment, OR activity logs 
 ## Return contract
 
 Spend snapshot + cap status + top offenders (bot / model / session) + OR activity if management key present + any halt actions taken.
+
+## Inspection Tool (prompt → model → cost)
+
+```
+python3 scripts/ledger_inspect.py                         # list recent sessions (all profiles: --all-profiles)
+python3 scripts/ledger_inspect.py --session SESSION_ID    # exact prompt + model + cost per turn
+python3 scripts/ledger_inspect.py --session SESSION_ID --explain  # + WHY (fallback reasons from agent.log)
+python3 scripts/ledger_inspect.py --today --all-profiles  # fleet-wide today
+```
+
+Drill-down maps every user prompt to the exact model/provider that handled it, the token counts, latency,
+estimated cost, and any fallback reason (error type + summary) from `agent.log`.
+Use this to answer "which prompt used which model, how much did it cost, and why did it pick that model."
