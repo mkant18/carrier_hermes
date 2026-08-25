@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "todoist_ops",
+  "type": "object",
+  "required": ["ops"],
+  "properties": {
+    "ops": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["idempotency_key", "action", "title"],
+        "properties": {
+          "idempotency_key": { "type": "string" },
+          "action": { "enum": ["create", "update", "complete", "reschedule", "skip"] },
+          "title": { "type": "string" },
+          "todoist_id": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}

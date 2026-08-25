@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "email_triage",
+  "type": "object",
+  "required": ["message_id", "urgency", "action", "summary"],
+  "properties": {
+    "message_id": { "type": "string", "minLength": 1 },
+    "urgency": { "enum": ["low", "normal", "high", "critical"] },
+    "action": { "enum": ["ignore", "read", "draft", "escalate", "file"] },
+    "summary": { "type": "string" },
+    "sender": { "type": "string" }
+  },
+  "additionalProperties": true
+}

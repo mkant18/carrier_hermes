@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "calendar_sync",
+  "type": "object",
+  "required": ["events"],
+  "properties": {
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["event_id"],
+        "properties": {
+          "event_id": { "type": "string" },
+          "title": { "type": "string" },
+          "start": { "type": "string" }
+        }
+      }
+    },
+    "todoist_actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["idempotency_key", "title"],
+        "properties": {
+          "idempotency_key": { "type": "string" },
+          "title": { "type": "string" },
+          "todoist_action": { "enum": ["create", "update", "complete", "skip"] }
+        }
+      }
+    }
+  }
+}

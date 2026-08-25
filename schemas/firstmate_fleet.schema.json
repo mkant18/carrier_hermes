@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "firstmate_fleet",
+  "type": "object",
+  "properties": {
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "bot", "job_id"],
+        "properties": {
+          "path": { "type": "string" },
+          "bot": { "type": "string" },
+          "job_id": { "type": "string" }
+        }
+      }
+    }
+  }
+}
