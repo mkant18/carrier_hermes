@@ -70,7 +70,7 @@ On every redeem job:
 5. Confirm `expires_at` is in the future (UTC).
 6. Confirm `jti` not in redeemed/replay set; mark jti consumed **before** Doppler fetch (atomic append).
 7. Confirm `secret_refs_allowed` / `actions_allowed` / `delivery` / `ttl_seconds` cover the redeem request (subset only — never expand).
-8. Verify `integrity.signature` with key `integrity.key_id` (default `helm-grant-v1`) over canonical body **excluding** the signature field. Script: `scripts/lockbox_verify_grant.py`.
+8. Verify `integrity.signature` with key `integrity.key_id` (allowlist `helm-grant-v1` only) over canonical body **excluding** the signature field. Script: `scripts/lockbox_verify_grant.py` (**no signing** in this binary). Helm signs via `scripts/lockbox_sign_grant.py` only.
 9. Only then call Doppler / store. Prefer service token scoped to needed configs.
 10. Deliver per mode; mode `0600` files only under subject bot write root or grant `write_paths_allowed`.
 11. Emit **redacted** result packet + audit event. **Never** put raw secret in packet structured block.

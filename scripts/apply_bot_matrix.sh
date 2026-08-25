@@ -34,6 +34,12 @@ pin api_watcher deepseek/deepseek-chat-v3-0324 openrouter
 off api_watcher browser computer_use image_gen video video_gen x_search tts web delegation code_execution vision
 mcp_off api_watcher todoist hugging_face kiwi vercel dropbox obsidian-second-brain
 
+# LockBox — non-China only; never DeepSeek
+pin lockbox google/gemini-2.5-flash openrouter
+hermes -p lockbox config set model.fallback "openai/gpt-4o-mini" --force >/dev/null || true
+off lockbox browser computer_use image_gen video video_gen x_search tts web delegation code_execution vision cronjob
+mcp_off lockbox todoist hugging_face kiwi vercel dropbox obsidian-second-brain
+
 # Coding / meta
 pin firstmate claude-sonnet-4-6 anthropic
 off firstmate tts video video_gen image_gen

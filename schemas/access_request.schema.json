@@ -40,7 +40,8 @@
     },
     "permission_refs": {
       "type": "array",
-      "items": { "type": "string" }
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 0
     },
     "scope": {
       "type": "object",
@@ -84,5 +85,9 @@
       "type": "boolean"
     }
   },
+  "anyOf": [
+    { "properties": { "secret_refs": { "minItems": 1 } }, "required": ["secret_refs"] },
+    { "properties": { "permission_refs": { "minItems": 1 } }, "required": ["permission_refs"] }
+  ],
   "additionalProperties": true
 }

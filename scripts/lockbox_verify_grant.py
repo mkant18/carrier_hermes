@@ -1,39 +1,45 @@
 #!/usr/bin/env python3
-"""Verify a LockBox HANDSHAKE_GRANT (HMAC-SHA256 or ed25519 stub).
+"""Verify a LockBox HANDSHAKE_GRANT before any Doppler fetch.
 
-Phase A structural verifier — used before any Doppler fetch in Phase B.
+V1 alg: HMAC-SHA256 (key_id allowlisted). Residual: same secret verifies and
+could sign — signing is intentionally NOT in this binary (see lockbox_sign_grant.py).
+Trust boundary: only Helm-operated hosts run the signer; LockBox home runs verify only.
 
-Canonical body for signing:
-  - Parse grant as JSON object
-  - Deep-copy; set integrity.signature to ""
-  - Serialize with sort_keys=True, separators=(",", ":"), ensure_ascii=False
-  - UTF-8 bytes → HMAC-SHA256(key) → hex digest (lowercase)
-
-Key resolution (first hit):
-  1. LOCKBOX_GRANT_HMAC_KEY env (raw or hex if prefixed hex:)
-  2. ~/.hermes/carrier/lockbox/keys/<key_id>  (raw file bytes stripped)
-  3. --key-file PATH
+Canonical body:
+  deep-copy grant; integrity.signature=""; json.dumps(sort_keys=True, separators=(',',':'), ensure_ascii=False) UTF-8
+  HMAC-SHA256 → lowercase hex
 
 Exit codes:
-  0  valid signature (+ optional time/decision checks)
-  1  invalid signature / schema / decision
-  2  usage / IO error
-  3  expired (when --check-expiry)
-  4  replay (when --jti-db provided and jti seen)
+  0 OK
+  1 invalid / deny / scope
+  2 usage / IO
+  3 expired
+  4 replay
+  5 path/delivery constraint fail
 
-Does not print secret values. Does not call Doppler.
+Does not print secret values. Does not call Doppler. No --sign.
 """
 from __future__ import annotations
 
 import argparse
+import errno
+import fcntl
 import hashlib
 import hmac
 import json
 import os
+import re
 import sys
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
+
+ALLOWED_KEY_IDS = frozenset({"helm-grant-v1"})
+KEY_ID_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$")
+ACTIONS = frozenset({"read_once", "read_ttl", "rotate", "create", "delete_meta"})
+DELIVERIES = frozenset(
+    {"env_file", "stdout_to_caller_job_only", "doppler_inject", "path_under_write_root"}
+)
 
 
 def _utc_now() -> datetime:
@@ -63,9 +69,20 @@ def canonical_bytes(grant: dict) -> bytes:
     )
 
 
+def sanitize_key_id(key_id: str) -> str:
+    if not key_id or not KEY_ID_RE.match(key_id):
+        raise ValueError(f"invalid key_id format: {key_id!r}")
+    if key_id not in ALLOWED_KEY_IDS:
+        raise ValueError(f"key_id not allowlisted: {key_id!r} allowed={sorted(ALLOWED_KEY_IDS)}")
+    if "/" in key_id or "\\" in key_id or ".." in key_id:
+        raise ValueError("key_id path components forbidden")
+    return key_id
+
+
 def load_key(key_id: str, key_file: str | None) -> bytes:
+    kid = sanitize_key_id(key_id)
     if key_file:
-        p = Path(key_file)
+        p = Path(key_file).resolve()
         if not p.is_file():
             raise FileNotFoundError(f"key file not found: {p}")
         return p.read_bytes().strip()
@@ -74,20 +91,21 @@ def load_key(key_id: str, key_file: str | None) -> bytes:
         if env.startswith("hex:"):
             return bytes.fromhex(env[4:])
         return env.encode("utf-8")
-    home = Path(os.environ.get("HERMES_HOME", Path.home() / ".hermes"))
-    # keys live under carrier lockbox, not profile home
-    default = Path.home() / ".hermes" / "carrier" / "lockbox" / "keys" / key_id
+    keys_root = (Path.home() / ".hermes" / "carrier" / "lockbox" / "keys").resolve()
+    default = (keys_root / kid).resolve()
+    if not str(default).startswith(str(keys_root) + os.sep):
+        raise ValueError("key path escapes keys root")
     if default.is_file():
         return default.read_bytes().strip()
     raise FileNotFoundError(
-        f"no key for {key_id}: set LOCKBOX_GRANT_HMAC_KEY or create {default}"
+        f"no key for {kid}: set LOCKBOX_GRANT_HMAC_KEY or create {default}"
     )
 
 
 def verify_hmac(grant: dict, key: bytes) -> bool:
     integrity = grant["integrity"]
     if integrity.get("alg") != "HMAC-SHA256":
-        raise ValueError(f"unsupported alg for hmac path: {integrity.get('alg')}")
+        raise ValueError(f"unsupported alg: {integrity.get('alg')}")
     sig = str(integrity.get("signature", "")).strip().lower()
     if sig.startswith("0x"):
         sig = sig[2:]
@@ -95,71 +113,120 @@ def verify_hmac(grant: dict, key: bytes) -> bool:
     return hmac.compare_digest(expected, sig)
 
 
-def jti_seen(jti_db: Path, jti: str) -> bool:
-    if not jti_db.is_file():
-        return False
-    for line in jti_db.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        if line == jti or line.startswith(jti + "\t") or line.startswith(jti + " "):
-            return True
-    return False
+def consume_jti_atomic(jti_dir: Path, jti: str) -> bool:
+    """Return True if consumed first time; False if replay.
+
+    Uses O_CREAT|O_EXCL per-jti file under jti_dir (atomic on POSIX).
+    """
+    if not re.match(r"^[A-Za-z0-9_.:-]{8,128}$", jti):
+        raise ValueError("invalid jti charset/length")
+    jti_dir.mkdir(parents=True, exist_ok=True)
+    # flock a dir lock for multi-writer safety around exclusives on some FS
+    lock_path = jti_dir / ".lock"
+    lock_path.touch(exist_ok=True)
+    target = jti_dir / f"{jti}.redeemed"
+    with lock_path.open("a+", encoding="utf-8") as lockf:
+        fcntl.flock(lockf.fileno(), fcntl.LOCK_EX)
+        try:
+            fd = os.open(str(target), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except OSError as e:
+            if e.errno == errno.EEXIST:
+                return False
+            raise
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(f"{jti}\t{_utc_now().isoformat()}\n")
+        return True
 
 
-def mark_jti(jti_db: Path, jti: str) -> None:
-    jti_db.parent.mkdir(parents=True, exist_ok=True)
-    with jti_db.open("a", encoding="utf-8") as f:
-        f.write(f"{jti}\t{_utc_now().isoformat()}\n")
+def load_json(path: Path) -> dict:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError("root must be object")
+    return data
+
+
+def check_subset(grant: dict, request: dict | None, redeem_refs: list[str] | None) -> None:
+    g_refs = set(grant.get("secret_refs_allowed") or [])
+    g_acts = set(grant.get("actions_allowed") or [])
+    if not g_acts <= ACTIONS:
+        raise ValueError(f"unknown actions_allowed: {g_acts - ACTIONS}")
+    if request is not None:
+        if grant.get("request_id") and request.get("request_id") != grant.get("request_id"):
+            raise ValueError("request_id mismatch grant vs ACCESS_REQUEST")
+        r_refs = set(request.get("secret_refs") or [])
+        r_scope = request.get("scope") or {}
+        r_acts = set(r_scope.get("actions") or [])
+        if not g_refs <= r_refs:
+            raise ValueError(f"grant secret_refs not subset of request: {g_refs - r_refs}")
+        if r_acts and not g_acts <= r_acts:
+            raise ValueError(f"grant actions not subset of request: {g_acts - r_acts}")
+        # narrow/approve must not expand delivery beyond request if set
+        r_del = r_scope.get("delivery")
+        if r_del and grant.get("delivery") and grant.get("delivery") != r_del:
+            # allow only if narrow to same family — V1: must match
+            raise ValueError("grant delivery must match ACCESS_REQUEST scope.delivery")
+    if redeem_refs is not None:
+        need = set(redeem_refs)
+        if not need <= g_refs:
+            raise ValueError(f"redeem refs exceed grant: {need - g_refs}")
+
+
+def check_delivery_constraints(grant: dict) -> None:
+    delivery = grant.get("delivery")
+    if delivery not in DELIVERIES:
+        raise ValueError(f"invalid delivery: {delivery}")
+    paths = grant.get("write_paths_allowed") or []
+    if delivery == "path_under_write_root" and not paths:
+        raise ValueError("path_under_write_root requires non-empty write_paths_allowed")
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Verify LockBox HANDSHAKE_GRANT integrity")
-    ap.add_argument("grant_path", type=Path, help="Path to grant JSON")
-    ap.add_argument("--key-file", default=None, help="Override HMAC key file")
+    ap = argparse.ArgumentParser(description="Verify LockBox HANDSHAKE_GRANT (no signing)")
+    ap.add_argument("grant_path", type=Path)
+    ap.add_argument("--key-file", default=None)
     ap.add_argument(
-        "--check-expiry",
+        "--expect-subject",
+        required=True,
+        help="Required: redeeming bot_id must equal grant subject_bot",
+    )
+    ap.add_argument(
+        "--jti-dir",
+        type=Path,
+        default=Path.home() / ".hermes" / "carrier" / "lockbox" / "jti",
+        help="Directory of O_EXCL jti markers (atomic consume)",
+    )
+    ap.add_argument(
+        "--no-consume",
         action="store_true",
-        help="Fail exit 3 if expires_at is past",
+        help="Verify without consuming jti (dry-run)",
     )
     ap.add_argument(
         "--require-decision",
         default="approve,narrow",
-        help="Comma list of allowed decisions (default approve,narrow)",
     )
     ap.add_argument(
-        "--expect-subject",
-        default=None,
-        help="Require subject_bot equals this bot_id",
-    )
-    ap.add_argument(
-        "--jti-db",
+        "--access-request",
         type=Path,
         default=None,
-        help="Append-only jti log; fail exit 4 on replay; --consume marks jti",
+        help="Optional ACCESS_REQUEST JSON for subset checks",
     )
     ap.add_argument(
-        "--consume",
-        action="store_true",
-        help="Append jti to --jti-db after successful verify",
+        "--redeem-refs",
+        default=None,
+        help="Comma-separated secret refs this redeem wants (must ⊆ grant)",
     )
     ap.add_argument(
-        "--sign",
+        "--allow-break-glass-skew",
         action="store_true",
-        help="Dev helper: write signature into grant file (requires key). Not for production release path.",
+        help="Skip expires_at <= decided_at + ttl_seconds check",
     )
     args = ap.parse_args(argv)
 
     try:
-        raw = args.grant_path.read_text(encoding="utf-8")
-        grant = json.loads(raw)
+        grant = load_json(args.grant_path)
     except Exception as e:
         print(f"ERROR load: {e}", file=sys.stderr)
         return 2
-
-    if not isinstance(grant, dict):
-        print("ERROR: grant root must be object", file=sys.stderr)
-        return 1
 
     for field in (
         "grant_id",
@@ -169,7 +236,12 @@ def main(argv: list[str] | None = None) -> int:
         "subject_bot",
         "decision",
         "expires_at",
+        "decided_at",
         "integrity",
+        "secret_refs_allowed",
+        "actions_allowed",
+        "delivery",
+        "ttl_seconds",
     ):
         if field not in grant:
             print(f"ERROR: missing field {field}", file=sys.stderr)
@@ -179,43 +251,24 @@ def main(argv: list[str] | None = None) -> int:
         print("ERROR: from/to_lockbox mismatch", file=sys.stderr)
         return 1
 
+    if grant.get("subject_bot") != args.expect_subject:
+        print(
+            f"DENY subject_bot={grant.get('subject_bot')} expected={args.expect_subject}",
+            file=sys.stderr,
+        )
+        return 1
+
     integrity = grant["integrity"]
     if not isinstance(integrity, dict):
         print("ERROR: integrity must be object", file=sys.stderr)
         return 1
 
-    key_id = integrity.get("key_id") or "helm-grant-v1"
-    alg = integrity.get("alg") or "HMAC-SHA256"
-
     try:
-        key = load_key(str(key_id), args.key_file)
+        key_id = sanitize_key_id(str(integrity.get("key_id") or "helm-grant-v1"))
+        key = load_key(key_id, args.key_file)
+        ok = verify_hmac(grant, key)
     except Exception as e:
-        print(f"ERROR key: {e}", file=sys.stderr)
-        return 2
-
-    if args.sign:
-        if alg != "HMAC-SHA256":
-            print("ERROR: --sign only supports HMAC-SHA256 in V1", file=sys.stderr)
-            return 2
-        sig = hmac.new(key, canonical_bytes(grant), hashlib.sha256).hexdigest()
-        grant = deepcopy(grant)
-        grant["integrity"] = dict(grant["integrity"])
-        grant["integrity"]["signature"] = sig
-        args.grant_path.write_text(json.dumps(grant, indent=2) + "\n", encoding="utf-8")
-        print(f"SIGNED {args.grant_path} key_id={key_id}")
-        return 0
-
-    if alg == "HMAC-SHA256":
-        try:
-            ok = verify_hmac(grant, key)
-        except Exception as e:
-            print(f"ERROR verify: {e}", file=sys.stderr)
-            return 1
-    elif alg == "ed25519":
-        print("ERROR: ed25519 verify not implemented in V1 script (use HMAC-SHA256)", file=sys.stderr)
-        return 1
-    else:
-        print(f"ERROR: unknown alg {alg}", file=sys.stderr)
+        print(f"ERROR verify: {e}", file=sys.stderr)
         return 1
 
     if not ok:
@@ -227,30 +280,58 @@ def main(argv: list[str] | None = None) -> int:
         print(f"DENY decision={grant.get('decision')}", file=sys.stderr)
         return 1
 
-    if args.expect_subject and grant.get("subject_bot") != args.expect_subject:
-        print(
-            f"DENY subject_bot={grant.get('subject_bot')} expected={args.expect_subject}",
-            file=sys.stderr,
-        )
+    # Expiry always enforced
+    try:
+        exp = _parse_iso(str(grant["expires_at"]))
+        decided = _parse_iso(str(grant["decided_at"]))
+        ttl = int(grant.get("ttl_seconds") or 0)
+    except Exception as e:
+        print(f"ERROR time fields: {e}", file=sys.stderr)
+        return 1
+    if exp <= _utc_now():
+        print(f"EXPIRED {grant['expires_at']}", file=sys.stderr)
+        return 3
+    if not args.allow_break_glass_skew and ttl >= 0:
+        # expires should not exceed decided + ttl (+ 120s clock skew)
+        max_exp = decided.timestamp() + ttl + 120
+        if exp.timestamp() > max_exp and not grant.get("break_glass"):
+            print("DENY expires_at beyond decided_at+ttl_seconds", file=sys.stderr)
+            return 1
+
+    try:
+        check_delivery_constraints(grant)
+    except ValueError as e:
+        print(f"DENY delivery: {e}", file=sys.stderr)
+        return 5
+
+    request = None
+    if args.access_request:
+        try:
+            request = load_json(args.access_request)
+        except Exception as e:
+            print(f"ERROR access_request: {e}", file=sys.stderr)
+            return 2
+
+    redeem_refs = None
+    if args.redeem_refs:
+        redeem_refs = [x.strip() for x in args.redeem_refs.split(",") if x.strip()]
+
+    try:
+        check_subset(grant, request, redeem_refs)
+    except ValueError as e:
+        print(f"DENY scope: {e}", file=sys.stderr)
         return 1
 
-    if args.check_expiry:
-        try:
-            exp = _parse_iso(str(grant["expires_at"]))
-        except Exception as e:
-            print(f"ERROR expires_at: {e}", file=sys.stderr)
-            return 1
-        if exp <= _utc_now():
-            print(f"EXPIRED {grant['expires_at']}", file=sys.stderr)
-            return 3
-
     jti = str(grant["jti"])
-    if args.jti_db is not None:
-        if jti_seen(args.jti_db, jti):
+    if not args.no_consume:
+        try:
+            first = consume_jti_atomic(args.jti_dir, jti)
+        except Exception as e:
+            print(f"ERROR jti: {e}", file=sys.stderr)
+            return 2
+        if not first:
             print(f"REPLAY jti={jti}", file=sys.stderr)
             return 4
-        if args.consume:
-            mark_jti(args.jti_db, jti)
 
     print(
         "OK",
@@ -258,6 +339,7 @@ def main(argv: list[str] | None = None) -> int:
         f"subject={grant.get('subject_bot')}",
         f"decision={grant.get('decision')}",
         f"jti={jti[:12]}…",
+        "dry" if args.no_consume else "consumed",
     )
     return 0
 

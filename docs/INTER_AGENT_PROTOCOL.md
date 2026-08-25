@@ -487,10 +487,12 @@ Full layout: `integrations/aipass-mailbox.md`. Message template: `templates/aipa
 | key_id | `helm-grant-v1` |
 | Canonical body | JSON object with `integrity.signature` set to `""`, then `json.dumps(..., sort_keys=True, separators=(',', ':'), ensure_ascii=False)` UTF-8 |
 | Signature encoding | lowercase hex digest |
-| Key location | `~/.hermes/carrier/lockbox/keys/helm-grant-v1` or env `LOCKBOX_GRANT_HMAC_KEY` (Phase B; **not in git**) |
-| Verifier | `scripts/lockbox_verify_grant.py` |
-| jti store | append-only under `~/.hermes/carrier/lockbox/jti.log` (or vault `_agent/lockbox/jti.log`) — consume **before** Doppler fetch |
+| Key location | `~/.hermes/carrier/lockbox/keys/helm-grant-v1` or env `LOCKBOX_GRANT_HMAC_KEY` (Phase B; **not in git**). **key_id allowlist only** (`helm-grant-v1`); path separators rejected. |
+| Verifier | `scripts/lockbox_verify_grant.py` — **no signing**; always requires `--expect-subject`; always enforces expiry; atomic jti via `jti/<jti>.redeemed` O_EXCL+flock |
+| Signer (Helm only) | `scripts/lockbox_sign_grant.py` — **must not** be the LockBox redeem path |
+| jti store | `~/.hermes/carrier/lockbox/jti/` — consume **before** Doppler fetch |
 | max_redeems | **1** in V1 |
+| HMAC residual (V1) | Symmetric key can both sign and verify. Cryptographic issuer separation is **not** provided. Mitigation: signer binary only on Helm ops path; LockBox home must not ship/run `lockbox_sign_grant.py` in routines; key mode 0600; residual accepted until optional ed25519 upgrade. |
 
 ### Rotation (V1)
 

@@ -111,9 +111,9 @@ else
   grep -q 'Tasker' "$ROOT/bots/calendar_manager/SOUL.md" && pass "chronos_handoff_tasker" || failc "chronos_handoff_tasker" "Chronos SOUL missing Tasker handoff"
 fi
 
-# 7 twelve bots defined
+# 7 thirteen bots defined
 n=$(ls "$ROOT"/bots/*/SOUL.md | wc -l | tr -d ' ')
-[[ "$n" == "12" ]] && pass "twelve_souls" || failc "twelve_souls" "count=$n"
+[[ "$n" == "13" ]] && pass "thirteen_souls" || failc "thirteen_souls" "count=$n"
 
 # 8 bot homes
 homes=0
@@ -123,6 +123,7 @@ done <<'IDS'
 chief_of_staff
 subscription_watcher
 api_watcher
+lockbox
 firstmate
 hermes_ai_explorer
 email_reader
@@ -133,7 +134,18 @@ vault_librarian
 obsidian_archivist
 research_agent
 IDS
-[[ "$homes" == "12" ]] && pass "twelve_bot_homes" || failc "twelve_bot_homes" "homes=$homes"
+[[ "$homes" == "13" ]] && pass "thirteen_bot_homes" || failc "thirteen_bot_homes" "homes=$homes"
+
+# 9 lockbox grant verify (shadow fixture if present)
+if [[ -f "$HOME/.hermes/carrier/lockbox/keys/helm-grant-v1" ]]; then
+  if python3 "$ROOT/scripts/lockbox_verify_grant.py" --help >/dev/null 2>&1; then
+    pass "lockbox_verify_help"
+  else
+    failc "lockbox_verify_help" "script broken"
+  fi
+else
+  skip "lockbox_hmac_key" "key not generated yet"
+fi
 
 echo "=== done fail=$fail ==="
 exit "$fail"
