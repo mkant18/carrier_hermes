@@ -15,7 +15,7 @@ set -euo pipefail
 # re-running the script — the second run gets clobbered exactly the same way.
 # ---------------------------------------------------------------------------
 ROSTER_IDS="chief_of_staff marshal subscription_watcher api_watcher lockbox \
-coding_lt firstmate hermes_ai_explorer passive_watch ops_lt email_reader \
+coding_lt firstmate git_yeoman hermes_ai_explorer passive_watch ops_lt email_reader \
 email_drafter calendar_manager todoist_manager knowledge_lt vault_librarian \
 obsidian_archivist research_agent finance_reader"
 
@@ -358,6 +358,13 @@ chain firstmate cheap
 off firstmate tts video video_gen image_gen
 mcp_off firstmate todoist kiwi dropbox
 
+# Yeoman 📋 — Coding Wing GitHub admin; gh CLI only; specialist rote model
+pin git_yeoman grok-4.5 xai-oauth
+chain git_yeoman cheap
+off git_yeoman code_execution browser computer_use delegation web \
+  image_gen video video_gen tts x_search vision cronjob
+mcp_off git_yeoman todoist hugging_face kiwi vercel dropbox obsidian-second-brain
+
 pin hermes_ai_explorer grok-4.5 xai-oauth
 chain hermes_ai_explorer cheap
 off hermes_ai_explorer computer_use image_gen video video_gen tts delegation
@@ -439,6 +446,7 @@ verify_pin coding_lt            claude-sonnet-4-6                     || drift=1
 verify_pin ops_lt               claude-sonnet-4-6                     || drift=1
 verify_pin knowledge_lt         claude-sonnet-4-6                     || drift=1
 verify_pin firstmate            grok-4.5                              || drift=1
+verify_pin git_yeoman           grok-4.5                              || drift=1
 verify_pin hermes_ai_explorer   grok-4.5                              || drift=1
 verify_pin passive_watch        grok-4.5                              || drift=1
 verify_pin email_reader         grok-4.5                              || drift=1

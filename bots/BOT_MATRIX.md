@@ -43,6 +43,7 @@ or queries Monarch has violated its SOUL. Route it to the specialist instead.
 | bot_id | Callsign | Model | Toolsets ON | Toolsets OFF | MCP |
 |---|---|---|---|---|---|
 | `firstmate` | Mate ⚙️ | `quality` implementer; `specialist` janitor/docs | terminal, file, code_execution, skills (claude-code, codex, opencode), delegation, session_search, memory, web (opt), kanban worker | mail, todoist, calendar, OSB write | vercel/github as needed for coding; **no** todoist/OSB write |
+| `git_yeoman` | Yeoman 📋 | `specialist` paid DeepSeek V3 | terminal **narrow** (`gh` CLI only), file `_agent/git_yeoman/**`, session_search, memory, aipass, discord `#fleet` via First Watch, todo, skills (github-issues, github-pr-workflow, github-code-review read-only) | code_execution, browser, web, computer_use, mail, mail_send, todoist, calendar, OSB write, delegation, cronjob | **none** (gh CLI handles GitHub API) |
 
 ## Recon Wing
 

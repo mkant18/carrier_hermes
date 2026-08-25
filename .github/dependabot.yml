@@ -1,0 +1,36 @@
+# Dependabot — carrier_hermes
+# Keeps GitHub Actions pinned and Python deps current.
+# No npm/node in this repo; add ecosystems here as the stack grows.
+
+version: 2
+
+updates:
+  # GitHub Actions — pin workflow action versions automatically
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(actions)"
+
+  # Python pip — track requirements files if/when added
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "chore(deps)"
+    # Only open PRs for security updates until we have a requirements.txt
+    open-pull-requests-limit: 5
