@@ -130,6 +130,17 @@ LEVEL="$2"
 MESSAGE="$3"
 COLOR="${4:-$(_color_for_level "$LEVEL")}"
 
+# Model footprint footer (§15.2) — appended when caller sets FLEET_MODEL_FOOTPRINT
+# Format:  FLEET_MODEL_FOOTPRINT="google/gemini-2.5-flash · OpenRouter · ~$0.0004"
+if [[ -n "${FLEET_MODEL_FOOTPRINT:-}" ]]; then
+  FOOTPRINT_BLOCK=""
+  while IFS= read -r line; do
+    FOOTPRINT_BLOCK="${FOOTPRINT_BLOCK}
+> 🤖 \`${line}\`"
+  done <<< "${FLEET_MODEL_FOOTPRINT}"
+  MESSAGE="${MESSAGE}${FOOTPRINT_BLOCK}"
+fi
+
 if [[ ! -f "$HERMES_ENV_FILE" ]]; then
   echo "alert_signal: env file not found: $HERMES_ENV_FILE" >&2
   exit 1
