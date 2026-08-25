@@ -14,6 +14,8 @@ Names are frozen. **Do not invent snowflake IDs.**
 | Fleet ops & handoffs (Dispatch/receipt confirmations, Chart/Sonar tips) | `#fleet` | `1541866443765977138` |
 | Coding crew standup (Mate, Wrench) | `#ready-room` | `1541919952599130132` |
 | Job launch board (Wrench dispatches to Mate here) | `#catapult` | `1541919999894229053` |
+| Ops Wing internal coordination (Deck + squadron) | `#quarterdeck` | `1541929900586565783` |
+| Knowledge Wing internal coordination (Stacks + squadron) | `#chart-room` | `1541929921176281170` |
 
 ### Routing rules (frozen intent)
 

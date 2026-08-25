@@ -164,12 +164,25 @@ BOTS = {
 
 # Channel registry
 CHANNELS = {
-    "command":   "1541866378255011980",
-    "fleet":     "1541866443765977138",
-    "alerts":    "1541866423427801148",
-    "drafts":    "1541866401432871002",
+    # Core command/fleet channels
+    "command":    "1541866378255011980",
+    "fleet":      "1541866443765977138",
+    "alerts":     "1541866423427801148",
+    "drafts":     "1541866401432871002",
     "ready_room": "1541919952599130132",
-    "catapult":  "1541919999894229053",
+    "catapult":   "1541919999894229053",
+    # Wing home channels (internal coordination)
+    "quarterdeck": "1541929900586565783",   # Ops Wing home
+    "chart_room":  "1541929921176281170",   # Knowledge Wing home
+    # Domain specialist channels
+    "email":      "1541155152726204416",
+    "calendar":   "1541155189019517078",
+    "tasks":      "1541155241746239658",
+    "vault":      "1541155274528915577",
+    "finance":    "1541155307860795503",
+    "audit":      "1541155342833025114",
+    "urgent":     "1541155373371621507",
+    "general":    "1541154516811120762",
 }
 
 # Wing membership (for wire_wing_tokens.sh)
