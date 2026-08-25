@@ -35,3 +35,8 @@ Runtime: each bot installs to a Hermes bot home (`hermes profile create <bot_id>
 
 Paste `prompts/IMPLEMENT_PROMPT.md` into a fresh Hermes session.  
 **Phase A** freezes inter-bot protocol. **Phase B** creates the **bot roster** (not “a pile of anonymous profiles”).
+
+Post-fleet todos (two fresh sessions):
+
+- [`prompts/SESSION_OPENROUTER_AND_DISCORD.md`](prompts/SESSION_OPENROUTER_AND_DISCORD.md) — OpenRouter key + Discord IDs  
+- [`prompts/SESSION_SHADOW_AND_TRUST.md`](prompts/SESSION_SHADOW_AND_TRUST.md) — shadow exit + Trust Level walkthrough
