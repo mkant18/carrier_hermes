@@ -3,6 +3,27 @@
 > **Status:** Binding design. IMPLEMENT_PROMPT must complete and freeze this document (with any filled TBD tables) **before** creating profiles, crons, or wiring tools.
 > **Audience:** Chief of Staff, every specialist SOUL, and any human implementing the fleet.
 
+## Fleet roster update (authoritative bot list)
+
+Product language: **bots** (Hermes Bot Mode). CLI may say `profile create` — still a bot.
+
+**Command tier (co-equal watchers beside Helm):**
+- `chief_of_staff` / **Helm**
+- `subscription_watcher` / **Vigil** (renamed from Sentry) — fleet-wide stalls + subscription quotas → `DISPATCH_LOCK`
+- `api_watcher` / **Ledger** — fleet-wide metered $ (OpenRouter etc.) → `SPEND_HALT`
+
+**Ops:** Inbox, Quill, Chronos (calendar only), **Tasker** (`todoist_manager`) for all Todoist.
+
+**Knowledge split:**
+- `vault_librarian` / **Librarian** — query out
+- `obsidian_archivist` / **Clerk** — intake in (post-run artifacts → CoS keep/discard → file OSB)
+
+**Also:** Mate, Scout, Probe.
+
+Helm preflight: refuse dispatch if `DISPATCH_LOCK` **or** `SPEND_HALT` is set.
+
+See `bots/README.md` and per-bot SOULs under `bots/<bot_id>/`.
+
 ---
 
 ## 1. Design goals
@@ -125,7 +146,7 @@ Each bot has: **name**, **callsign**, **one-line identity**, **model tier**, **a
 | Write roots | `_agent/research/**` |
 | Return contract | report md with sources, confidence, next steps. |
 
-### 2.9 `subscription_watcher` — callsign **Sentry**
+### 2.9 `subscription_watcher` — callsign **Vigil**
 
 | Field | Spec |
 |---|---|
@@ -149,7 +170,7 @@ Each bot has: **name**, **callsign**, **one-line identity**, **model tier**, **a
                        │
                        ▼
               ┌────────────────┐
-              │  CoS (Helm)    │◄──────── dispatch lock ──── Sentry (script)
+              │  CoS (Helm)    │◄──────── dispatch lock ──── Vigil (script)
               └───────┬────────┘
                       │ job packets / results
         ┌─────────────┼──────────────┬──────────────┬─────────────┐
@@ -445,7 +466,7 @@ Retries: **one** retry with adjusted brief, then escalate (FirstMate rule genera
 ```text
 Helm=CoS classify/dispatch | Mate=coding | Scout=fleet/AI optimize proposals |
 Inbox=email triage DeepSeek | Quill=drafts Sonnet no-send | Chronos=calendar/todoist DeepSeek |
-Archivist=OSB vault TL0 | Probe=web research | Sentry=lock+alerts script
+Archivist=OSB vault TL0 | Probe=web research | Vigil=lock+alerts script
 Channels: Kanban default; cron periodic; delegate_task never for named ops bots
 Blackboard: $OBSIDIAN_VAULT_PATH/_agent/<bot>/
 ```

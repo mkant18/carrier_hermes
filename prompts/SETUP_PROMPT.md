@@ -1,7 +1,7 @@
 # Carrier Hermes Fleet Setup Prompt
 
-> **DEPRECATED for full fleet builds.** Use `prompts/IMPLEMENT_PROMPT.md` (v3) instead.
-> That prompt **requires Phase A first**: refine `docs/INTER_AGENT_PROTOCOL.md` (CoS↔bot chat, identities, KBs, tools) before any implementation.
+> **DEPRECATED for full fleet builds.** Use `prompts/IMPLEMENT_PROMPT.md` (v4) instead.
+> That prompt **requires Phase A first (bots + AIPass hybrid mailbox + dual watchers)**: refine `docs/INTER_AGENT_PROTOCOL.md` (CoS↔bot chat, identities, KBs, tools) before any implementation.
 > Phase B then builds cost-optimal plan + FirstMate + explorer + OSB + no_agent watcher + shadow-mode gates.
 >
 > This file remains as a lighter bootstrap reference. Where it conflicts with IMPLEMENT_PROMPT or `.hermes/plans/2026-08-25_122838-cost-optimal-fleet-hardening.md`, those win.

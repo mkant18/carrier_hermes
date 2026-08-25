@@ -1,87 +1,36 @@
 # carrier_hermes
 
-> Hermes Agent implementation of the Carrier Ops chief-of-staff fleet.
+> Hermes **Bot Mode** fleet: Carrier Ops chief-of-staff as a roster of named **bots**.
 
-The original [carrier_ops](https://github.com/michaelkanter/carrier_ops) plan described a 5-layer always-on agent stack (OpenClaw → OpenMausBot harness → Podiom → LiteLLM → Obsidian/OB1). This repo re-implements the same fleet using **Hermes Agent as the single runtime**, collapsing those layers while preserving every governance rule, tool scope, agent identity, and model tier from the master plan.
+Canonical bot definitions: [`bots/`](bots/README.md).  
+Runtime: each bot installs to a Hermes bot home (`hermes profile create <bot_id>` is only the CLI verb — product language is **bot**).
 
-## What maps to what
+## Roster (12 bots)
 
-| carrier_ops layer | Hermes equivalent |
-|---|---|
-| OpenClaw gateway (Discord/Telegram) | Hermes gateway — `platforms.discord`, `platforms.telegram` in config |
-| Podiom durable sessions + scheduler | Hermes profiles + `hermes cron` + Kanban |
-| firstmate parallel crew dispatch | **firstmate** profile + worktrees / coding skills (default for coding) |
-| OpenMausBot harness / approval cards | Hermes `approvals` mode + per-toolset scoping + no-send tools |
-| LiteLLM model routing (aliases) | Hermes model aliases + MoA preset |
-| Subscription Watcher | Cron `no_agent` heartbeat scripts + optional cheap summary |
-| buzz + maka dual audit | Hermes `state.db` + `_agent/audit/` + Discord webhook |
-| Obsidian / OB1 knowledge | **obsidian-second-brain** skills + MCP + vault_librarian |
-| Meta optimization (new) | **hermes_ai_explorer** profile (periodic) |
-
-## Model tiers (Hermes-native)
-
-| Alias | Resolves to | Billing |
+| Callsign | bot_id | Tier |
 |---|---|---|
-| `chief-of-staff` / `smart` | `xai-oauth / grok-4.5` (fallback Claude Max) | SuperGrok OAuth subscription |
-| `quality` | `anthropic / claude-sonnet-4-6` | Claude Max OAuth |
-| `frontier-quality` | `anthropic / claude-opus-4-8` | Claude Max OAuth (rare) |
-| `specialist` | `openrouter / deepseek/deepseek-chat-v3-0324` **paid pin** | OpenRouter per-token |
-| `watcher` | script-first (`no_agent`); optional DeepSeek summary | ~$0 |
-| `frontier` | MoA — cheap refs → grok-4.5 aggregator | Mixed |
+| **Helm** | chief_of_staff | Command — front door |
+| **Vigil** | subscription_watcher | Command — beside Helm — all-session health/quota |
+| **Ledger** | api_watcher | Command — beside Helm — all-session $ / OpenRouter |
+| **Mate** | firstmate | Coding |
+| **Scout** | hermes_ai_explorer | Meta advisor |
+| **Inbox** | email_reader | Ops |
+| **Quill** | email_drafter | Ops |
+| **Chronos** | calendar_manager | Ops calendar |
+| **Tasker** | todoist_manager | Ops Todoist |
+| **Librarian** | vault_librarian | Knowledge query |
+| **Clerk** | obsidian_archivist | Knowledge intake |
+| **Probe** | research_agent | Research |
 
-Do **not** pin email/calendar specialists to OpenRouter `:free` models.
+## Docs
 
-## Directory structure
-
-```
-carrier_hermes/
-├── README.md
-├── ARCHITECTURE.md
-├── integrations/
-│   └── obsidian-second-brain.md
-├── profiles/
-│   ├── chief_of_staff/
-│   ├── firstmate/                 # coding default (plan)
-│   ├── hermes_ai_explorer/        # fleet + AI optimization advisor
-│   ├── email_reader/
-│   ├── email_drafter/
-│   ├── calendar_manager/
-│   ├── vault_librarian/           # OSB primary
-│   ├── research_agent/
-│   └── subscription_watcher/
-├── prompts/
-│   ├── SETUP_PROMPT.md
-│   ├── IMPLEMENT_PROMPT.md        # full plan implementation session
-│   └── explorer_cron_prompt.md
-├── moa/
-│   └── frontier_preset.md
-└── .hermes/plans/                 # hardening + cost-optimal plans
-```
-
-## Inter-agent protocol (read this)
-
-**How CoS talks to other bots** (identities, relationships, knowledge bases, tools, job/result packets, forbidden edges) lives in:
-
-[`docs/INTER_AGENT_PROTOCOL.md`](docs/INTER_AGENT_PROTOCOL.md)
-
-IMPLEMENT_PROMPT **Phase A** must refine and freeze that document **before** any fleet build (Phase B).
+- [`docs/INTER_AGENT_PROTOCOL.md`](docs/INTER_AGENT_PROTOCOL.md) — how bots talk
+- [`bots/README.md`](bots/README.md) — bot table
+- [`integrations/obsidian-second-brain.md`](integrations/obsidian-second-brain.md)
+- [`prompts/IMPLEMENT_PROMPT.md`](prompts/IMPLEMENT_PROMPT.md) — Phase A protocol freeze → Phase B build **bots**
+- [`.hermes/plans/2026-08-25_122838-cost-optimal-fleet-hardening.md`](.hermes/plans/2026-08-25_122838-cost-optimal-fleet-hardening.md)
 
 ## Quickstart
 
-1. **Full fleet build (preferred):** paste `prompts/IMPLEMENT_PROMPT.md` into a fresh Hermes session with full tool access.
-   - **Phase A** = deepen protocol + templates + SOUL contracts (no infra yet)
-   - **Phase B** = cost-optimal plan + explorer + OSB + crons + smokes
-2. **Legacy bootstrap:** `prompts/SETUP_PROMPT.md` (deprecated for full builds).
-3. **OSB only:** follow `integrations/obsidian-second-brain.md`.
-
-## Profiles (summary)
-
-| Profile | Role |
-|---|---|
-| chief_of_staff | Inbound classify/dispatch |
-| firstmate | Coding crew default |
-| hermes_ai_explorer | Periodic workflow/cost/connector advisor → CoS |
-| email_reader / email_drafter / calendar_manager | Ops specialists |
-| vault_librarian | Obsidian second brain |
-| research_agent | General research briefs |
-| subscription_watcher | Heartbeat / lock / alerts |
+Paste `prompts/IMPLEMENT_PROMPT.md` into a fresh Hermes session.  
+**Phase A** freezes inter-bot protocol. **Phase B** creates the **bot roster** (not “a pile of anonymous profiles”).
