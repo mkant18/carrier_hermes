@@ -21,7 +21,7 @@ Sources: live `hermes --help` / `hermes profile` / `hermes kanban` / `hermes cro
 | Group chats | 2–6 bots; expensive (serial rounds). **Not** a Carrier dispatch channel. |
 | Hide | Display-only; routines still run. |
 
-**This machine (pre–Phase B):** only `default`, `chief_of_staff`, `hermes_ai_explorer`, `vault_librarian` exist as bot homes. Phase B creates the remaining 12-roster homes. Do not treat those three as the fleet.
+**This machine (post–Phase B / ECO 2026-08-25):** full BOT_MATRIX roster homes exist under `~/.hermes/profiles/*`, including Command (Helm, Marshal, Vigil, Ledger, LockBox), Lts (Wrench, Deck, Stacks, Chart), Coding (Mate, Yeoman), Ops specialists, Knowledge (Librarian, Clerk), and Recon (Sonar, Probe). Do not treat a partial three-home snapshot as the fleet.
 
 ---
 
@@ -80,9 +80,28 @@ Pick the **lowest-cost durable** channel that fits. Never skip down the table be
 
 **Enabled toolsets (default home):** web, browser, terminal, file, code_execution, vision, image_gen, x_search, tts, skills, todo, memory, session_search, clarify, delegation, cronjob, computer_use.
 
-**MCP:** hugging_face, kiwi (search-flight only), todoist (template import/export excluded), vercel, obsidian-second-brain (Inbox writers excluded: `obsidian_save_note`, `obsidian_capture`, `obsidian_update_note`), dropbox disabled.
+**MCP (default desktop home may keep more; specialists must not inherit):** hugging_face, kiwi (search-flight only), todoist (template import/export excluded; **Tasker only** on fleet), vercel (Mate), obsidian-second-brain (Clerk write; Librarian/Stacks/Chart read-only writers excluded: `obsidian_save_note`, `obsidian_capture`, `obsidian_update_note`), dropbox disabled.
 
-Per-bot enablement is **structural** in each bot home (Phase B / `bots/BOT_MATRIX.md`). Default home staying fully tooled is fine; specialists must not inherit that set.
+**MCP ECO decisions (2026-08-25):** Consensus MCP = **ADOPT draft** for Probe + Chart only after Helm OAuth (`integrations/mcp-consensus.md`). Obsidian Local REST API MCP = **REJECT** fleet (prefer OSB). Granola = **DEFER**. Monarch as Hermes MCP = **DEFER** (Purse stays narrow terminal). Todoist = Tasker only (tighten excludes). Per-bot include/exclude draft: operator `_agent/coding/mcp/POLICY.md` (not committed).
+
+**Live drift note (B-MCP-3):** `chief_of_staff` apply path may still carry SUPER-AGENT domain MCP (OSB/todoist/hf/kiwi/vercel) while BOT_MATRIX says **none domain**. Helm decides matrix vs apply; this docs pass does not expand Helm power.
+
+Per-bot enablement is **structural** in each bot home (`bots/BOT_MATRIX.md`). Default home staying fully tooled is fine; specialists must not inherit that set.
+
+---
+
+## Ecosystem integration (2026-08-25)
+
+Mission handoff: `docs/HANDOFF_2026-08-25_ECOSYSTEM_INTEGRATION.md`. Integration notes under `integrations/`.
+
+| Area | Decision (short) |
+|---|---|
+| hermes-workspace | Zero-fork **install ADOPT**; daily-drive **DEFER** until RO hardening (Agent View + domain MCP not RO) — `integrations/hermes-workspace.md` |
+| hermes-telemetry | **ADAPT / DEFER install** — tool-gate microscope only; does not replace SPEND_HALT — `integrations/hermes-telemetry.md` |
+| evey-cost-guard / evey-bridge / evey-goals / evey-status | **REJECT** install (bridge stack conflicts with AIPass+Kanban; cost-guard soft-only) |
+| Skills catalogs | Official + fleet-authored **ADOPT**; awesome lists **discovery only**; **SkillClaw REJECT** |
+| Mobile companions | Chat clients **ADOPT-LATER** (human Tailscale); device control / AGI Phone **DEFER**; Mercury **REJECT** |
+| Fleet hard stop | Unchanged: Ledger `SPEND_HALT` + Vigil `DISPATCH_LOCK` + Helm preflight |
 
 ---
 
@@ -107,10 +126,16 @@ Per-bot enablement is **structural** in each bot home (Phase B / `bots/BOT_MATRI
 | 6 | Ledger spend API | Script: `GET /api/v1/key` with `OPENROUTER_API_KEY` → `usage_daily`, `usage_monthly`, `limit_remaining`. Optional `GET /api/v1/credits` only if a management key exists (`OPENROUTER_MANAGEMENT_KEY`). No LLM on the 10–15m tick. |
 | 7 | Cross-bot session_search | **Yes** for Helm, Chart, Vigil summary, Ledger correlation. Ops bots: own domain only. |
 | 8 | Gateway | Helm-only inbound. |
+| 9 | hermes-workspace daily-drive | **DEFER** until RO hardening (GET-only / viewer profile; no domain MCP on workspace process). Install docs OK. |
+| 10 | hermes-telemetry fleet install | **DEFER** until multi-home + optional SPEND_HALT signal design approved; never transfer alert ownership from Ledger/Vigil. |
+| 11 | Consensus MCP prod enable | **DEFER** until Helm OAuth grant on Probe + Chart only. |
+| 12 | AIPass / Kanban | **FROZEN primary** — no 42-evey bridge replacement. |
+| 13 | SkillClaw | **REJECT** on all live bot homes. |
+| 14 | Helm domain MCP vs BOT_MATRIX | **OPEN** — live SUPER-AGENT MCP may exceed matrix "none domain"; Helm picks matrix or apply, then Wrench packet. |
 
 ---
 
-## What Phase B must not invent
+## What Phase B / ECO must not invent
 
 - Full `pip install aipass` / `.trinity/` / `.ai_mail.local/`
 - Free `:free` pins on Inbox / Chronos / Tasker
@@ -119,3 +144,8 @@ Per-bot enablement is **structural** in each bot home (Phase B / `bots/BOT_MATRI
 - Librarian doing intake
 - Mail send tools
 - Trust Level > 0 without Michael
+- Mass `hermes skills install` / SkillClaw auto-evolve on production homes
+- evey-bridge as a second bot-to-bot bus
+- Plugin soft budgets as the fleet kill switch
+- Obsidian Local REST MCP as the fleet vault path (OSB wins)
+- Production mobile device-control MCP without Helm + LockBox
