@@ -4,6 +4,43 @@ Subscription-first. Pay-per-token only for high-volume structured ops. **Never**
 
 ---
 
+## Local LLM Policy (pending integration — see Kanban task `local-llm-routing`)
+
+Once a local LLM is available on the host, apply this routing hierarchy:
+
+### Decision-making tier — NEVER local LLM
+These bots stay on subscription OAuth regardless:
+- **Helm** (chief_of_staff): `grok-4.5/xai-oauth` primary
+- **Marshal**: `claude-sonnet-5/anthropic` primary
+- **All 4 LTs** (Wrench, Deck, Stacks, Chart): `claude-sonnet-5/anthropic` primary
+
+Rationale: routing, coordination, and judgment calls need frontier-quality reasoning. Latency and reliability of local LLM are not acceptable for dispatch decisions.
+
+### Worker/watcher tier — local LLM primary, OAuth fallback on tool calls
+All remaining bots (Vigil, Ledger, Sonar, Inbox, Chronos, Tasker, Yeoman, Mate, Probe, Quill, Purse, Librarian, Clerk, LockBox) use:
+```
+local-llm (primary — $0, zero quota)
+  → claude-sonnet-5/anthropic OR grok-4.5/xai-oauth (fallback — ONLY when tool calls required)
+```
+**NOT** OpenRouter for the fallback — use subscription OAuth so fallback is still $0 marginal.
+
+LockBox specifically: local LLM for routine Doppler health checks; OAuth fallback for tool calls; **never DeepSeek/PRC even on local** (keep the non-PRC policy at inference time).
+
+### Implementation note (for the wiring session)
+Set each affected bot's `config.yaml` provider chain to:
+```yaml
+provider: local          # ollama / llama.cpp / whatever the integration uses
+model: <local-model>
+fallback:
+  - provider: anthropic  # OAuth subscription
+    model: claude-sonnet-5-20251001
+    condition: tool_calls  # only when tool calls needed
+```
+Script: `scripts/apply_local_llm_routing.py` (to be written by that session).
+Verify with `billing_guard.py` after — expected PASS (local = $0, fallback = OAuth $0).
+
+---
+
 ## Rules
 
 1. Subscription OAuth first (xAI SuperGrok, Anthropic Claude Max).
