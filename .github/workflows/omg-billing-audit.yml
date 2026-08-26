@@ -1,0 +1,45 @@
+name: OMG Billing Audit
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  merge_group:
+  schedule:
+    # Daily at 08:00 UTC (04:00 Eastern)
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+jobs:
+  billing-audit:
+    name: "🚨 OMG Billing Audit"
+    runs-on: [self-hosted, windows, mks-pc]
+    timeout-minutes: 5
+
+    steps:
+      - name: Determine context
+        id: ctx
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "context=PR #${{ github.event.pull_request.number }} (${{ github.head_ref }} → ${{ github.base_ref }})" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "context=daily scheduled run" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            echo "context=push to ${{ github.ref_name }} by ${{ github.actor }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "context=workflow_dispatch by ${{ github.actor }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run zero-LLM billing audit
+        shell: bash
+        env:
+          DISCORD_FLEET_BOT_TOKEN:    ${{ secrets.OMB_DISCORD_FLEET_TOKEN }}
+          DISCORD_ALERTS_CHANNEL_ID:  ${{ secrets.OMB_DISCORD_ALERTS_CHANNEL }}
+          TELEGRAM_BOT_TOKEN:         ${{ secrets.OMB_TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_FLEET_CHAT_ID:     ${{ secrets.OMB_TELEGRAM_FLEET_CHAT }}
+        run: |
+          python3 \
+            "$USERPROFILE/carrier_hermes/scripts/omg_billing_audit.py" \
+            --context "${{ steps.ctx.outputs.context }}"
