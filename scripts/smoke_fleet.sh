@@ -128,6 +128,25 @@ else
   skip "ping_openai_codex" "openai-codex OAuth credential not configured — fail-closed"
 fi
 ping_model claude anthropic claude-sonnet-4-6
+# OpenAI OAuth smoke probe — skip if credential absent (fail-closed, not fail-error)
+if python3 - <<'PY'
+import json
+from pathlib import Path
+p = Path.home() / '.hermes' / 'auth.json'
+try:
+    d = json.loads(p.read_text(encoding='utf-8'))
+except Exception:
+    raise SystemExit(1)
+pool = d.get('credential_pool') or {}
+providers = d.get('providers') or {}
+ok = bool(pool.get('openai-oauth') or providers.get('openai-oauth'))
+raise SystemExit(0 if ok else 1)
+PY
+then
+  ping_model openai_oauth openai-oauth gpt-4o-mini
+else
+  skip "ping_openai_oauth" "openai-oauth credential not configured — fail-closed"
+fi
 # DeepSeek requires OPENROUTER_API_KEY
 if grep -qE '^OPENROUTER_API_KEY=.' "${HERMES_HOME:-$HOME/.hermes}/.env" 2>/dev/null; then
   ping_model deepseek openrouter deepseek/deepseek-chat-v3-0324

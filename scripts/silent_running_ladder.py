@@ -47,11 +47,12 @@ SHIPWRIGHT_BOTS = ("maintenance_lt", "code_auditor", "repair_planner",
 
 # Freshness windows: a standing tier is "due" if it hasn't run within this.
 DUE_WINDOWS_S = {
-    "memory":   24 * 3600,   # optimize memory at most ~daily
-    "cleaning": 24 * 3600,   # sweep stale artifacts ~daily
-    "trends":   24 * 3600,   # trend analysis ~daily (OAuth-tier: Helm + LTs)
-    "training": 48 * 3600,   # 48h corrections review window (per Michael)
-    "features": 72 * 3600,   # feature scouting every ~3 days
+    "memory":    24 * 3600,   # optimize Hermes memory stores ~daily
+    "omb_audit": 12 * 3600,   # OMB bot health audit + hardening ~twice daily
+    "cleaning":  24 * 3600,   # sweep stale artifacts ~daily
+    "trends":    24 * 3600,   # trend analysis ~daily (OAuth-tier: Helm + LTs)
+    "training":  48 * 3600,   # 48h corrections review window (per Michael)
+    "features":  72 * 3600,   # feature scouting every ~3 days
 }
 
 
@@ -136,18 +137,21 @@ def build_report() -> dict:
         top = 2
     elif standing["memory"]["due"]:
         top = 3
-    elif standing["cleaning"]["due"]:
+    elif standing["omb_audit"]["due"]:
         top = 4
-    elif standing["trends"]["due"]:
+    elif standing["cleaning"]["due"]:
         top = 5
-    elif standing["training"]["due"]:
+    elif standing["trends"]["due"]:
         top = 6
-    elif standing["features"]["due"]:
+    elif standing["training"]["due"]:
         top = 7
+    elif standing["features"]["due"]:
+        top = 8
     # If everything is clear and nothing is due, Helm holds (top=None → idle).
 
     tier_names = {1: "backlog", 2: "maintenance", 3: "memory",
-                  4: "cleaning", 5: "trends", 6: "training", 7: "features"}
+                  4: "omb_audit", 5: "cleaning", 6: "trends",
+                  7: "training", 8: "features"}
 
     return {
         "generated_at": int(time.time()),
@@ -199,7 +203,7 @@ def main() -> int:
           f"ollama={g['ollama_ready']}")
     print(f"tier1 backlog     : {kb['backlog_count']} task(s)")
     print(f"tier2 maintenance : {kb['maintenance_open']} open task(s)")
-    for name in ("memory", "cleaning", "trends", "training", "features"):
+    for name in ("memory", "omb_audit", "cleaning", "trends", "training", "features"):
         s = report["standing"][name]
         age = "never" if s["last_run_at"] is None else f"{s['age_hours']}h ago"
         print(f"tier {name:9}: due={s['due']} (last: {age})")

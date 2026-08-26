@@ -231,7 +231,7 @@ def is_anthropic_or_grok_model(model: Any) -> bool:
 
 
 SUBSCRIPTION_ONLY_PROVIDERS: frozenset[str] = frozenset(
-    {"anthropic", "xai-oauth", "openai-codex"}
+    {"anthropic", "xai-oauth", "openai-codex", "openai-oauth"}
 )
 
 
@@ -317,7 +317,7 @@ def violation_message(
         f"(base_url={base_url or ''}). "
         "PERIOD FULL STOP: Anthropic/Claude, xAI/Grok, and OpenAI frontier "
         "MUST NEVER ride OpenRouter or any metered aggregator — OAuth only "
-        "(anthropic / xai-oauth / openai-codex). "
+        "(anthropic / xai-oauth / openai-codex / openai-oauth). "
         "OpenRouter is ALLOWLIST-ONLY: DeepSeek flash/chat, Gemini Flash/Lite, gpt-oss."
     )
 
@@ -571,6 +571,15 @@ def self_test() -> None:
     assert subscription_route_config_violation({"provider": "openai-codex", "model": "gpt-5.6-luna", "base_url": "https://api.openai.com/v1"}, "test")
     assert not subscription_route_config_violation({"provider": "openai-codex", "model": "gpt-5.6-luna"}, "test")
 
+    # --- OpenAI OAuth guard probes ---
+    # MUST ALLOW (OAuth subscription path)
+    assert not is_billing_violation("openai-oauth", "gpt-4o-mini", None), "openai-oauth cheap must allow"
+    assert not is_billing_violation("openai-oauth", "gpt-4o", None), "openai-oauth mid must allow"
+    assert not is_billing_violation("openai-oauth", "o3", None), "openai-oauth frontier must allow"
+    assert "openai-oauth" in SUBSCRIPTION_ONLY_PROVIDERS, "openai-oauth must be in SUBSCRIPTION_ONLY_PROVIDERS"
+    assert subscription_route_config_violation({"provider": "openai-oauth", "model": "gpt-4o", "api_key": "sk-test"}, "test"), "openai-oauth with api_key must fail"
+    assert not subscription_route_config_violation({"provider": "openai-oauth", "model": "gpt-4o"}, "test"), "openai-oauth clean route must pass"
+
     # MUST ALLOW
     allow = [
         ("openrouter", "deepseek/deepseek-v4-flash-0731", None),
@@ -585,6 +594,9 @@ def self_test() -> None:
         ("openai-codex", "gpt-5.6-sol", None),
         ("openai-codex", "gpt-5.6-terra", None),
         ("openai-codex", "gpt-5.6-luna", None),
+        ("openai-oauth", "gpt-4o-mini", None),
+        ("openai-oauth", "gpt-4o", None),
+        ("openai-oauth", "o3", None),
     ]
     for p, m, bu in allow:
         assert not is_billing_violation(p, m, bu), f"false positive {p}/{m}: {violation_message(p,m,bu)}"

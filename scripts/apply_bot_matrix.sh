@@ -124,13 +124,18 @@ OPENAI = {
     "cheap": {"provider": "openai-codex", "model": "gpt-5.6-luna"},
     "nocn": {"provider": "openai-codex", "model": "gpt-5.6-luna"},
 }
+OPENAI_OAUTH = {
+    "command": {"provider": "openai-oauth", "model": "gpt-4o"},
+    "cheap": {"provider": "openai-oauth", "model": "gpt-4o-mini"},
+    "nocn": {"provider": "openai-oauth", "model": "gpt-4o-mini"},
+}
 ANTHROPIC = {
     "command": {"provider": "anthropic", "model": "claude-sonnet-4-6"},
     "cheap": {"provider": "anthropic", "model": "claude-haiku-4-5"},
     "nocn": {"provider": "anthropic", "model": "claude-haiku-4-5"},
 }
 
-for tier_name, entries in {k: [OPENAI[k], ANTHROPIC[k]] for k in OPENAI}.items():
+for tier_name, entries in {k: [OPENAI[k], OPENAI_OAUTH[k], ANTHROPIC[k]] for k in OPENAI}.items():
     for e in [GROK] + entries:
         err = violation_for_route(
             provider=e["provider"], model=e["model"], where=f"TAILS[{tier_name!r}]"
@@ -160,7 +165,7 @@ m["provider"] = primary_provider
 m.pop("fallback", None)
 cfg.pop("fallback_model", None)
 
-ordered = [dict(GROK), dict(OPENAI[tier]), dict(ANTHROPIC[tier])]
+ordered = [dict(GROK), dict(OPENAI[tier]), dict(OPENAI_OAUTH[tier]), dict(ANTHROPIC[tier])]
 fb_list = [e for e in ordered if e["provider"] != primary_provider]
 for i, fb in enumerate(fb_list):
     err = violation_for_route(
@@ -222,6 +227,7 @@ if "opencode" in bu or ":free" in bu or bu.strip() == "" or "openrouter" in bu.l
 # Helm QUALITY paid tail — subscription-only; OpenRouter NEVER carries frontier.
 cfg["fallback_providers"] = [
     {"provider": "openai-codex", "model": "gpt-5.6-sol"},
+    {"provider": "openai-oauth", "model": "gpt-4o"},
     {"provider": "anthropic", "model": "claude-sonnet-4-6"},
 ]
 for i, fb in enumerate(cfg["fallback_providers"]):
