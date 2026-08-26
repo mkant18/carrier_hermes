@@ -297,6 +297,8 @@ def discord_post(token: str, channel_id: str, content: str) -> bool:
         headers={
             "Authorization": f"Bot {token}",
             "Content-Type": "application/json",
+            # Required — Cloudflare blocks Python's default UA with 403/1010
+            "User-Agent": "DiscordBot (https://carrier-hermes, 1.0)",
         },
         method="POST",
     )
@@ -341,17 +343,28 @@ def buzz_post(bot_id: str, text: str, channel: str = "fleet") -> bool:
 
 # ── Telegram ──────────────────────────────────────────────────────────────────
 
-def telegram_send(chat_id: str | int, text: str) -> bool:
-    """Send via hermes send --to telegram:<chat_id>."""
-    if not chat_id:
-        print("  [telegram] no chat_id configured", file=sys.stderr)
+def telegram_send(chat_id: str | int, text: str, tg_token: str) -> bool:
+    """Send via Telegram Bot API directly (token from chief_of_staff profile)."""
+    if not chat_id or not tg_token:
+        print(f"  [telegram] missing chat_id or token — skipping", file=sys.stderr)
         return False
-    cmd = ["hermes", "send", "--to", f"telegram:{chat_id}", "--quiet", text]
+    payload = json.dumps({"chat_id": str(chat_id), "text": text}).encode()
+    req = urllib.request.Request(
+        f"https://api.telegram.org/bot{tg_token}/sendMessage",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        ok = r.returncode == 0
-        print(f"  [telegram] send → {'OK' if ok else 'FAIL'}: {r.stderr.strip()[:120]}")
-        return ok
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            d = json.loads(resp.read())
+            ok = d.get("ok", False)
+            msg_id = d.get("result", {}).get("message_id", "?")
+            print(f"  [telegram] send → {'OK' if ok else 'FAIL'} msg_id={msg_id}")
+            return ok
+    except urllib.error.HTTPError as e:
+        print(f"  [telegram] HTTPError {e.code}: {e.read()[:200]}", file=sys.stderr)
+        return False
     except Exception as e:
         print(f"  [telegram] Error: {e}", file=sys.stderr)
         return False
@@ -369,6 +382,15 @@ def main() -> int:
     fleet_channel_id = "1541866443765977138"  # #fleet
     tg_chat_id       = BUZZ_CHANNELS.get("command", {}).get("telegram_chat_id", "")
     michael_uid      = "174349224870150144"
+
+    # Telegram token lives in chief_of_staff profile (not default home)
+    cos_env_path = HOME / "profiles" / "chief_of_staff" / ".env"
+    tg_token = ""
+    if cos_env_path.exists():
+        for line in cos_env_path.read_text(encoding="utf-8").splitlines():
+            if line.startswith("TELEGRAM_BOT_TOKEN="):
+                tg_token = line.partition("=")[2].strip().strip('"').strip("'")
+                break
 
     now_dt   = datetime.fromtimestamp(now_ts, tz=timezone.utc).astimezone(
         timezone(timedelta(hours=-4))  # EDT
@@ -474,7 +496,7 @@ def main() -> int:
 
     # Telegram
     if tg_chat_id:
-        ok_telegram = telegram_send(tg_chat_id, message)
+        ok_telegram = telegram_send(tg_chat_id, message, tg_token)
     else:
         print("  [telegram] no chat_id in buzz_channels.json — skipping")
 
