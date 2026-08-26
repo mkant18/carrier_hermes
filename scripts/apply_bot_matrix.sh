@@ -506,6 +506,9 @@ if [[ -f "$ROOT/scripts/or_billing_policy.py" ]]; then
     echo "FAIL: billing_guard violations after matrix apply" >&2
     exit 1
   }
+  python3 "$ROOT/scripts/sync_or_billing_guardrail.py" || {
+    echo "WARN: OR workspace allowlist sync failed (check OPENROUTER_MANAGEMENT_KEY)" >&2
+  }
 else
   echo "FAIL: or_billing_policy.py missing" >&2
   exit 1

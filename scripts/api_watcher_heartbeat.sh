@@ -66,3 +66,13 @@ else
   # Under cap — silent (no_agent: empty stdout = no delivery)
   exit 0
 fi
+
+# Billing hard-guard (no Claude/Grok on OpenRouter)
+ROOT="${CARRIER_HERMES_ROOT:-$HOME/carrier_hermes}"
+if [[ -f "$ROOT/scripts/billing_guard.py" ]]; then
+  python3 "$ROOT/scripts/billing_guard.py" --quiet-ok || {
+    echo "billing_guard FAIL — OpenRouter/Claude-Grok policy breach in configs" >&2
+    # non-zero so heartbeat can alert
+    exit 1
+  }
+fi
