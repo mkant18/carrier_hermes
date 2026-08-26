@@ -1,3 +1,20 @@
+# Local LLM Registry — carrier_hermes fleet
+# Auto-updated by scripts/register_new_local_llms.py
+# Manual edits allowed; script will merge, not overwrite, existing entries.
+#
+# tier values:
+#   worker-primary    — the default local primary for worker/watcher bots
+#   worker-alternate  — available as a drop-in swap, not default
+#   specialist        — purpose-built custom model (do NOT use as a general worker)
+#
+# To set a specific bot to use an alternate model, edit its profile config.yaml:
+#   model:
+#     default: gemma4:26b
+#     provider: custom
+#     base_url: http://localhost:11434/v1
+#
+# Or re-run apply_local_llm_routing.py --local-model <model> to flip ALL workers.
+
 local_models:
   qwen2.5:7b-instruct-q4_K_M:
     display_name: Qwen 2.5 7B Instruct Q4_K_M
