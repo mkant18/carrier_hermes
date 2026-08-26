@@ -3,11 +3,12 @@
 fleet_checkin.py — Hourly Fleet Check-in
 ==========================================
 Runs as a Hermes cron (no_agent=True). Mines all 20 bot state.db files for
-sessions in the last 65 minutes, then calls ONE OpenRouter gemini-2.5-flash-lite
-call PER ACTIVE WING (the LT "writes" a 2-3 sentence wing summary). Idle wings
-get zero LLM calls. Broadcasts the assembled report to Discord, Buzz, and Telegram.
+sessions in the last 65 minutes, then builds a zero-cost Python wing summary
+per active wing. Idle wings get no output. Broadcasts the assembled report to
+Discord, Buzz, and Telegram.
 
-Cost: ~$0.0001/run for active wings (essentially $0). Zero tokens from subscription.
+Cost: $0.00 per run. Zero OR spend. Zero LLM tokens from subscription.
+(Wing summaries are pure Python — no or_flash_summarize() call.)
 
 Posted as:
   Discord:  **Marshal 🎖️** → #fleet (First Watch REST)
@@ -153,14 +154,45 @@ def callsign_for(bot_id: str) -> str:
     return f"{b.get('callsign', bot_id)} {b.get('emoji', '')}".strip()
 
 
+def python_summarize(wing_label: str, lt_callsign: str, wing_data: dict[str, Any],
+                     kanban: dict[str, dict]) -> str:
+    """
+    Zero-cost pure-Python wing summary — replaces the former or_flash_summarize().
+    Formats session titles and kanban task status into a compact one-liner.
+    No LLM call, no OR spend.
+    """
+    parts: list[str] = []
+    for bot_id, sessions in wing_data.items():
+        cs = callsign_for(bot_id)
+        for s in sessions:
+            title = s.get("title", "(untitled)")
+            task_ids = _TASK_ID_RE.findall(title + " " + s.get("last_msg", "")[:200])
+            detail_parts: list[str] = []
+            for tid in task_ids:
+                kb = kanban.get(tid)
+                if kb:
+                    short = kb["title"][:50] + ("…" if len(kb["title"]) > 50 else "")
+                    detail_parts.append(f'{tid} "{short}" [{kb["status"]}]')
+            if detail_parts:
+                parts.append(f"{cs}: {' | '.join(detail_parts)}")
+            else:
+                short_title = title[:80] + ("…" if len(title) > 80 else "")
+                parts.append(f"{cs}: {short_title}")
+    if not parts:
+        return "All quiet this hour."
+    # Keep it compact — join first 5 items
+    body = "; ".join(parts[:5])
+    if len(parts) > 5:
+        body += f" (+{len(parts) - 5} more)"
+    return f"Active this hour — {body}."
+
+
 def or_flash_summarize(wing_label: str, lt_callsign: str, wing_data: dict[str, Any],
                        or_key: str, kanban: dict[str, dict]) -> str:
     """
-    Call OpenRouter gemini-2.5-flash-lite to have the Lt 'write' a compact
-    wing summary. Returns a 2-3 sentence summary string, or falls back gracefully.
-
-    Model: google/gemini-2.5-flash-lite (~$0.015/M in, $0.04/M out → <$0.0001/call)
-    This is on the OR allowlist and costs essentially nothing at this scale.
+    DEPRECATED — kept for reference only. Use python_summarize() instead.
+    Original OR-backed summarizer (google/gemini-2.5-flash-lite).
+    Removed from active call path 2026-08-26 to eliminate OR cash spend.
     """
     # Build compact structured input — enrich with kanban title + run_summary
     bot_lines: list[str] = []
@@ -720,26 +752,16 @@ def main() -> int:
     kanban = kanban_enrich(list(set(all_task_ids)))
     print(f"  [kanban] enriched {len(kanban)}/{len(set(all_task_ids))} task IDs")
 
-    # ── Phase 3: LT summaries (cheap LLM per active wing) ─────────────────────
-    if not or_key:
-        print("  [warn] OPENROUTER_API_KEY not found — falling back to title-only summaries")
-
+    # ── Phase 3: LT summaries (zero-cost Python, no LLM/OR) ──────────────────
     for wr in wing_results:
         if not wr["active"]:
             wr["summary"] = None  # idle
             continue
         wing = wr["wing"]
-        print(f"  [llm] Summarizing {wing['label']} via gemini-2.5-flash-lite ...")
-        if or_key:
-            wr["summary"] = or_flash_summarize(
-                wing["label"], wing["callsign"], wr["data"], or_key, kanban
-            )
-        else:
-            # No key: list titles
-            titles = "; ".join(
-                s["title"] for sessions in wr["data"].values() for s in sessions
-            )
-            wr["summary"] = f"Active this hour: {titles}."
+        print(f"  [summary] Summarizing {wing['label']} via python_summarize ...")
+        wr["summary"] = python_summarize(
+            wing["label"], wing["callsign"], wr["data"], kanban
+        )
 
     # ── Phase 3: Compose message ───────────────────────────────────────────────
     header = f"**Marshal 🎖️** ⏰ Fleet Check-in | {ts_label} | <@{michael_uid}>\n"
@@ -798,7 +820,7 @@ def main() -> int:
     sections += [
         f"⚓ **Command** — Marshal · Vigil · Ledger · LockBox\n{cmd_parts_str}",
         f"📊 **Spend & Subs**\n{spend_block}",
-        "> 🤖 `google/gemini-2.5-flash-lite` · openrouter · ~$0.00",
+        "> 🤖 `python_summarize` · zero-cost · no LLM",
     ]
     message = "\n\n".join(sections)
 
