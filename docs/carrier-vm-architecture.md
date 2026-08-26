@@ -56,7 +56,7 @@ This prevents duplicate container names from racing starts.
 `carrier_vm_manager.py` orchestrates the entire fleet:
 
 ```bash
-python scripts/carrier_vm_manager.py status   # see who's running
+python scripts/carrier_vm_manager.py status --openmaus  # see who's running
 python scripts/carrier_vm_manager.py start    # start all VMs
 python scripts/carrier_vm_manager.py stop     # graceful shutdown
 python scripts/carrier_vm_manager.py exec "python scripts/smoke_fleet.sh"

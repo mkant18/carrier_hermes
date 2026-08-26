@@ -33,6 +33,8 @@ OPENAI_FRONTIER = {"provider": "openai-codex", "model": "gpt-5.6-sol"}
 OPENAI_MID = {"provider": "openai-codex", "model": "gpt-5.6-terra"}
 OPENAI_CHEAP = {"provider": "openai-codex", "model": "gpt-5.6-luna"}
 CLAUDE = {"provider": "anthropic", "model": "claude-sonnet-4-6"}
+OPENAI_OAUTH_PROVIDER = 'openai-oauth'
+OPENAI_OAUTH_MODEL_SLUGS = ['gpt-4o-mini', 'gpt-4o', 'o3']
 
 SUBSCRIPTION_PRIORITY = [GROK, OPENAI_FRONTIER, CLAUDE]
 

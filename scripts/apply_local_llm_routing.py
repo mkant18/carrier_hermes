@@ -36,11 +36,37 @@ HERMES_HOME = Path(r"C:\Users\micha\AppData\Local\hermes")
 SCRIPTDIR   = Path(__file__).resolve().parent
 DRY         = "--dry-run" in sys.argv
 
+# ── Known local models (added/updated 2026-08-26) ─────────────────────────────
+# All of these are available as the LOCAL_MODEL primary for worker bots.
+# Specialist models (mistral-nemo-classifier) should NOT be used as general workers.
+#
+# Context requirement: Hermes minimum is 64K. Models below that cannot be Kanban workers.
+#
+#  Model                              | Ctx    | Tool calls | Notes
+#  -----------------------------------|--------|------------|-----------------------------
+#  qwen2.5:7b-instruct-q4_K_M        | 32K ⚠ | Yes        | Fast; CANNOT be Kanban worker
+#  llama3.1:8b-instruct-q4_K_M       | 128K   | Yes        | Reliable Kanban worker
+#  gemma4:26b                         | 128K+  | Yes        | MoE reasoning; ~4B active
+#  mistral-nemo                       | 128K   | Yes        | 12B, strong structured output
+#  mistral-nemo-classifier            | 16K    | No         | Specialist: classification only
+KNOWN_LOCAL_MODELS = [
+    "qwen2.5:7b-instruct-q4_K_M",       # fast rote (ctx too small for kanban worker)
+    "llama3.1:8b-instruct-q4_K_M",      # reliable kanban worker (128K ctx)
+    "gemma4:26b",                         # reasoning-capable MoE worker
+    "mistral-nemo",                       # 12B 128K general purpose
+    # mistral-nemo-classifier is specialist-only; don't use as general worker primary
+]
+
 # Allow overriding the local model name (e.g. when a new model is pulled)
 LOCAL_MODEL = "qwen2.5:7b-instruct-q4_K_M"
 for i, arg in enumerate(sys.argv):
     if arg == "--local-model" and i + 1 < len(sys.argv):
         LOCAL_MODEL = sys.argv[i + 1]
+        if LOCAL_MODEL == "mistral-nemo-classifier":
+            print("ERROR: mistral-nemo-classifier is a specialist (classification-only) model.")
+            print("       It should NOT be used as the general worker primary.")
+            print("       Use mistral-nemo, gemma4:26b, or llama3.1:8b-instruct-q4_K_M instead.")
+            sys.exit(1)
 
 LOCAL_BASE_URL = "http://localhost:11434/v1"
 
