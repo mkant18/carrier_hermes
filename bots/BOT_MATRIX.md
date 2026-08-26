@@ -45,6 +45,27 @@ or queries Monarch has violated its SOUL. Route it to the specialist instead.
 | `firstmate` | Mate ⚙️ | `quality` implementer; `specialist` janitor/docs | terminal, file, code_execution, skills (claude-code, codex, opencode), delegation, session_search, memory, web (opt), kanban worker | mail, todoist, calendar, OSB write | vercel/github as needed for coding; **no** todoist/OSB write |
 | `git_yeoman` | Yeoman 📋 | `specialist` paid DeepSeek V3 | terminal **narrow** (`gh` CLI only), file `_agent/git_yeoman/**`, session_search, memory, aipass, discord `#fleet` via First Watch, todo, skills (github-issues, github-pr-workflow, github-code-review read-only) | code_execution, browser, web, computer_use, mail, mail_send, todoist, calendar, OSB write, delegation, cronjob | **none** (gh CLI handles GitHub API) |
 
+## Shipwright Wing (Autonomous Maintenance)
+
+Fully autonomous maintenance pipeline. Runs on a schedule. No user input required per-run.
+All bots report to Marshal via Kanban. Bosun is the ONLY dispatcher for this wing.
+
+| bot_id | Callsign | Model | Toolsets ON | Toolsets OFF | MCP |
+|---|---|---|---|---|---|
+| `maintenance_lt` | Bosun 🛠️ | `claude-sonnet-5-20251001` anthropic → `grok-4.5` xai-oauth | kanban (dispatch/review), AIPass, session_search, memory, file `_agent/maintenance_lt/**`, discord `#maintenance` + `#fleet` via Shipwright REST | terminal, code_execution, browser, computer_use, delegation, web, mail, todoist, calendar, OSB write | none |
+| `code_auditor` | Diver 🤿 | local `qwen2.5:7b-instruct-q4_K_M` → `claude-sonnet-5-20251001` anthropic → `grok-4.5` xai-oauth | terminal **narrow** (rg, ruff, pylint, git log/diff/status, tail, cat — READ-ONLY, NO git write), file `_agent/maintenance/**` (write) + repo (read-only), session_search, AIPass | mail, todoist, calendar, OSB write, delegation, kanban-as-owner, browser, computer_use | none |
+| `repair_planner` | Rigger 🪢 | `claude-opus-4-5` anthropic → `claude-sonnet-5` anthropic → `grok-4.5` xai-oauth → `google/gemini-2.5-flash-lite` OR (last resort) | file `_agent/maintenance/**` (read+write), session_search, memory, skills, AIPass | terminal, code_execution, browser, computer_use, delegation, web, mail, todoist, calendar, kanban | none |
+| `patch_writer` | Caulker ⚒️ | local `qwen2.5:7b-instruct-q4_K_M` → `claude-haiku-4-5` anthropic → `claude-sonnet-5-20251001` anthropic → `grok-4.5` xai-oauth | terminal **narrow** (git branch/add/commit/push, ruff, pytest), file (repo write + `_agent/maintenance/**`), code_execution, skills, AIPass (to Yeoman + Bosun), session_search | mail, todoist, calendar, OSB write, browser, computer_use, kanban-as-owner | none |
+| `pr_reviewer` | Surveyor 🧭 | `claude-opus-4-5` anthropic → `claude-sonnet-5` anthropic → `grok-4.5` xai-oauth → `google/gemini-2.5-flash-lite` OR (last resort) | terminal **narrow** (gh pr view/diff/checks, billing_guard read-only, git log/diff), file `_agent/maintenance/**`, skills, AIPass (to Caulker + Bosun + Yeoman), session_search | code_execution, mail, todoist, calendar, OSB write, delegation, computer_use, kanban-as-owner | none |
+
+### Hard rules — Shipwright Wing
+
+1. **Diver is READ-ONLY on the repo** — no `git write`, no file mutations outside `_agent/maintenance/`
+2. **Caulker does NOT open PRs directly** — always goes through Yeoman (same protocol as Mate)
+3. **Surveyor does NOT merge directly** — instructs Yeoman to merge (Yeoman is the only bot with `gh pr merge` authority)
+4. **Bosun never executes code** — same Lt hard rule as all other LTs
+5. **All 5 bots must pass billing_guard** before any dispatch
+
 ## Recon Wing
 
 | bot_id | Callsign | Model | Toolsets ON | Toolsets OFF | MCP |
