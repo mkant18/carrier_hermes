@@ -4,22 +4,22 @@ apply_local_llm_routing.py — Wire the local LLM routing policy fleet-wide.
 
 Policy (from COST_MODEL.md §Local LLM Policy):
   DECISION-MAKING TIER (never local LLM):
-    chief_of_staff  → grok-4.5/xai-oauth  → claude-sonnet-5/anthropic
-    marshal         → claude-sonnet-5/anthropic → grok-4.5/xai-oauth
-    coding_lt       → claude-sonnet-5/anthropic → grok-4.5/xai-oauth
-    ops_lt          → claude-sonnet-5/anthropic → grok-4.5/xai-oauth
-    knowledge_lt    → claude-sonnet-5/anthropic → grok-4.5/xai-oauth
-    hermes_ai_explorer → claude-sonnet-5/anthropic → grok-4.5/xai-oauth
+    chief_of_staff  → grok-4.5/xai-oauth  → claude-sonnet-4-6/anthropic
+    marshal         → claude-sonnet-4-6/anthropic → grok-4.5/xai-oauth
+    coding_lt       → claude-sonnet-4-6/anthropic → grok-4.5/xai-oauth
+    ops_lt          → claude-sonnet-4-6/anthropic → grok-4.5/xai-oauth
+    knowledge_lt    → claude-sonnet-4-6/anthropic → grok-4.5/xai-oauth
+    hermes_ai_explorer → claude-sonnet-4-6/anthropic → grok-4.5/xai-oauth
 
   WORKER/WATCHER TIER (local LLM primary, OAuth fallback only):
     All others → local/qwen2.5:7b-instruct-q4_K_M
-                  → anthropic/claude-sonnet-5  (fallback — tool calls or local unavail)
+                  → anthropic/claude-sonnet-4-6  (fallback — tool calls or local unavail)
                   → xai-oauth/grok-4.5         (final fallback)
     NO OpenRouter in fallback chain — subscription OAuth only.
 
   LOCKBOX EXCEPTION:
     lockbox → local/qwen2.5:7b-instruct-q4_K_M (non-PRC model only)
-               → anthropic/claude-sonnet-5
+               → anthropic/claude-sonnet-4-6
                → xai-oauth/grok-4.5
     (Never DeepSeek/PRC even locally — the local model must be non-PRC)
 
@@ -101,35 +101,35 @@ DECISION_CHAINS = {
     "chief_of_staff": {
         "model": {"default": "grok-4.5", "provider": "xai-oauth"},
         "fallback_providers": [
-            {"provider": "anthropic", "model": "claude-sonnet-5-20251001"},
+            {"provider": "anthropic", "model": "claude-sonnet-4-6"},
         ],
     },
     "marshal": {
-        "model": {"default": "claude-sonnet-5-20251001", "provider": "anthropic"},
+        "model": {"default": "claude-sonnet-4-6", "provider": "anthropic"},
         "fallback_providers": [
             {"provider": "xai-oauth", "model": "grok-4.5"},
         ],
     },
     "coding_lt": {
-        "model": {"default": "claude-sonnet-5-20251001", "provider": "anthropic"},
+        "model": {"default": "claude-sonnet-4-6", "provider": "anthropic"},
         "fallback_providers": [
             {"provider": "xai-oauth", "model": "grok-4.5"},
         ],
     },
     "ops_lt": {
-        "model": {"default": "claude-sonnet-5-20251001", "provider": "anthropic"},
+        "model": {"default": "claude-sonnet-4-6", "provider": "anthropic"},
         "fallback_providers": [
             {"provider": "xai-oauth", "model": "grok-4.5"},
         ],
     },
     "knowledge_lt": {
-        "model": {"default": "claude-sonnet-5-20251001", "provider": "anthropic"},
+        "model": {"default": "claude-sonnet-4-6", "provider": "anthropic"},
         "fallback_providers": [
             {"provider": "xai-oauth", "model": "grok-4.5"},
         ],
     },
     "hermes_ai_explorer": {
-        "model": {"default": "claude-sonnet-5-20251001", "provider": "anthropic"},
+        "model": {"default": "claude-sonnet-4-6", "provider": "anthropic"},
         "fallback_providers": [
             {"provider": "xai-oauth", "model": "grok-4.5"},
         ],
@@ -158,7 +158,7 @@ WORKER_BOTS = [
 WORKER_CHAIN = {
     "model": {"default": LOCAL_MODEL, "provider": "custom", "base_url": LOCAL_BASE_URL},
     "fallback_providers": [
-        {"provider": "anthropic", "model": "claude-sonnet-5-20251001"},
+        {"provider": "anthropic", "model": "claude-sonnet-4-6"},
         {"provider": "xai-oauth",  "model": "grok-4.5"},
         # NO OpenRouter — subscription OAuth is already $0, no metered fallback needed
     ],
@@ -243,7 +243,7 @@ for b in WORKER_BOTS:
     print(f"  {b:25} custom/{LOCAL_MODEL}")
 print()
 print("Fallback chain for ALL workers (tool calls / local unavail):")
-print("  anthropic/claude-sonnet-5  →  xai-oauth/grok-4.5")
+print("  anthropic/claude-sonnet-4-6  →  xai-oauth/grok-4.5")
 print("  NO OpenRouter — subscription OAuth only ($0 marginal)")
 print()
 if not ollama_up or not (available_models if ollama_up else []):

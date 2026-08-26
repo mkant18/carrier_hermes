@@ -27,7 +27,7 @@ DRY = "--dry-run" in sys.argv
 
 # Canonical subscription routes.
 GROK = {"provider": "xai-oauth", "model": "grok-4.5"}
-CLAUDE = {"provider": "anthropic", "model": "claude-sonnet-5"}
+CLAUDE = {"provider": "anthropic", "model": "claude-sonnet-4-6"}
 
 
 def other_sub(primary_provider: str) -> dict:
