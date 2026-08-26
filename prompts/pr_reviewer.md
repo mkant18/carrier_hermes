@@ -229,6 +229,32 @@ Decision: CHANGES REQUESTED
 
 **Step 2:** Send AIPass to Caulker (patch_writer):
 
+**Step 2b:** After sending AIPass to Caulker, post to Discord #maintenance:
+
+```python
+import json, urllib.request
+from pathlib import Path
+
+def _discord_post(channel_id, text, env_path=r"C:\Users\micha\AppData\Local\hermes\.env"):
+    env = {}
+    for line in Path(env_path).read_text(encoding="utf-8", errors="replace").splitlines():
+        if "=" in line and not line.startswith("#"):
+            k, _, v = line.partition("="); env[k.strip()] = v.strip()
+    token = env.get("SHIPWRIGHT_DISCORD_TOKEN") or env.get("DISCORD_FLEET_BOT_TOKEN","")
+    if not token: return
+    payload = json.dumps({"content": text[:2000]}).encode()
+    req = urllib.request.Request(
+        f"https://discord.com/api/v10/channels/{channel_id}/messages", data=payload,
+        headers={"Authorization": f"Bot {token}", "Content-Type": "application/json",
+                 "User-Agent": "DiscordBot (https://carrier-hermes, 1.0)"}, method="POST")
+    try: urllib.request.urlopen(req, timeout=10)
+    except Exception: pass
+
+_discord_post("1542052741889663077",
+    f"🧭 **Surveyor** — PR #<N> needs changes · `<N_issues>` issue(s) found\n"
+    f"→ Fix requests sent to **Caulker ⚒️** · awaiting corrections")
+```
+
 ```markdown
 ---
 from: pr_reviewer
@@ -362,6 +388,35 @@ C:/Users/micha/AppData/Local/hermes/profiles/maintenance_lt/home/_agent/mailbox/
 ```
 
 **Step 2:** Update your review file with merge SHA and timestamp.
+
+**Step 3:** Post a handoff message to Discord #maintenance:
+
+```python
+import json, urllib.request
+from pathlib import Path
+
+def _discord_post(channel_id, text, env_path=r"C:\Users\micha\AppData\Local\hermes\.env"):
+    env = {}
+    for line in Path(env_path).read_text(encoding="utf-8", errors="replace").splitlines():
+        if "=" in line and not line.startswith("#"):
+            k, _, v = line.partition("="); env[k.strip()] = v.strip()
+    token = env.get("SHIPWRIGHT_DISCORD_TOKEN") or env.get("DISCORD_FLEET_BOT_TOKEN","")
+    if not token: return
+    payload = json.dumps({"content": text[:2000]}).encode()
+    req = urllib.request.Request(
+        f"https://discord.com/api/v10/channels/{channel_id}/messages", data=payload,
+        headers={"Authorization": f"Bot {token}", "Content-Type": "application/json",
+                 "User-Agent": "DiscordBot (https://carrier-hermes, 1.0)"}, method="POST")
+    try: urllib.request.urlopen(req, timeout=10)
+    except Exception: pass
+
+_discord_post("1542052741889663077",
+    f"🧭 **Surveyor** — PR #<N> approved and merged ✅\n"
+    f"🔀 Merge SHA: `<sha>`\n"
+    f"📦 `<N_fixes>` fixes shipped · **Bosun 🛠️** notified")
+```
+
+Replace `<N>`, `<sha>`, `<N_fixes>` with actual values.
 
 ---
 

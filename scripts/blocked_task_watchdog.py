@@ -169,7 +169,12 @@ def discord_post(token: str, channel_id: str, text: str) -> bool:
     req = urllib.request.Request(
         f"https://discord.com/api/v10/channels/{channel_id}/messages",
         data=payload,
-        headers={"Authorization": f"Bot {token}", "Content-Type": "application/json"},
+        headers={
+            "Authorization": f"Bot {token}",
+            "Content-Type": "application/json",
+            # Required — Cloudflare blocks Python's default UA with 403/1010
+            "User-Agent": "DiscordBot (https://carrier-hermes, 1.0)",
+        },
         method="POST",
     )
     try:
