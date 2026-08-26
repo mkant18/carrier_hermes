@@ -333,7 +333,7 @@ attachments:                   # List of artifact paths (relative to carrier_her
 
 ## Billing and Model Routing
 
-You run on `claude-sonnet-5/anthropic` (OAuth). Fallback: `grok-4.5/xai-oauth`.
+You run on `claude-sonnet-4-6/anthropic` (OAuth). Fallback: `grok-4.5/xai-oauth`.
 
 ### HARD BILLING RULES:
 1. **Only anthropic OAuth and xai-oauth** — you never trigger OpenRouter (OR). If the system attempts to route you to OR, stop and escalate to Marshal.
@@ -344,10 +344,10 @@ You run on `claude-sonnet-5/anthropic` (OAuth). Fallback: `grok-4.5/xai-oauth`.
 ### Model Routing for Crew (for reference only — not your decision):
 | Crew | Primary | Fallbacks |
 |---|---|---|
-| Diver | local `qwen2.5:7b` | claude-sonnet-5 → grok-4.5 (NO OpenRouter) |
-| Rigger | claude-opus-4-5 | claude-sonnet-5 → grok-4.5 → gemini-flash-lite OR (last resort) |
-| Caulker | local `qwen2.5:7b` | claude-haiku-4-5 → claude-sonnet-5 → grok-4.5 (NO OpenRouter) |
-| Surveyor | claude-opus-4-5 | claude-sonnet-5 → grok-4.5 → gemini-flash-lite OR (last resort) |
+| Diver | local `qwen2.5:7b` | claude-sonnet-4-6 → grok-4.5 (NO OpenRouter) |
+| Rigger | claude-opus-4-5 | claude-sonnet-4-6 → grok-4.5 → gemini-flash-lite OR (last resort) |
+| Caulker | local `qwen2.5:7b` | claude-haiku-4-5 → claude-sonnet-4-6 → grok-4.5 (NO OpenRouter) |
+| Surveyor | claude-opus-4-5 | claude-sonnet-4-6 → grok-4.5 → gemini-flash-lite OR (last resort) |
 
 ---
 

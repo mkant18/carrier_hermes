@@ -38,7 +38,7 @@ PYTHON = sys.executable  # use same Python that runs this watchdog
 
 def _log(msg: str) -> None:
     line = f"{time.strftime('%Y-%m-%d %H:%M:%S')} [watchdog] {msg}"
-    print(line, flush=True)
+    # Write to log file only — keep stdout clean for hash-suppression
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
         with START_LOG.open("a", encoding="utf-8") as f:

@@ -15,16 +15,16 @@ Wing Lead (Bosun) dispatches sequentially: Diver → Rigger → Caulker → Surv
 
 | bot_id | Callsign | Emoji | Role | Primary Model | Fallback Chain |
 |---|---|---|---|---|---|
-| `maintenance_lt` | Bosun | 🛠️ | Wing Lead — dispatch & review only | `claude-sonnet-5/anthropic` (OAuth) | `grok-4.5/xai-oauth` |
-| `code_auditor` | Diver | 🤿 | Repo crawler + log inspector | `custom/qwen2.5:7b-instruct-q4_K_M` (local) | `claude-sonnet-5/anthropic` → `grok-4.5/xai-oauth` |
-| `repair_planner` | Rigger | 🪢 | Fix design & task-list author | `claude-opus-4-5/anthropic` (OAuth) | `claude-sonnet-5/anthropic` → `grok-4.5/xai-oauth` → `google/gemini-2.5-flash-lite` (OR, last resort) |
-| `patch_writer` | Caulker | ⚒️ | Fix implementer (code writer) | `custom/qwen2.5:7b-instruct-q4_K_M` (local) | `claude-haiku-4-5/anthropic` → `claude-sonnet-5/anthropic` → `grok-4.5/xai-oauth` |
-| `pr_reviewer` | Surveyor | 🧭 | PR reviewer & merge gatekeeper | `claude-opus-4-5/anthropic` (OAuth) | `claude-sonnet-5/anthropic` → `grok-4.5/xai-oauth` → `google/gemini-2.5-flash-lite` (OR, last resort) |
+| `maintenance_lt` | Bosun | 🛠️ | Wing Lead — dispatch & review only | `claude-sonnet-4-6/anthropic` (OAuth) | `grok-4.5/xai-oauth` |
+| `code_auditor` | Diver | 🤿 | Repo crawler + log inspector | `custom/qwen2.5:7b-instruct-q4_K_M` (local) | `claude-sonnet-4-6/anthropic` → `grok-4.5/xai-oauth` |
+| `repair_planner` | Rigger | 🪢 | Fix design & task-list author | `claude-opus-4-5/anthropic` (OAuth) | `claude-sonnet-4-6/anthropic` → `grok-4.5/xai-oauth` → `google/gemini-2.5-flash-lite` (OR, last resort) |
+| `patch_writer` | Caulker | ⚒️ | Fix implementer (code writer) | `custom/qwen2.5:7b-instruct-q4_K_M` (local) | `claude-haiku-4-5/anthropic` → `claude-sonnet-4-6/anthropic` → `grok-4.5/xai-oauth` |
+| `pr_reviewer` | Surveyor | 🧭 | PR reviewer & merge gatekeeper | `claude-opus-4-5/anthropic` (OAuth) | `claude-sonnet-4-6/anthropic` → `grok-4.5/xai-oauth` → `google/gemini-2.5-flash-lite` (OR, last resort) |
 
 ### Model Routing Policy Notes
-- **Rigger & Surveyor** (planning + review): OAuth-only primary (`claude-opus-4-5` or `claude-sonnet-5`). Second fallback = xai-oauth Grok 4.5. OpenRouter is **absolute last resort** and MUST be cheapest allowlisted model only (`google/gemini-2.5-flash-lite`). NEVER a frontier model over OR.
+- **Rigger & Surveyor** (planning + review): OAuth-only primary (`claude-opus-4-5` or `claude-sonnet-4-6`). Second fallback = xai-oauth Grok 4.5. OpenRouter is **absolute last resort** and MUST be cheapest allowlisted model only (`google/gemini-2.5-flash-lite`). NEVER a frontier model over OR.
 - **Diver & Caulker** (crawl + implement): Local LLM primary. OAuth fallbacks only — no OpenRouter in the fallback chain (subscription OAuth is $0, metered fallback adds no value).
-- **Bosun (LT)**: Same as existing LTs — `claude-sonnet-5/anthropic` → `grok-4.5/xai-oauth`. No local LLM. No OpenRouter.
+- **Bosun (LT)**: Same as existing LTs — `claude-sonnet-4-6/anthropic` → `grok-4.5/xai-oauth`. No local LLM. No OpenRouter.
 - The billing guard must pass at `PASS` for all 5 new profiles before any bot is activated.
 
 ---
@@ -237,7 +237,7 @@ Config (`profiles/maintenance_lt/config.yaml`):
 display_name: "Bosun 🛠️"
 system_prompt_file: "C:/Users/micha/carrier_hermes/prompts/maintenance_lt.md"
 provider: anthropic
-model: claude-sonnet-5
+model: claude-sonnet-4-6
 fallback_chain:
   - provider: xai-oauth
     model: grok-4.5
@@ -275,7 +275,7 @@ custom_provider:
   api_key: "ollama"
 fallback_chain:
   - provider: anthropic
-    model: claude-sonnet-5
+    model: claude-sonnet-4-6
   - provider: xai-oauth
     model: grok-4.5
 toolsets:
@@ -322,7 +322,7 @@ provider: anthropic
 model: claude-opus-4-5
 fallback_chain:
   - provider: anthropic
-    model: claude-sonnet-5
+    model: claude-sonnet-4-6
   - provider: xai-oauth
     model: grok-4.5
   - provider: openrouter
@@ -363,7 +363,7 @@ fallback_chain:
   - provider: anthropic
     model: claude-haiku-4-5
   - provider: anthropic
-    model: claude-sonnet-5
+    model: claude-sonnet-4-6
   - provider: xai-oauth
     model: grok-4.5
 toolsets:
@@ -409,7 +409,7 @@ provider: anthropic
 model: claude-opus-4-5
 fallback_chain:
   - provider: anthropic
-    model: claude-sonnet-5
+    model: claude-sonnet-4-6
   - provider: xai-oauth
     model: grok-4.5
   - provider: openrouter

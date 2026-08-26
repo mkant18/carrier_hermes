@@ -100,6 +100,13 @@ def _run_discord_capture() -> None:
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)  # type: ignore[union-attr]
 
+        if not (hasattr(mod, 'get_bot_token') and hasattr(mod, 'run_discord_capture')):
+            log.error(
+                "discord_capture.py missing required API (get_bot_token / run_discord_capture) "
+                "— Discord capture disabled"
+            )
+            return
+
         import asyncio
         token = mod.get_bot_token()
         if not token:
@@ -157,6 +164,9 @@ def main() -> None:
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)  # type: ignore[union-attr]
     # mcp.run() blocks — this is the main thread
+    if not hasattr(mod, 'mcp'):
+        log.error("OB1 server.py missing required .mcp attribute — cannot start MCP server")
+        sys.exit(1)
     mod.mcp.run()
 
 
