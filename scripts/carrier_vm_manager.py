@@ -6,12 +6,15 @@ This module manages the full lifecycle: build, start, stop, exec, logs, health.
 """
 from __future__ import annotations
 
+import concurrent.futures
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from scripts.carrier_bot_vm import _docker_available, get_bot_vm
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
@@ -43,6 +46,17 @@ ALL_BOT_IDS: list[str] = [
     "calendar_manager",
     "finance_reader",
     "obsidian_archivist",
+]
+
+# Bots represented by the OpenMausBot-style compose file.  Keep this smaller
+# compatibility fleet separate from the canonical 20-bot production fleet.
+FLEET_BOT_IDS: list[str] = [
+    "coding_lt",
+    "research_lt",
+    "helm",
+    "ob1",
+    "viking",
+    "peers",
 ]
 
 
@@ -367,6 +381,74 @@ def vm_health_summary() -> str:
     return f"FLEET_DEGRADED:{len(down)}_down"
 
 
+# ── OpenMausBot-compatible fleet API ─────────────────────────────────────────
+
+def _parallel_botvm_call(bot_ids: list[str], method: str, max_workers: int) -> dict:
+    """Call a BotVM method in parallel for the compose-managed compatibility fleet."""
+    results: dict = {}
+
+    def _call_one(bot_id: str) -> tuple[str, dict]:
+        vm = get_bot_vm(bot_id)
+        return bot_id, getattr(vm, method)()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = [pool.submit(_call_one, bot_id) for bot_id in bot_ids]
+        for future in concurrent.futures.as_completed(futures):
+            bot_id, result = future.result()
+            results[bot_id] = result
+    return results
+
+
+def start_fleet_vms(bot_ids: list[str] | None = None) -> dict:
+    """Start the OpenMausBot-style fleet, using local fallback when Docker is absent."""
+    target_bots = bot_ids or FLEET_BOT_IDS
+    if _docker_available():
+        docker_network_create()
+    else:
+        print("[vm_manager] Docker unavailable; using BotVM fallback workspaces")
+    return _parallel_botvm_call(target_bots, "start", max_workers=4)
+
+
+def stop_fleet_vms(bot_ids: list[str] | None = None) -> dict:
+    """Stop the OpenMausBot-style fleet."""
+    return _parallel_botvm_call(bot_ids or FLEET_BOT_IDS, "stop", max_workers=4)
+
+
+def vm_status(bot_ids: list[str] | None = None) -> dict:
+    """Return per-bot and aggregate status for the OpenMausBot-style fleet."""
+    target_bots = bot_ids or FLEET_BOT_IDS
+    results = _parallel_botvm_call(target_bots, "status", max_workers=8)
+    running_count = sum(1 for status in results.values() if status.get("running"))
+    return {
+        "bots": results,
+        "summary": {
+            "total": len(target_bots),
+            "running": running_count,
+            "stopped": len(target_bots) - running_count,
+            "docker_available": _docker_available(),
+        },
+    }
+
+
+def exec_all(command: str, bot_ids: list[str] | None = None) -> dict:
+    """Execute a command in each running OpenMausBot-style fleet VM."""
+    target_bots = bot_ids or FLEET_BOT_IDS
+    results: dict = {}
+
+    def _exec_one(bot_id: str) -> tuple[str, dict]:
+        vm = get_bot_vm(bot_id)
+        if not vm.is_running():
+            return bot_id, {"skipped": True, "reason": "not running"}
+        return bot_id, vm.exec_cmd(command)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+        futures = [pool.submit(_exec_one, bot_id) for bot_id in target_bots]
+        for future in concurrent.futures.as_completed(futures):
+            bot_id, result = future.result()
+            results[bot_id] = result
+    return results
+
+
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
@@ -379,22 +461,27 @@ if __name__ == "__main__":
     sub.add_parser("network", help="Create carrier-fleet network")
     sub.add_parser("start-fleet", help="Start all 20 bots")
     sub.add_parser("stop-fleet", help="Stop all 20 bots")
-    sub.add_parser("status", help="Show status of all bots")
+    status_p = sub.add_parser("status", help="Show status of all bots")
+    status_p.add_argument(
+        "--openmaus",
+        action="store_true",
+        help="Show the six-bot OpenMausBot-compatible fleet",
+    )
     sub.add_parser("health", help="Print FLEET_HEALTHY or FLEET_DEGRADED:N")
 
-    start_p = sub.add_parser("start", help="Start a specific bot")
-    start_p.add_argument("bot_id")
+    start_p = sub.add_parser("start", help="Start one bot, or the OpenMausBot fleet")
+    start_p.add_argument("bot_id", nargs="?")
 
-    stop_p = sub.add_parser("stop", help="Stop a specific bot")
-    stop_p.add_argument("bot_id")
+    stop_p = sub.add_parser("stop", help="Stop one bot, or the OpenMausBot fleet")
+    stop_p.add_argument("bot_id", nargs="?")
 
     log_p = sub.add_parser("logs", help="Show logs for a bot")
     log_p.add_argument("bot_id")
     log_p.add_argument("--tail", type=int, default=50)
 
-    exec_p = sub.add_parser("exec", help="Execute command in bot container")
-    exec_p.add_argument("bot_id")
-    exec_p.add_argument("command")
+    exec_p = sub.add_parser("exec", help="Execute in one bot, or across the OpenMausBot fleet")
+    exec_p.add_argument("target_or_command")
+    exec_p.add_argument("command", nargs="?")
 
     ensure_p = sub.add_parser("ensure", help="Ensure a bot VM is running")
     ensure_p.add_argument("bot_id")
@@ -415,22 +502,32 @@ if __name__ == "__main__":
         for bid, ok in results.items():
             print(f"  {'✓' if ok else '✗'} {bid}")
     elif args.cmd == "status":
-        status = vm_status_all()
-        for bid, s in status.items():
-            icon = "✓" if s["running"] else "✗"
-            print(f"  {icon} {bid:30} {s['status']:12} {s.get('error') or ''}")
+        if args.openmaus:
+            print(json.dumps(vm_status(), indent=2, default=str))
+        else:
+            status = vm_status_all()
+            for bid, s in status.items():
+                icon = "✓" if s["running"] else "✗"
+                print(f"  {icon} {bid:30} {s['status']:12} {s.get('error') or ''}")
     elif args.cmd == "health":
         print(vm_health_summary())
     elif args.cmd == "start":
-        sys.exit(0 if start_bot_vm(args.bot_id) else 1)
+        if args.bot_id:
+            sys.exit(0 if start_bot_vm(args.bot_id) else 1)
+        print(json.dumps(start_fleet_vms(), indent=2, default=str))
     elif args.cmd == "stop":
-        sys.exit(0 if stop_bot_vm(args.bot_id) else 1)
+        if args.bot_id:
+            sys.exit(0 if stop_bot_vm(args.bot_id) else 1)
+        print(json.dumps(stop_fleet_vms(), indent=2, default=str))
     elif args.cmd == "logs":
         print(vm_logs(args.bot_id, tail=args.tail))
     elif args.cmd == "exec":
-        rc, out = exec_in_bot_vm(args.bot_id, args.command)
-        print(out)
-        sys.exit(rc)
+        if args.command is None:
+            print(json.dumps(exec_all(args.target_or_command), indent=2, default=str))
+        else:
+            rc, out = exec_in_bot_vm(args.target_or_command, args.command)
+            print(out)
+            sys.exit(rc)
     elif args.cmd == "ensure":
         sys.exit(0 if ensure_bot_vm_running(args.bot_id) else 1)
     else:
