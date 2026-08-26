@@ -101,37 +101,43 @@ DECISION_CHAINS = {
     "chief_of_staff": {
         "model": {"default": "grok-4.5", "provider": "xai-oauth"},
         "fallback_providers": [
+            {"provider": "openai-oauth", "model": "gpt-4o"},       # midtier OAuth fallback
             {"provider": "anthropic", "model": "claude-sonnet-4-6"},
         ],
     },
     "marshal": {
         "model": {"default": "claude-sonnet-4-6", "provider": "anthropic"},
         "fallback_providers": [
-            {"provider": "xai-oauth", "model": "grok-4.5"},
+            {"provider": "xai-oauth",    "model": "grok-4.5"},
+            {"provider": "openai-oauth", "model": "gpt-4o"},       # midtier OAuth fallback
         ],
     },
     "coding_lt": {
         "model": {"default": "claude-sonnet-4-6", "provider": "anthropic"},
         "fallback_providers": [
-            {"provider": "xai-oauth", "model": "grok-4.5"},
+            {"provider": "xai-oauth",    "model": "grok-4.5"},
+            {"provider": "openai-oauth", "model": "gpt-4o"},       # midtier OAuth fallback
         ],
     },
     "ops_lt": {
         "model": {"default": "claude-sonnet-4-6", "provider": "anthropic"},
         "fallback_providers": [
-            {"provider": "xai-oauth", "model": "grok-4.5"},
+            {"provider": "xai-oauth",    "model": "grok-4.5"},
+            {"provider": "openai-oauth", "model": "gpt-4o"},       # midtier OAuth fallback
         ],
     },
     "knowledge_lt": {
         "model": {"default": "claude-sonnet-4-6", "provider": "anthropic"},
         "fallback_providers": [
-            {"provider": "xai-oauth", "model": "grok-4.5"},
+            {"provider": "xai-oauth",    "model": "grok-4.5"},
+            {"provider": "openai-oauth", "model": "gpt-4o"},       # midtier OAuth fallback
         ],
     },
     "hermes_ai_explorer": {
         "model": {"default": "claude-sonnet-4-6", "provider": "anthropic"},
         "fallback_providers": [
-            {"provider": "xai-oauth", "model": "grok-4.5"},
+            {"provider": "xai-oauth",    "model": "grok-4.5"},
+            {"provider": "openai-oauth", "model": "gpt-4o"},       # midtier OAuth fallback
         ],
     },
 }
@@ -158,8 +164,10 @@ WORKER_BOTS = [
 WORKER_CHAIN = {
     "model": {"default": LOCAL_MODEL, "provider": "custom", "base_url": LOCAL_BASE_URL},
     "fallback_providers": [
-        {"provider": "anthropic", "model": "claude-sonnet-4-6"},
-        {"provider": "xai-oauth",  "model": "grok-4.5"},
+        {"provider": "anthropic",    "model": "claude-haiku-4-5"},
+        {"provider": "openai-oauth", "model": "gpt-4o-mini"},  # cheap OAuth fallback
+        {"provider": "anthropic",    "model": "claude-sonnet-4-6"},
+        {"provider": "xai-oauth",    "model": "grok-4.5"},
         # NO OpenRouter — subscription OAuth is already $0, no metered fallback needed
     ],
 }

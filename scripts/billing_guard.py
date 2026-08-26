@@ -84,7 +84,7 @@ def scan_anthropic_auth(hermes_home: Path) -> list[str]:
     except Exception as e:  # noqa: BLE001
         return [f"auth.json: cannot parse (fail-closed): {e}"]
 
-    SUB_ONLY = ("anthropic", "claude", "xai", "grok")
+    SUB_ONLY = ("anthropic", "claude", "xai", "grok", "openai", "openai-oauth", "chatgpt")
 
     def check_cred(provider: str, cred: dict, where: str) -> None:
         pl = provider.lower()
@@ -92,12 +92,12 @@ def scan_anthropic_auth(hermes_home: Path) -> list[str]:
             return
         ctype = (cred.get("type") or cred.get("auth_type") or "").lower()
         has_key = bool(cred.get("api_key") or cred.get("key") or cred.get("token"))
-        # anthropic/xai must be oauth; an api_key credential is a hard violation.
+        # anthropic/xai/openai must be oauth; an api_key credential is a hard violation.
         if ctype == "api_key" or (has_key and ctype != "oauth"):
             errs.append(
                 f"auth.json [{where}]: '{provider}' credential is API-KEY "
-                f"(type={ctype or '?'}) — Anthropic/Grok are SUBSCRIPTION/OAUTH "
-                "ONLY. Remove it and re-auth via Claude Max / SuperGrok OAuth "
+                f"(type={ctype or '?'}) — Anthropic/Grok/OpenAI are SUBSCRIPTION/OAUTH "
+                "ONLY. Remove it and re-auth via Claude Max / SuperGrok / ChatGPT Plus OAuth "
                 "(`hermes setup`). A paid API key for these families is forbidden."
             )
 

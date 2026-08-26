@@ -141,10 +141,14 @@ METERED_PROVIDERS: frozenset[str] = frozenset(
         "nvidia",
         "huggingface",
         "bedrock",
+        "openai",
+        "openai-key",
     }
 )
 
-FORBIDDEN_API_KEY_PROVIDERS: frozenset[str] = frozenset({"xai", "grok", "x-ai", "x_ai"})
+FORBIDDEN_API_KEY_PROVIDERS: frozenset[str] = frozenset(
+    {"xai", "grok", "x-ai", "x_ai", "openai", "openai-key"}
+)
 
 OPENROUTER_BASE_URL_NEEDLES: tuple[str, ...] = (
     "openrouter.ai",
@@ -162,6 +166,15 @@ FORBIDDEN_ENV_KEYS: tuple[str, ...] = (
     "XAI_API_TOKEN",
     "GROK_API_KEY",
     "GROK_KEY",
+    "OPENAI_API_KEY",
+    "OPENAI_KEY",
+    "OPENAI_API_TOKEN",
+    "OPENAI_AUTH_TOKEN",
+)
+
+# Providers that are subscription/OAuth only — no api_key, no base_url allowed.
+SUBSCRIPTION_ONLY_PROVIDERS: frozenset[str] = frozenset(
+    {"anthropic", "xai-oauth", "openai-codex", "openai-oauth"}
 )
 
 
@@ -529,6 +542,20 @@ def self_test() -> None:
     ]
     for p, m, bu in allow:
         assert not is_billing_violation(p, m, bu), f"false positive {p}/{m}: {violation_message(p,m,bu)}"
+
+    # --- OpenAI guard probes ---
+    # MUST BLOCK (API key / metered paths)
+    assert is_billing_violation("openai", "gpt-4o", None), "bare openai provider must block"
+    assert is_billing_violation("openai-key", "gpt-4o", None), "openai-key provider must block"
+    assert is_billing_violation("openrouter", "openai/gpt-4o", None), "OR gpt-4o must block"
+    assert is_billing_violation("openrouter", "openai/o1", None), "OR o1 must block"
+    assert "OPENAI_API_KEY" in FORBIDDEN_ENV_KEYS
+    assert "OPENAI_KEY" in FORBIDDEN_ENV_KEYS
+    # MUST ALLOW (OAuth subscription path)
+    assert not is_billing_violation("openai-oauth", "gpt-4o-mini", None), "openai-oauth cheap must allow"
+    assert not is_billing_violation("openai-oauth", "gpt-4o", None), "openai-oauth mid must allow"
+    assert not is_billing_violation("openai-oauth", "o3", None), "openai-oauth frontier must allow"
+    assert not is_billing_violation("openrouter", "openai/gpt-oss-120b", None), "gpt-oss must allow"
 
     # Deep walk
     cfg = {

@@ -28,10 +28,28 @@ DRY = "--dry-run" in sys.argv
 # Canonical subscription routes.
 GROK = {"provider": "xai-oauth", "model": "grok-4.5"}
 CLAUDE = {"provider": "anthropic", "model": "claude-sonnet-4-6"}
+OPENAI_CHEAP = {"provider": "openai-oauth", "model": "gpt-4o-mini"}
+OPENAI_MID   = {"provider": "openai-oauth", "model": "gpt-4o"}
+OPENAI_FRONT = {"provider": "openai-oauth", "model": "o3"}
 
 
+def other_subs(primary_provider: str) -> list[dict]:
+    """Return the OTHER subscription(s) not already primary, in priority order."""
+    if primary_provider == "xai-oauth":
+        return [dict(CLAUDE), dict(OPENAI_MID)]   # Grok primary -> Claude -> OpenAI mid
+    if primary_provider == "anthropic":
+        return [dict(GROK), dict(OPENAI_MID)]     # Claude primary -> Grok -> OpenAI mid
+    if primary_provider == "openai-oauth":
+        return [dict(GROK), dict(CLAUDE)]         # OpenAI primary -> Grok -> Claude
+    return []
+
+
+# Legacy alias for backward compat.
 def other_sub(primary_provider: str) -> dict:
-    """Return the subscription that is NOT the primary."""
+    """Return the subscription that is NOT the primary (first result only)."""
+    subs = other_subs(primary_provider)
+    if subs:
+        return subs[0]
     if primary_provider == "xai-oauth":
         return dict(CLAUDE)
     return dict(GROK)
@@ -57,7 +75,7 @@ def normalize(cfg: dict) -> tuple[dict, str]:
 
     # Safety: strip any accidental api_key/base_url on subscription entries.
     for e in new_chain:
-        if e.get("provider") in ("xai-oauth", "anthropic"):
+        if e.get("provider") in ("xai-oauth", "anthropic", "openai-oauth"):
             e.pop("base_url", None)
             e.pop("api_key", None)
 

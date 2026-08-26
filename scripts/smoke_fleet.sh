@@ -117,6 +117,14 @@ else
   skip "ping_deepseek" "OPENROUTER_API_KEY not set (commented/missing)"
 fi
 
+# OpenAI OAuth smoke probe — skip if credential absent (fail-closed, not fail-error)
+if python3 -c "import json,sys; a=json.load(open('${HERMES_HOME:-$HOME/.hermes}/auth.json')); sys.exit(0 if any(k.startswith('openai') for k in a.get('credential_pool',{})) else 1)" 2>/dev/null; then
+  echo "[smoke] openai-oauth credential present — running ping"
+  ping_model openai-oauth openai-oauth gpt-4o-mini
+else
+  skip "ping_openai-oauth" "openai-oauth credential absent (fail-closed)"
+fi
+
 # 6 Chronos does not claim Todoist
 if grep -qi 'todoist' "$ROOT/bots/calendar_manager/SOUL.md" && grep -qi 'do not' "$ROOT/bots/calendar_manager/SOUL.md"; then
   if grep -q 'todoist_manager' "$ROOT/bots/calendar_manager/SOUL.md" || grep -q 'Tasker' "$ROOT/bots/calendar_manager/SOUL.md"; then

@@ -167,6 +167,7 @@ m.pop("fallback", None)
 cfg.pop("fallback_model", None)
 
 fb_list = [
+    {"provider": "openai-oauth", "model": "gpt-4o-mini" if tier == "cheap" else "gpt-4o"},
     {"provider": "anthropic", "model": "claude-sonnet-5"},
 ] + [dict(x) for x in TAILS[tier]]
 for i, fb in enumerate(fb_list):
@@ -228,6 +229,7 @@ if "opencode" in bu or ":free" in bu or bu.strip() == "" or "openrouter" in bu.l
     m.pop("base_url", None)
 # Helm QUALITY paid tail — OpenRouter NEVER carries Claude/Grok
 cfg["fallback_providers"] = [
+    {"provider": "openai-oauth", "model": "gpt-4o"},
     {"provider": "anthropic", "model": "claude-sonnet-5"},
     {"provider": "openrouter", "model": "deepseek/deepseek-chat-v3-0324"},
     {"provider": "openrouter", "model": "google/gemini-3.7-flash"},
