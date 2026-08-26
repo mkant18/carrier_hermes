@@ -94,3 +94,32 @@ and trend analysis. Helm owns the whole process.
 - memory.py flagged global MEMORY.md at 86% cap for review.
 - broadcast composes the exact phrase "Silent Running, EMCON".
 - billing_guard.py PASS (custom/localhost is not a metered provider).
+
+## Go-live executed (2026-08-26)
+
+- **DISPATCH_LOCK diagnosis:** the lock was transient, written at Shipwright
+  maintenance run-start (cron `shipwright-maintenance` 75571fa22080, fires
+  02/10/18:00). Root cause of the churn: the `code_auditor` (Diver) worker was
+  **crash-looping** — spawned, never emitted a heartbeat, reaped at ~60s as
+  "pid not alive" (4 crashes in 30 min). Each Shipwright run set the lock; the
+  loop churned it. code_auditor is pinned local-LLM-primary (`qwen2.5`, provider
+  `custom`) with `fallback: None` — the likely crash cause (first-inference hang /
+  no OAuth fallback). **This is a Shipwright-pipeline bug, separate from
+  silent-running.**
+- **Fix applied:** parked the two zombie audit tasks
+  (`e91a2b0a-…` Diver run, `t_4b259dcc` audit) to `blocked`/`human` with an
+  explanatory comment, clearing worker_pid/claim/heartbeat so the loop stops.
+  Left the deeper code_auditor spawn fix for the maintenance team (flagged, not
+  silently rewritten).
+- **All three crons RESUMED in order:** Governor fade86fd8141 → Checkpoint
+  41dc283bfff6 → Orchestrator d65f527e1ef8. Governor test-fired clean (set the
+  `user_active` brake correctly while Michael was at the keyboard). System now
+  rests in standby; it will enter EMCON automatically on the next idle ≥10 min
+  window with CPU/GPU < 40%.
+
+### Follow-up for the maintenance team (not blocking silent-running)
+
+- Fix `code_auditor` spawn crash: either give it an OAuth fallback in
+  `profiles/code_auditor/config.yaml` (currently `fallback: None`), or ensure
+  Ollama is warm/reachable for that bot before the Diver step runs. Until then
+  the Shipwright Diver step will keep crashing when the maintenance cron fires.
