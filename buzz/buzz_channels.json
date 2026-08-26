@@ -14,7 +14,9 @@
       "hermes_ai_explorer"
     ],
     "whatsapp": true,
-    "topic": "Command net: Helm, Marshal, watchers, LockBox, Lieutenants. Bridged to WhatsApp."
+    "topic": "Command net: Helm, Marshal, watchers, LockBox, Lieutenants. Bridged to WhatsApp.",
+    "telegram_chat_id": -5577918772,
+    "telegram_group": "Fleet Command"
   },
   "fleet": {
     "uuid": "fbbe66bd-9535-4e01-b704-c295a73164c4",
