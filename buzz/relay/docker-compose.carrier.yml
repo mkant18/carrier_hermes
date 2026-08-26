@@ -1,0 +1,62 @@
+# Carrier Hermes — Buzz relay overlay (Phase 1)
+# Adds the prebuilt ghcr.io/block/buzz relay to the block/buzz infra compose.
+# Minimal stack: postgres + redis + relay. (keycloak/minio/prometheus optional.)
+#
+# Usage (from ~/buzz):
+#   docker compose -f docker-compose.yml -f docker-compose.carrier.yml up -d postgres redis relay
+#
+# The relay auto-applies SQL migrations on startup and serves ws://<host>:3000.
+# BUZZ_BIND_ADDR binds 0.0.0.0 so the Mac can reach it over Tailscale.
+services:
+  relay:
+    image: ghcr.io/block/buzz:latest
+    container_name: buzz-relay
+    environment:
+      # In-network service hostnames (compose DNS), not localhost.
+      DATABASE_URL: postgres://buzz:buzz_dev@postgres:5432/buzz
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: buzz
+      PGPASSWORD: buzz_dev
+      PGDATABASE: buzz
+      REDIS_URL: redis://redis:6379
+      BUZZ_BIND_ADDR: 0.0.0.0:3000
+      # Canonical host = stable Tailscale MagicDNS name so PC (local) and Mac
+      # (over tailnet) both resolve to the SAME community. The relay binds its
+      # deployment community to this host; requests with a different Host header
+      # fail closed (Buzz row-zero tenant binding).
+      RELAY_URL: ws://mks-pc.taileda46c.ts.net:3000
+      # Create the schema on first boot (events/communities tables etc.)
+      BUZZ_AUTO_MIGRATE: "true"
+      # Media/object store — relay's git conformance probe requires S3 (minio).
+      BUZZ_S3_ENDPOINT: http://minio:9000
+      BUZZ_S3_ACCESS_KEY: buzz_dev
+      BUZZ_S3_SECRET_KEY: buzz_dev_secret
+      BUZZ_S3_BUCKET: buzz-media
+      BUZZ_S3_REGION: us-east-1
+      BUZZ_S3_ADDRESSING_STYLE: path
+      RUST_LOG: buzz_relay=info,buzz_db=warn,buzz_auth=info,buzz_pubsub=warn
+    env_file:
+      - .env.carrier
+    ports:
+      - "0.0.0.0:3000:3000"   # WS relay — reachable over Tailscale
+      - "127.0.0.1:9102:9102" # metrics (localhost only)
+    networks:
+      - buzz-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 1024m
+    labels:
+      com.buzz.service: "relay"
+      com.carrier.buzz: "phase1"
+    restart: unless-stopped
