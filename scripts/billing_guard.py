@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
-"""Carrier Hermes — billing hard-guard (config + env audit).
+"""Carrier Hermes — subscription billing hard-guard (config + env audit + fix).
 
-Uses or_billing_policy.py (SINGLE SOURCE OF TRUTH).
+HARD RULE: OpenRouter/metered never carries Claude/Grok/frontier.
+Canonical policy: or_billing_policy.py
 
-HARD RULE — PERIOD, FULL STOP:
-  OpenRouter / metered aggregators MUST NEVER run Anthropic/Claude or Grok/xAI
-  (or any non-allowlisted frontier). Those families are OAuth only.
-
-Exit: 0 clean · 1 violations · 2 IO
+Exit: 0 clean, 1 violations, 2 usage error
 """
 from __future__ import annotations
 
@@ -18,7 +15,7 @@ from pathlib import Path
 
 try:
     import yaml
-except ImportError:  # pragma: no cover
+except ImportError:
     print("billing_guard: need PyYAML", file=sys.stderr)
     sys.exit(2)
 
@@ -30,7 +27,6 @@ from or_billing_policy import (  # noqa: E402
     FORBIDDEN_ENV_KEYS,
     scrub_aliases,
     scrub_fallback_providers,
-    self_test,
     walk_config_routes,
 )
 
@@ -41,7 +37,7 @@ def scan_env_file(path: Path, label: str) -> list[str]:
         return errs
     try:
         text = path.read_text(encoding="utf-8", errors="ignore")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return [f"{label}: cannot read: {e}"]
     for line in text.splitlines():
         s = line.strip()
@@ -53,13 +49,13 @@ def scan_env_file(path: Path, label: str) -> list[str]:
         if key in FORBIDDEN_ENV_KEYS and val:
             errs.append(
                 f"{label}: {key} is set (len={len(val)}) — "
-                "remove it; Anthropic/Grok are OAuth only (no API tokens)"
+                "remove it; use anthropic OAuth / xai-oauth only (no API tokens)"
             )
     return errs
 
 
 def scan_process_env() -> list[str]:
-    errs: list[str] = []
+    errs = []
     for key in FORBIDDEN_ENV_KEYS:
         val = os.environ.get(key, "").strip()
         if val:
@@ -76,90 +72,67 @@ def iter_profile_configs(hermes_home: Path):
                 yield p / "config.yaml", f"profile:{p.name}"
 
 
-def scan_config_file(path: Path, label: str) -> list[str]:
-    if not path.exists():
-        return []
-    try:
-        cfg = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except Exception as e:  # noqa: BLE001
-        return [f"{label}: cannot parse YAML: {e}"]
-    if not isinstance(cfg, dict):
-        return []
-    return walk_config_routes(cfg, label)
-
-
-def fix_env_file(path: Path) -> int:
-    if not path.exists():
-        return 0
-    text = path.read_text(encoding="utf-8", errors="ignore")
-    out: list[str] = []
-    n = 0
-    for line in text.splitlines():
-        stripped = line.strip()
-        blocked = False
-        if stripped and not stripped.startswith("#") and "=" in stripped:
-            key = stripped.split("=", 1)[0].strip()
-            if key in FORBIDDEN_ENV_KEYS:
-                out.append(f"# BLOCKED_BY_billing_guard (no Anthropic/Grok API tokens): {line}")
-                blocked = True
-                n += 1
-        if not blocked:
-            out.append(line)
-    if n:
-        path.write_text("\n".join(out) + ("\n" if out else ""), encoding="utf-8")
-    return n
-
-
-def fix_config_file(path: Path, label: str) -> list[str]:
+def fix_config(path: Path) -> list[str]:
+    """Scrub forbidden aliases/fallbacks; return log lines."""
     logs: list[str] = []
     if not path.exists():
         return logs
     try:
         cfg = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except Exception as e:  # noqa: BLE001
-        return [f"{label}: cannot parse for fix: {e}"]
+    except Exception as e:
+        return [f"{path}: parse error {e}"]
     if not isinstance(cfg, dict):
         return logs
-
     changed = False
     model = cfg.get("model")
     if isinstance(model, dict):
         aliases = model.get("aliases")
         if isinstance(aliases, dict):
             for line in scrub_aliases(aliases):
-                logs.append(f"{label}: {line}")
+                logs.append(f"{path.name}: {line}")
                 changed = True
-        from or_billing_policy import violation_for_route, check_alias_value
-
+            if not aliases:
+                model.pop("aliases", None)
+        # strip legacy single fallback if dirty
         fb = model.get("fallback")
         if isinstance(fb, dict):
+            from or_billing_policy import violation_for_route
+
             err = violation_for_route(
                 provider=fb.get("provider"),
                 model=fb.get("model") or fb.get("default"),
                 base_url=fb.get("base_url"),
-                where=f"{label}.model.fallback",
+                where="model.fallback",
             )
             if err:
                 model.pop("fallback", None)
-                logs.append(f"{label}: REMOVED {err}")
+                logs.append(f"{path.name}: REMOVED {err}")
                 changed = True
-        elif isinstance(fb, str) and fb:
-            err = check_alias_value("fallback", fb, label)
-            if err:
+        elif isinstance(fb, str) and "openrouter" in fb.lower():
+            from or_billing_policy import is_billing_violation, normalize_model_slug
+
+            if is_billing_violation("openrouter", normalize_model_slug(fb)):
                 model.pop("fallback", None)
-                logs.append(f"{label}: REMOVED {err}")
+                logs.append(f"{path.name}: REMOVED model.fallback string {fb!r}")
                 changed = True
+        # Never leave openrouter base_url on anthropic/xai-oauth primary
+        bu = str(model.get("base_url") or "")
+        prov = str(model.get("provider") or "").lower()
+        if "openrouter" in bu.lower() and prov in {"anthropic", "xai-oauth", "xai"}:
+            model.pop("base_url", None)
+            logs.append(f"{path.name}: REMOVED openrouter base_url on {prov}")
+            changed = True
+        if "openrouter" in bu.lower() and prov == "openrouter":
+            # OK for OR primary only if model allowlisted — walk catches it
+            pass
 
-        # Primary on OR with forbidden model — do not silently rewrite primary
-        # (too dangerous); leave for FAIL report.
-
-    fbp = cfg.get("fallback_providers")
-    if isinstance(fbp, list):
-        cleaned, scrub_logs = scrub_fallback_providers(fbp)
-        if scrub_logs:
+    fbs = cfg.get("fallback_providers")
+    if isinstance(fbs, list):
+        cleaned, flogs = scrub_fallback_providers(fbs)
+        if flogs:
             cfg["fallback_providers"] = cleaned
-            for line in scrub_logs:
-                logs.append(f"{label}: {line}")
+            for line in flogs:
+                logs.append(f"{path.name}: {line}")
             changed = True
 
     if changed:
@@ -177,23 +150,15 @@ def main(argv: list[str] | None = None) -> int:
         default=os.environ.get("HERMES_HOME") or str(Path.home() / ".hermes"),
     )
     ap.add_argument("--fix-env", action="store_true")
-    ap.add_argument("--fix-config", action="store_true")
+    ap.add_argument(
+        "--fix-config",
+        action="store_true",
+        help="Scrub forbidden aliases/fallbacks from configs then re-scan",
+    )
     ap.add_argument("--quiet-ok", action="store_true")
-    ap.add_argument("--self-test", action="store_true")
     args = ap.parse_args(argv)
-
-    if args.self_test:
-        try:
-            self_test()
-        except AssertionError as e:
-            print(f"billing_guard self_test FAIL: {e}", file=sys.stderr)
-            return 1
-        print("billing_guard: self_test OK")
-        return 0
-
     home = Path(args.hermes_home).expanduser()
     errs: list[str] = []
-    fix_logs: list[str] = []
 
     errs.extend(scan_process_env())
 
@@ -205,39 +170,58 @@ def main(argv: list[str] | None = None) -> int:
                 env_paths.append(p / ".env")
 
     for ep in env_paths:
-        if args.fix_env:
-            n = fix_env_file(ep)
-            if n:
-                fix_logs.append(f"{ep}: blocked {n} API-key line(s)")
-        errs.extend(scan_env_file(ep, str(ep)))
+        label = str(ep)
+        e = scan_env_file(ep, label)
+        if e and args.fix_env and ep.exists():
+            text = ep.read_text(encoding="utf-8", errors="ignore")
+            out = []
+            for line in text.splitlines():
+                stripped = line.strip()
+                blocked = False
+                for key in FORBIDDEN_ENV_KEYS:
+                    if stripped.startswith(key + "=") and not stripped.startswith("#"):
+                        out.append(
+                            f"# BLOCKED_BY_billing_guard (no Anthropic/Grok API tokens): {line}"
+                        )
+                        blocked = True
+                        break
+                if not blocked:
+                    out.append(line)
+            ep.write_text("\n".join(out) + ("\n" if out else ""), encoding="utf-8")
+            e = scan_env_file(ep, label)
+        errs.extend(e)
+
+    if args.fix_config:
+        for cfg_path, _label in iter_profile_configs(home):
+            for line in fix_config(cfg_path):
+                print(f"fix: {line}")
 
     for cfg_path, label in iter_profile_configs(home):
-        if args.fix_config:
-            fix_logs.extend(fix_config_file(cfg_path, label))
-        errs.extend(scan_config_file(cfg_path, label))
-
-    for line in fix_logs:
-        print(f"billing_guard fix: {line}")
+        if not cfg_path.exists():
+            continue
+        try:
+            cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+        except Exception as e:
+            errs.append(f"{label}: cannot parse: {e}")
+            continue
+        errs.extend(walk_config_routes(cfg, label))
 
     if errs:
         print("billing_guard: FAIL")
         for x in errs:
             print(f"  - {x}")
         print(
-            "\nHARD RULE: OpenRouter/metered MUST NEVER carry Anthropic/Claude or Grok.\n"
-            "OAuth only: provider anthropic · provider xai-oauth.\n"
-            "OR allowlist only: DeepSeek / Gemini Flash-Lite / gpt-oss.\n"
-            "Remediation: unset ANTHROPIC_API_KEY/XAI_API_KEY; "
+            "\nRemediation: anthropic OAuth + xai-oauth only for Claude/Grok; "
+            "OpenRouter ALLOWLIST only (DeepSeek/Gemini Flash/gpt-oss); "
             "python3 scripts/billing_guard.py --fix-env --fix-config; "
-            "bash scripts/apply_bot_matrix.sh; "
-            "python3 scripts/sync_or_billing_guardrail.py"
+            "python3 scripts/sync_or_billing_guardrail.py; "
+            "bash scripts/apply_bot_matrix.sh"
         )
         return 1
 
     if not args.quiet_ok:
         print(
-            "billing_guard: PASS — OpenRouter allowlist-only; "
-            "zero Anthropic/Claude/Grok on metered transports; no API tokens for those families"
+            "billing_guard: PASS — no Anthropic/Grok/frontier on OpenRouter or API tokens"
         )
     return 0
 

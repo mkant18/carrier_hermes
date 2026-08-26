@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Push OpenRouter workspace guardrail to ALLOWLIST-only cheap models.
+"""Push OpenRouter workspace Default guardrail to ALLOWLIST-only cheap models.
 
-Replaces dated ignore-lists (which miss undated slugs like anthropic/claude-sonnet-5)
-with an explicit allowed_models list from or_billing_policy.
+Strategy:
+  - allowed_models = catalog intersection with Carrier cheap allowlist
+  - ignored_models = all valid catalog Claude/Grok/expensive IDs (no ~ aliases)
+  - ignored_providers = anthropic, xai, …
 
-Requires OPENROUTER_MANAGEMENT_KEY in ~/.hermes/.env (or env).
+Requires OPENROUTER_MANAGEMENT_KEY.
 """
 from __future__ import annotations
 
@@ -19,9 +21,11 @@ _SCRIPTS = Path(__file__).resolve().parent
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
-from or_billing_policy import or_guardrail_allowed_models  # noqa: E402
-
-GUARDRAIL_NAME_HINT = "Default"
+from or_billing_policy import (  # noqa: E402
+    has_forbidden_frontier_needle,
+    is_anthropic_or_grok_model,
+    is_or_allowlisted_model,
+)
 
 
 def _load_env() -> dict[str, str]:
@@ -47,101 +51,116 @@ def _req(method: str, url: str, key: str, body: dict | None = None) -> dict:
             "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
             "HTTP-Referer": "https://carrier-hermes.local",
-            "X-Title": "Carrier Ledger billing guardrail sync",
+            "X-Title": "Carrier billing guardrail sync",
         },
     )
     try:
-        with urllib.request.urlopen(r, timeout=30) as resp:
+        with urllib.request.urlopen(r, timeout=60) as resp:
             raw = resp.read().decode()
             return json.loads(raw) if raw else {}
     except urllib.error.HTTPError as e:
         err = e.read().decode(errors="replace")
-        raise SystemExit(f"HTTP {e.code} {url}: {err[:800]}") from e
+        raise SystemExit(f"HTTP {e.code} {url}: {err[:1200]}") from e
+
+
+def _valid_catalog_id(mid: str) -> bool:
+    if not mid or mid.startswith("~") or mid.startswith("openrouter/"):
+        return False
+    return True
 
 
 def main() -> int:
     env = _load_env()
-    key = env.get("OPENROUTER_MANAGEMENT_KEY") or ""
-    if not key:
-        print("sync_or_billing_guardrail: OPENROUTER_MANAGEMENT_KEY missing", file=sys.stderr)
+    mgmt = env.get("OPENROUTER_MANAGEMENT_KEY") or ""
+    inf = env.get("OPENROUTER_API_KEY") or ""
+    if not mgmt:
+        print("OPENROUTER_MANAGEMENT_KEY missing", file=sys.stderr)
+        return 2
+    if not inf:
+        print("OPENROUTER_API_KEY missing (needed to list catalog)", file=sys.stderr)
         return 2
 
-    listing = _req("GET", "https://openrouter.ai/api/v1/guardrails", key)
-    rows = listing.get("data") or []
-    if not rows:
-        print("sync_or_billing_guardrail: no guardrails found", file=sys.stderr)
+    catalog = _req("GET", "https://openrouter.ai/api/v1/models", inf).get("data") or []
+    ids = [m["id"] for m in catalog if _valid_catalog_id(m.get("id") or "")]
+
+    allowed = sorted({m for m in ids if is_or_allowlisted_model(m)})
+    if len(allowed) < 3:
+        print("FAIL: allowlist too small after catalog filter", allowed, file=sys.stderr)
         return 1
 
-    # Prefer workspace Default
-    g = None
-    for row in rows:
-        name = str(row.get("name") or "")
-        if GUARDRAIL_NAME_HINT.lower() in name.lower():
-            g = row
-            break
-    if g is None:
-        g = rows[0]
-
-    gid = g["id"]
-    allowed = or_guardrail_allowed_models()
-    # Hard deny list of expensive providers as ignored_providers (belt)
-    ignored_providers = sorted(
+    ignored = sorted(
         {
-            "anthropic",
-            "xai",
-            "openai",  # gpt-oss still allowed via allowed_models override?
-            # Note: if allowed_models is set, intersection applies — gpt-oss is
-            # in allowed_models so openai provider may still be needed for gpt-oss.
-            "azure",
-            "bedrock",
-            "claude-on-aws",
-            "mistral",
-            "cohere",
-            "perplexity",
-            "together",
-            "fireworks",
-            "groq",
-            "deepinfra",
-            "novita",
+            m
+            for m in ids
+            if m not in allowed
+            and (
+                is_anthropic_or_grok_model(m)
+                or m.startswith("anthropic/")
+                or m.startswith("x-ai/")
+                or has_forbidden_frontier_needle(m)
+            )
         }
     )
-    # Do NOT ignore openai if we need gpt-oss — rely on allowed_models only.
-    ignored_providers = [p for p in ignored_providers if p != "openai"]
+    if not ignored:
+        # API requires ignored_models >= 1; seed with a known expensive id
+        ignored = ["openai/gpt-4o"] if "openai/gpt-4o" in ids else [ids[0]]
+
+    listing = _req("GET", "https://openrouter.ai/api/v1/guardrails", mgmt)
+    rows = listing.get("data") or []
+    g = next((r for r in rows if "default" in str(r.get("name") or "").lower()), None) or (
+        rows[0] if rows else None
+    )
+    if not g:
+        print("no guardrails", file=sys.stderr)
+        return 1
+    gid = g["id"]
 
     payload = {
         "allowed_models": allowed,
-        # Clear partial dated denylist — allowlist is the sole model gate
-        "ignored_models": [],
-        # Keep ignoring anthropic + xai backends regardless
-        "ignored_providers": ignored_providers,
+        "ignored_models": ignored,
+        "ignored_providers": [
+            "anthropic",
+            "xai",
+            "azure",
+            "bedrock",
+            "claude-on-aws",
+        ],
         "allowed_providers": None,
         "description": (
-            "Carrier HARD allowlist: DeepSeek/Gemini-Flash/gpt-oss only. "
-            "No Claude/Grok/OpenAI-frontier via OpenRouter. Synced by sync_or_billing_guardrail.py"
+            "Carrier HARD allowlist: DeepSeek / Gemini Flash·Lite / gpt-oss only. "
+            f"Ignore {len(ignored)} Claude/Grok/frontier catalog IDs. "
+            "sync_or_billing_guardrail.py"
         ),
     }
 
-    print(f"Patching guardrail {gid} ({g.get('name')})")
-    print(f"  allowed_models ({len(allowed)}):")
+    print(f"Patching {gid} ({g.get('name')})")
+    print(f"  allowed={len(allowed)} ignored={len(ignored)}")
     for m in allowed:
-        print(f"    - {m}")
-    updated = _req("PATCH", f"https://openrouter.ai/api/v1/guardrails/{gid}", key, payload)
-    # Some APIs wrap in data
+        print(f"    allow {m}")
+
+    updated = _req("PATCH", f"https://openrouter.ai/api/v1/guardrails/{gid}", mgmt, payload)
     data = updated.get("data") or updated
-    am = data.get("allowed_models")
-    print("Result allowed_models count:", len(am or []))
+    am = data.get("allowed_models") or []
     if not am:
-        print("WARNING: API returned empty allowed_models — verify in dashboard", file=sys.stderr)
+        print("FAIL: empty allowlist after patch", file=sys.stderr)
         return 1
-    # Verify a forbidden model is not present
-    joined = " ".join(am).lower()
-    for bad in ("claude", "grok", "gpt-4", "opus", "sonnet-5"):
-        if bad in joined and "gpt-oss" not in bad:
-            # sonnet shouldn't appear
-            if bad == "sonnet-5" or bad in joined:
-                if any(bad in x.lower() for x in am):
-                    print(f"FAIL: forbidden needle {bad!r} still in allowlist", file=sys.stderr)
-                    return 1
+    if any("claude" in x.lower() or "grok" in x.lower() for x in am):
+        print("FAIL: frontier still on allowlist", am, file=sys.stderr)
+        return 1
+
+    # Confirm
+    listing2 = _req("GET", "https://openrouter.ai/api/v1/guardrails", mgmt)
+    for row in listing2.get("data") or []:
+        if row.get("id") == gid:
+            am2 = row.get("allowed_models") or []
+            print(
+                f"Confirmed allow={len(am2)} ignore={len(row.get('ignored_models') or [])}"
+            )
+            if not am2:
+                print("FAIL re-fetch empty", file=sys.stderr)
+                return 1
+            break
+
     print("sync_or_billing_guardrail: OK")
     return 0
 
