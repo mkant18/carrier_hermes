@@ -1,0 +1,84 @@
+# Local LLM Registry — carrier_hermes fleet
+# Auto-updated by scripts/register_new_local_llms.py
+# Manual edits allowed; script will merge, not overwrite, existing entries.
+#
+# tier values:
+#   worker-primary    — the default local primary for worker/watcher bots
+#   worker-alternate  — available as a drop-in swap, not default
+#   specialist        — purpose-built custom model (do NOT use as a general worker)
+#
+# To set a specific bot to use an alternate model, edit its profile config.yaml:
+#   model:
+#     default: gemma4:26b
+#     provider: custom
+#     base_url: http://localhost:11434/v1
+#
+# Or re-run apply_local_llm_routing.py --local-model <model> to flip ALL workers.
+
+local_models:
+  qwen2.5:7b-instruct-q4_K_M:
+    display_name: Qwen 2.5 7B Instruct Q4_K_M
+    tier: worker-primary
+    speciality: general instruction following, tool calling, structured output
+    notes: 'Current fleet default for all worker/watcher bots. 7B, fast, reliable
+      tool calls. WARNING: context_length = 32,768 — below Hermes 64K floor. Cannot
+      be used as a Kanban worker (crashes at spawn). Use only for cron scripts / direct
+      Ollama API calls.
+
+      '
+    context_length: 32768
+    tool_calls: true
+    status: ctx-too-small-for-kanban-worker
+    ollama_tag: qwen2.5:7b-instruct-q4_K_M
+    base_url: http://localhost:11434/v1
+  llama3.1:8b-instruct-q4_K_M:
+    display_name: LLaMA 3.1 8B Instruct Q4_K_M
+    tier: worker-primary
+    speciality: general rote work, 128K context, reliable Kanban worker
+    notes: 'Verified 128K context. Passes Hermes 64K floor. Recommended as the primary
+      Kanban worker bot model. Slightly slower than Qwen 7B but handles full-context
+      tasks. Tool call capable.
+
+      '
+    context_length: 131072
+    tool_calls: true
+    status: ready
+    ollama_tag: llama3.1:8b-instruct-q4_K_M
+    base_url: http://localhost:11434/v1
+  gemma4:26b:
+    display_name: Gemma 4 26B (MoE)
+    tier: worker-alternate
+    speciality: reasoning, agentic workflows, coding, multimodal understanding
+    notes: 26B total / ~4B active params (MoE). Frontier-quality at rote speed. Good
+      drop-in replacement for qwen when reasoning depth matters more than pure speed.
+    context_length: 262144
+    tool_calls: true
+    status: ready
+    registered: '2026-08-26'
+    ollama_tag: gemma4:26b
+    base_url: http://localhost:11434/v1
+  mistral-nemo:
+    display_name: Mistral NeMo 12B
+    tier: worker-alternate
+    speciality: general purpose, instruction following, tool use
+    notes: 12B, 128K context. Strong at structured output and instruction following.
+      Base model for mistral-nemo-classifier.
+    context_length: 1024000
+    tool_calls: true
+    status: ready
+    registered: '2026-08-26'
+    ollama_tag: mistral-nemo
+    base_url: http://localhost:11434/v1
+  mistral-nemo-classifier:
+    display_name: Mistral NeMo Classifier (custom)
+    tier: specialist
+    speciality: classification, triage, intent detection, routing, labeling
+    notes: Built from mistral-nemo with temperature=0, top_k=1. Deterministic zero-temp
+      classifier for Kanban triage, intent detection, severity labeling, and fleet
+      routing decisions. Do NOT use for open-ended generation.
+    context_length: 1024000
+    tool_calls: false
+    status: ready
+    registered: '2026-08-26'
+    ollama_tag: mistral-nemo-classifier
+    base_url: http://localhost:11434/v1

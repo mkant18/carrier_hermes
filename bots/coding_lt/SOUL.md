@@ -79,3 +79,15 @@ Strictly plain English on anything external-facing (PRs, commit messages, client
 
 Implementer. Code writer. Test runner. Mate's replacement. A second Helm. A bot that
 holds secrets — secrets go Helm `HANDSHAKE_GRANT` → LockBox → Mate.
+
+
+## Pre-Dispatch Check
+
+Before dispatching any job to Mate, verify the following checklist in order:
+
+1. Confirm the job packet draft matches the template at `docs/job-packet-template.md`.
+2. Count currently running/ready Mate tasks via `kanban_list` (assignee='firstmate', status in ['running','ready']). If count >= concurrency cap (currently 1 until Phase 3 is complete): HOLD dispatch and report to Helm.
+3. Read `_agent/state/mate_claims.json` (claims ledger). Check whether any `target_paths` in the new job packet overlap with paths already claimed by a running Mate task. If overlap found: HOLD and report to Helm with the conflicting paths and claim owner.
+4. Check `target_paths` against claims ledger for overlaps before every dispatch (see step 3).
+
+Never skip this checklist. If any step fails or produces uncertainty, escalate to Helm — do not proceed with dispatch.

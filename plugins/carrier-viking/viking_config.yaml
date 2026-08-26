@@ -1,0 +1,25 @@
+# carrier-viking gap implementation notes
+# C:/Users/micha/AppData/Local/hermes/carrier/viking_config.yaml
+#
+# This file is tracked in the plugin dir for reference.
+# Actual config lives at the path above.
+
+storage:
+  backend: "localfs"
+  root: "C:/Users/micha/AppData/Local/hermes/carrier/viking_memory"
+  db_path: "C:/Users/micha/AppData/Local/hermes/carrier/viking_memory/memories.db"
+
+server:
+  host: "127.0.0.1"
+  port: 1933
+
+memory:
+  quotas:
+    task: 50
+    fact: 100
+    error: 30
+    decision: 25
+    experience: 50
+    trajectory: 30
+    entity: 100
+    preference: 50
