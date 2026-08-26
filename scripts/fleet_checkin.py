@@ -463,6 +463,162 @@ def extract_task_ids(sessions: list[dict]) -> list[str]:
     return list(ids)
 
 
+# ── Model / OAuth usage mining ─────────────────────────────────────────────────
+
+def _fmt_tokens(n: int) -> str:
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M"
+    if n >= 1_000:
+        return f"{n / 1_000:.1f}K"
+    return str(n)
+
+
+def mine_all_model_usage(since_ts: float) -> dict:
+    """Mine every bot state.db for model/provider usage in the check-in window.
+
+    Returns:
+        by_provider: {provider_key: {sessions, input_tokens, output_tokens,
+                                     est_cost, billing_mode}}
+        by_model:    {"{model}[{provider}]": {model, provider, sessions,
+                                              input_tokens, output_tokens, est_cost}}
+        total_sessions, total_input, total_output
+    """
+    all_bots = [b for wing in WINGS for b in wing["bots"]] + COMMAND_BOTS
+    by_provider: dict[str, dict] = {}
+    by_model:    dict[str, dict] = {}
+
+    for bot_id in all_bots:
+        db_path = HOME / "profiles" / bot_id / "state.db"
+        if not db_path.exists():
+            continue
+        try:
+            conn = sqlite3.connect(str(db_path))
+            try:
+                rows = conn.execute(
+                    "SELECT model, billing_provider, billing_mode, COUNT(*) AS cnt, "
+                    "COALESCE(SUM(input_tokens),0) AS inp, "
+                    "COALESCE(SUM(output_tokens),0) AS out, "
+                    "COALESCE(SUM(estimated_cost_usd),0) AS cost "
+                    "FROM sessions WHERE started_at > ? "
+                    "GROUP BY model, billing_provider, billing_mode",
+                    (since_ts,),
+                ).fetchall()
+            except Exception:
+                rows = []
+            conn.close()
+        except Exception:
+            continue
+
+        for row in rows:
+            model, prov, bmode, cnt, inp, out, cost = row
+            model = (model or "unknown").strip()
+            prov  = (prov  or "unknown").strip()
+            bmode = (bmode or "unknown").strip()
+
+            # ── By provider ───────────────────────────────────────────────────
+            if prov not in by_provider:
+                by_provider[prov] = {
+                    "sessions": 0, "input_tokens": 0, "output_tokens": 0,
+                    "est_cost": 0.0, "billing_mode": bmode,
+                }
+            by_provider[prov]["sessions"]      += cnt
+            by_provider[prov]["input_tokens"]  += inp
+            by_provider[prov]["output_tokens"] += out
+            by_provider[prov]["est_cost"]      += cost
+
+            # ── By model ──────────────────────────────────────────────────────
+            mk = f"{model}[{prov}]"
+            if mk not in by_model:
+                by_model[mk] = {
+                    "model": model, "provider": prov,
+                    "sessions": 0, "input_tokens": 0, "output_tokens": 0, "est_cost": 0.0,
+                }
+            by_model[mk]["sessions"]      += cnt
+            by_model[mk]["input_tokens"]  += inp
+            by_model[mk]["output_tokens"] += out
+            by_model[mk]["est_cost"]      += cost
+
+    total_sessions = sum(v["sessions"]      for v in by_model.values())
+    total_input    = sum(v["input_tokens"]  for v in by_model.values())
+    total_output   = sum(v["output_tokens"] for v in by_model.values())
+    return {
+        "by_provider":    by_provider,
+        "by_model":       by_model,
+        "total_sessions": total_sessions,
+        "total_input":    total_input,
+        "total_output":   total_output,
+    }
+
+
+_PROV_LABELS = {
+    "anthropic":   "Anthropic Claude Max 🔵",
+    "xai":         "xAI SuperGrok 🟣",
+    "openrouter":  "OpenRouter 🟠",
+    "openai":      "OpenAI 🟢",
+    "google":      "Google Gemini 🔵",
+    "ollama":      "Ollama (local) 💻",
+    "custom":      "Local/Custom (Ollama) 💻",
+    "mistral":     "Mistral 🟡",
+    "groq":        "Groq ⚡",
+    "together":    "Together AI 🌐",
+    "unknown":     "Unknown ❓",
+}
+
+
+def format_oauth_usage_block(model_usage: dict) -> str:
+    """Format per-OAuth/provider usage section for the check-in report."""
+    by_prov   = model_usage.get("by_provider", {})
+    total     = model_usage.get("total_sessions", 0)
+    tok_total = model_usage.get("total_input", 0) + model_usage.get("total_output", 0)
+
+    if not by_prov or total == 0:
+        return "• No session activity recorded this hour."
+
+    lines: list[str] = [
+        f"• Total this hour: **{total} sessions** | **{_fmt_tokens(tok_total)} tokens** "
+        f"({_fmt_tokens(model_usage.get('total_input',0))} in / "
+        f"{_fmt_tokens(model_usage.get('total_output',0))} out)"
+    ]
+    for prov, data in sorted(by_prov.items(), key=lambda x: -x[1]["sessions"]):
+        label    = _PROV_LABELS.get(prov, f"{prov} ❓")
+        sess_pct = data["sessions"] / total * 100 if total > 0 else 0
+        tok      = data["input_tokens"] + data["output_tokens"]
+        tok_pct  = tok / tok_total * 100 if tok_total > 0 else 0
+        mode_tag = ""
+        bmode = data.get("billing_mode", "")
+        if bmode and bmode not in ("unknown", ""):
+            mode_tag = f" [{bmode}]"
+        cost_tag = ""
+        if data.get("est_cost", 0.0) > 0.0005:
+            cost_tag = f" ~${data['est_cost']:.3f}"
+        lines.append(
+            f"• {label}{mode_tag}: **{data['sessions']} sess ({sess_pct:.0f}%)** | "
+            f"{_fmt_tokens(tok)} tok ({tok_pct:.0f}%){cost_tag}"
+        )
+    return "\n".join(lines)
+
+
+def format_model_breakdown(model_usage: dict) -> str:
+    """Format per-model percentage breakdown across all providers/routes."""
+    by_model = model_usage.get("by_model", {})
+    total    = model_usage.get("total_sessions", 0)
+
+    if not by_model or total == 0:
+        return "• No session data this hour."
+
+    lines: list[str] = []
+    for _key, data in sorted(by_model.items(), key=lambda x: -x[1]["sessions"]):
+        pct      = data["sessions"] / total * 100 if total > 0 else 0
+        tok      = data["input_tokens"] + data["output_tokens"]
+        tok_str  = f" | {_fmt_tokens(tok)} tok" if tok > 0 else ""
+        cost_str = f" ~${data['est_cost']:.3f}" if data.get("est_cost", 0.0) > 0.001 else ""
+        lines.append(
+            f"• `{data['model']}` [{data['provider']}]: "
+            f"**{data['sessions']} sess ({pct:.0f}%)**{tok_str}{cost_str}"
+        )
+    return "\n".join(lines)
+
+
 def build_kanban_board() -> list[str]:
     """
     Read ALL tasks from carrier kanban.db and return a list of message chunks,
@@ -527,18 +683,6 @@ def build_kanban_board() -> list[str]:
             )
 
     # Done/completed — compact: one line per assignee
-    terminal_tasks = grouped["done"] + grouped["completed"]
-    if terminal_tasks:
-        by_assignee: dict[str, list[str]] = {}
-        for t in terminal_tasks:
-            a = t["assignee"] or "unassigned"
-            by_assignee.setdefault(a, []).append(t["id"])
-        total = len(terminal_tasks)
-        all_lines.append(f"\n✅ **DONE / COMPLETED** ({total} total)")
-        for bot_id, ids in sorted(by_assignee.items()):
-            cs = callsign_for(bot_id)
-            all_lines.append(f"  {cs} — {len(ids)} tasks: " + " ".join(f"`{i}`" for i in ids))
-
     # Chunk into ≤ 1900-char messages
     return _chunk_lines(all_lines, limit=1900)
 
@@ -738,6 +882,12 @@ def main() -> int:
         if sessions:
             command_data[bot] = sessions
 
+    # Model / OAuth usage (mines all bots' state.db)
+    model_usage = mine_all_model_usage(since_ts)
+    print(f"  [model_usage] {model_usage['total_sessions']} sessions | "
+          f"{model_usage['total_input']} in / {model_usage['total_output']} out tokens | "
+          f"providers: {list(model_usage['by_provider'].keys())}")
+
     dispatch_lock = DISPATCH_LOCK.exists()
     spend_halt    = SPEND_HALT.exists()
     ledger        = get_ledger_snapshot()
@@ -811,6 +961,9 @@ def main() -> int:
         print(f"  [shipwright] {len(merge_lines)} unannounced merge(s) to report")
 
     # Assemble
+    oauth_block = format_oauth_usage_block(model_usage)
+    model_block = format_model_breakdown(model_usage)
+
     sections: list[str] = [
         header,
         "\n\n".join(wing_lines),
@@ -820,6 +973,8 @@ def main() -> int:
     sections += [
         f"⚓ **Command** — Marshal · Vigil · Ledger · LockBox\n{cmd_parts_str}",
         f"📊 **Spend & Subs**\n{spend_block}",
+        f"🔑 **OAuth & Provider Usage**\n{oauth_block}",
+        f"🤖 **Model Breakdown** (% of this hour's work)\n{model_block}",
         "> 🤖 `python_summarize` · zero-cost · no LLM",
     ]
     message = "\n\n".join(sections)
