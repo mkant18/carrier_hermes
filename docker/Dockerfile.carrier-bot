@@ -1,0 +1,48 @@
+# Carrier Bot Docker Image
+# Base: python:3.11-slim-bookworm
+# Runs one carrier fleet bot per container (VM-per-bot pattern)
+
+FROM python:3.11-slim-bookworm
+
+LABEL org.opencontainers.image.title="carrier-bot"
+LABEL org.opencontainers.image.description="Carrier Hermes fleet bot — one container per bot"
+
+# ── System dependencies ────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    build-essential \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Non-root user ──────────────────────────────────────────────────────────
+RUN useradd -u 1000 -m -s /bin/bash carrier
+
+# ── Python dependencies ────────────────────────────────────────────────────
+WORKDIR /tmp/build
+
+# Copy requirements from the Hermes venv (generated at build time via pip freeze)
+COPY requirements.carrier.txt ./
+
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.carrier.txt
+
+# ── Workspace ─────────────────────────────────────────────────────────────
+RUN mkdir -p /workspace && chown carrier:carrier /workspace
+
+# ── App ───────────────────────────────────────────────────────────────────
+# Repo is mounted read-only at /repo at runtime
+# Bot profile is mounted read-write at /profile
+
+WORKDIR /workspace
+
+USER carrier
+
+# Environment (overridden per-container in docker-compose)
+ENV HERMES_BOT_ID=""
+ENV HERMES_PROFILE=""
+ENV CARRIER_PEERS_BROKER_URL="http://host.docker.internal:9876"
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/repo
+
+CMD ["python", "/repo/scripts/run_local.py"]

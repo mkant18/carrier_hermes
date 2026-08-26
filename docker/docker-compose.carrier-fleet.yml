@@ -1,0 +1,388 @@
+services:
+  # ── Commander ────────────────────────────────────────────────────────────
+  chief_of_staff:
+    image: carrier-bot
+    container_name: carrier-chief_of_staff
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/chief_of_staff/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: chief_of_staff
+      HERMES_PROFILE: chief_of_staff
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  # ── Senior Lieutenants ───────────────────────────────────────────────────
+  marshal:
+    image: carrier-bot
+    container_name: carrier-marshal
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/marshal/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: marshal
+      HERMES_PROFILE: marshal
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  coding_lt:
+    image: carrier-bot
+    container_name: carrier-coding_lt
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/coding_lt/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: coding_lt
+      HERMES_PROFILE: coding_lt
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  ops_lt:
+    image: carrier-bot
+    container_name: carrier-ops_lt
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/ops_lt/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: ops_lt
+      HERMES_PROFILE: ops_lt
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  knowledge_lt:
+    image: carrier-bot
+    container_name: carrier-knowledge_lt
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/knowledge_lt/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: knowledge_lt
+      HERMES_PROFILE: knowledge_lt
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  maintenance_lt:
+    image: carrier-bot
+    container_name: carrier-maintenance_lt
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/maintenance_lt/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: maintenance_lt
+      HERMES_PROFILE: maintenance_lt
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  # ── Workers ──────────────────────────────────────────────────────────────
+  firstmate:
+    image: carrier-bot
+    container_name: carrier-firstmate
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/firstmate/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: firstmate
+      HERMES_PROFILE: firstmate
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  git_yeoman:
+    image: carrier-bot
+    container_name: carrier-git_yeoman
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/git_yeoman/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: git_yeoman
+      HERMES_PROFILE: git_yeoman
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  subscription_watcher:
+    image: carrier-bot
+    container_name: carrier-subscription_watcher
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/subscription_watcher/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: subscription_watcher
+      HERMES_PROFILE: subscription_watcher
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  api_watcher:
+    image: carrier-bot
+    container_name: carrier-api_watcher
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/api_watcher/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: api_watcher
+      HERMES_PROFILE: api_watcher
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  lockbox:
+    image: carrier-bot
+    container_name: carrier-lockbox
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/lockbox/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: lockbox
+      HERMES_PROFILE: lockbox
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  passive_watch:
+    image: carrier-bot
+    container_name: carrier-passive_watch
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/passive_watch/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: passive_watch
+      HERMES_PROFILE: passive_watch
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  # ── Watchers & Specialized Workers ──────────────────────────────────────
+  research_agent:
+    image: carrier-bot
+    container_name: carrier-research_agent
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/research_agent/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: research_agent
+      HERMES_PROFILE: research_agent
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  hermes_ai_explorer:
+    image: carrier-bot
+    container_name: carrier-hermes_ai_explorer
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/hermes_ai_explorer/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: hermes_ai_explorer
+      HERMES_PROFILE: hermes_ai_explorer
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  todoist_manager:
+    image: carrier-bot
+    container_name: carrier-todoist_manager
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/todoist_manager/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: todoist_manager
+      HERMES_PROFILE: todoist_manager
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  email_reader:
+    image: carrier-bot
+    container_name: carrier-email_reader
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/email_reader/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: email_reader
+      HERMES_PROFILE: email_reader
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  email_drafter:
+    image: carrier-bot
+    container_name: carrier-email_drafter
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/email_drafter/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: email_drafter
+      HERMES_PROFILE: email_drafter
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  calendar_manager:
+    image: carrier-bot
+    container_name: carrier-calendar_manager
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/calendar_manager/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: calendar_manager
+      HERMES_PROFILE: calendar_manager
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  finance_reader:
+    image: carrier-bot
+    container_name: carrier-finance_reader
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/finance_reader/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: finance_reader
+      HERMES_PROFILE: finance_reader
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+  obsidian_archivist:
+    image: carrier-bot
+    container_name: carrier-obsidian_archivist
+    volumes:
+      - C:/Users/micha/carrier_hermes:/repo:ro
+      - C:/Users/micha/AppData/Local/hermes/profiles/obsidian_archivist/_agent:/profile:rw
+    networks:
+      - carrier-fleet
+    environment:
+      HERMES_BOT_ID: obsidian_archivist
+      HERMES_PROFILE: obsidian_archivist
+      CARRIER_PEERS_BROKER_URL: http://host.docker.internal:9876
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+    restart: unless-stopped
+
+networks:
+  carrier-fleet:
+    external: true
