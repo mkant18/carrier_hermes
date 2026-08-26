@@ -214,6 +214,32 @@ def check_not_rate_limited() -> None:
         suppress("anthropic_rate_limited")
 
 
+# ─── Eligible-cycle counter (hash-suppression guard) ─────────────────────────
+
+def _eligible_cycle() -> int:
+    """Return an incrementing integer so each eligible tick produces unique stdout.
+
+    Hermes monitor_script hashes stdout each tick; identical output permanently
+    suppresses the agent turn.  A stable 'PREFLIGHT: OK' would fire the LLM once
+    then suppress it forever.  This counter ensures every eligible tick differs.
+    State persists in CARRIER_DIR so the counter survives across cron invocations.
+    """
+    cycle_file = os.path.join(CARRIER_DIR, "maintenance_preflight_cycle.txt")
+    try:
+        if os.path.exists(cycle_file):
+            with open(cycle_file, "r") as fh:
+                cycle = int(fh.read().strip())
+        else:
+            cycle = 0
+        cycle += 1
+        with open(cycle_file, "w") as fh:
+            fh.write(str(cycle))
+        return cycle
+    except (IOError, OSError, ValueError):
+        # Fallback: current epoch seconds always changes between ticks.
+        return int(time.time())
+
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -223,8 +249,9 @@ def main() -> None:
     check_fleet_quiet()
     check_not_rate_limited()
 
-    # All checks passed
-    print("PREFLIGHT: OK — all conditions met", flush=True)
+    # All checks passed — emit a CHANGING token so Hermes does not hash-suppress
+    # this tick and permanently silence the maintenance agent.
+    print(f"PREFLIGHT: OK cycle={_eligible_cycle()}", flush=True)
     sys.exit(0)
 
 
