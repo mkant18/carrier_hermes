@@ -67,6 +67,64 @@ def scan_process_env() -> list[str]:
     return errs
 
 
+def scan_anthropic_auth(hermes_home: Path) -> list[str]:
+    """HARD GATE: the anthropic credential must be OAuth (Claude Max), never a
+    paid API key. An Anthropic API key added via `hermes setup` lands in
+    auth.json as type=api_key — the env/config scans never see it, so this is
+    the only place that catches it. Same rule for xai (must be oauth).
+
+    Fails closed on ANY of:
+      - a credential whose type is 'api_key' for the anthropic/xai families
+      - a credential dict that carries an api_key/key field for those families
+    """
+    import json
+
+    errs: list[str] = []
+    auth_path = hermes_home / "auth.json"
+    if not auth_path.exists():
+        return errs
+    try:
+        data = json.loads(auth_path.read_text(encoding="utf-8"))
+    except Exception as e:  # noqa: BLE001
+        return [f"auth.json: cannot parse (fail-closed): {e}"]
+
+    SUB_ONLY = ("anthropic", "claude", "xai", "grok")
+
+    def check_cred(provider: str, cred: dict, where: str) -> None:
+        pl = provider.lower()
+        if not any(fam in pl for fam in SUB_ONLY):
+            return
+        ctype = (cred.get("type") or cred.get("auth_type") or "").lower()
+        has_key = bool(cred.get("api_key") or cred.get("key") or cred.get("token"))
+        # anthropic/xai must be oauth; an api_key credential is a hard violation.
+        if ctype == "api_key" or (has_key and ctype != "oauth"):
+            errs.append(
+                f"auth.json [{where}]: '{provider}' credential is API-KEY "
+                f"(type={ctype or '?'}) — Anthropic/Grok are SUBSCRIPTION/OAUTH "
+                "ONLY. Remove it and re-auth via Claude Max / SuperGrok OAuth "
+                "(`hermes setup`). A paid API key for these families is forbidden."
+            )
+
+    # providers block
+    providers = data.get("providers")
+    if isinstance(providers, dict):
+        for prov, v in providers.items():
+            if isinstance(v, dict):
+                check_cred(prov, v, "providers")
+    # credential_pool block
+    pool = data.get("credential_pool")
+    if isinstance(pool, dict):
+        for prov, creds in pool.items():
+            if isinstance(creds, list):
+                for c in creds:
+                    if isinstance(c, dict):
+                        check_cred(prov, c, "credential_pool")
+            elif isinstance(creds, dict):
+                check_cred(prov, creds, "credential_pool")
+    return errs
+
+
+
 def iter_profile_configs(hermes_home: Path):
     yield hermes_home / "config.yaml", "default"
     profiles = hermes_home / "profiles"
@@ -196,6 +254,7 @@ def main(argv: list[str] | None = None) -> int:
     fix_logs: list[str] = []
 
     errs.extend(scan_process_env())
+    errs.extend(scan_anthropic_auth(home))
 
     env_paths = [home / ".env"]
     profiles = home / "profiles"
