@@ -297,6 +297,57 @@ def format_spend_block(ledger: dict, dispatch_lock: bool, spend_halt: bool) -> s
     return "\n".join(lines)
 
 
+# ── Shipwright merge reporting ────────────────────────────────────────────────
+
+MERGE_LOG = Path(
+    r"C:\Users\micha\AppData\Local\hermes\profiles\maintenance_lt\home\_agent\maintenance\merge_log.jsonl"
+)
+
+
+def collect_shipwright_merges() -> list[str]:
+    """Read merge_log.jsonl, return formatted lines for unannounced merges,
+    and mark them announced=true in-place.  Silent if file absent or no new merges."""
+    if not MERGE_LOG.exists():
+        return []
+    try:
+        raw_lines = MERGE_LOG.read_text(encoding="utf-8").splitlines()
+        entries: list[dict] = []
+        for raw in raw_lines:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                entries.append(json.loads(raw))
+            except json.JSONDecodeError:
+                entries.append({"_raw": raw})  # preserve unparseable lines
+
+        lines_out: list[str] = []
+        changed = False
+        for entry in entries:
+            if entry.get("announced") is False or entry.get("announced") == "false":
+                pr    = entry.get("pr", "?")
+                title = entry.get("title", "(unknown)")
+                fixes = entry.get("fixes", 0)
+                lines_out.append(
+                    f"\U0001f6e0\ufe0f **Shipwright merged PR #{pr}** \u2014 {title} ({fixes} fixes)"
+                )
+                entry["announced"] = True
+                changed = True
+
+        if changed:
+            MERGE_LOG.write_text(
+                "\n".join(
+                    json.dumps(e) for e in entries if "_raw" not in e
+                ) + "\n",
+                encoding="utf-8",
+            )
+
+        return lines_out
+    except Exception as e:
+        print(f"  [shipwright] merge_log error: {e}", file=sys.stderr)
+        return []
+
+
 # ── Kanban enrichment ─────────────────────────────────────────────────────────
 
 KANBAN_DB = HOME / "kanban" / "boards" / "carrier" / "kanban.db"
@@ -605,10 +656,19 @@ def main() -> int:
 
     spend_block = format_spend_block(ledger, dispatch_lock, spend_halt)
 
+    # ── Shipwright merge lines (unannounced entries from merge_log.jsonl) ──────
+    merge_lines = collect_shipwright_merges()
+    if merge_lines:
+        print(f"  [shipwright] {len(merge_lines)} unannounced merge(s) to report")
+
     # Assemble
-    sections = [
+    sections: list[str] = [
         header,
         "\n\n".join(wing_lines),
+    ]
+    if merge_lines:
+        sections.append("\n".join(merge_lines))
+    sections += [
         f"⚓ **Command** — Marshal · Vigil · Ledger · LockBox\n{cmd_parts_str}",
         f"📊 **Spend & Subs**\n{spend_block}",
         "> 🤖 `google/gemini-2.5-flash-lite` · openrouter · ~$0.00",
