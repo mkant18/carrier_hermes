@@ -2,9 +2,11 @@
 """Carrier Hermes — OpenRouter / metered-aggregator billing policy (SINGLE SOURCE OF TRUTH).
 
 HARD RULE (Michael) — PERIOD, FULL STOP:
-  Anthropic (Claude*) and xAI (Grok*) are SUBSCRIPTION / OAUTH ONLY.
+  Anthropic (Claude*), xAI (Grok*), and OpenAI (GPT*/Codex*) are
+  SUBSCRIPTION / OAUTH ONLY.
     • provider ``anthropic``  → Claude Max OAuth
     • provider ``xai-oauth``  → SuperGrok OAuth
+    • provider ``openai-codex`` → ChatGPT/Codex OAuth
 
   OpenRouter and every other metered aggregator MUST NEVER carry:
     • any Anthropic/Claude model (any slug, any date, any org prefix)
@@ -119,6 +121,10 @@ _GROK_FAMILY_RE = re.compile(
     r"\bgrok\b|\bx-ai\b|(^|/)xai(/|$)|(^|/)x-ai(/|$)",
     re.I,
 )
+_OPENAI_FRONTIER_RE = re.compile(
+    r"(^|/)openai/(gpt-[345]|o[134])|(^|\b)(gpt-[345]|o[134])",
+    re.I,
+)
 
 METERED_PROVIDERS: frozenset[str] = frozenset(
     {
@@ -129,6 +135,8 @@ METERED_PROVIDERS: frozenset[str] = frozenset(
         "together",
         "fireworks",
         "groq",
+        "openai",
+        "openai-key",
         "deepinfra",
         "novita",
         "siliconflow",
@@ -144,7 +152,9 @@ METERED_PROVIDERS: frozenset[str] = frozenset(
     }
 )
 
-FORBIDDEN_API_KEY_PROVIDERS: frozenset[str] = frozenset({"xai", "grok", "x-ai", "x_ai"})
+FORBIDDEN_API_KEY_PROVIDERS: frozenset[str] = frozenset(
+    {"xai", "grok", "x-ai", "x_ai", "openai", "openai-api", "openai_api", "openai-key"}
+)
 
 OPENROUTER_BASE_URL_NEEDLES: tuple[str, ...] = (
     "openrouter.ai",
@@ -162,6 +172,10 @@ FORBIDDEN_ENV_KEYS: tuple[str, ...] = (
     "XAI_API_TOKEN",
     "GROK_API_KEY",
     "GROK_KEY",
+    "OPENAI_API_KEY",
+    "OPENAI_KEY",
+    "OPENAI_API_TOKEN",
+    "OPENAI_AUTH_TOKEN",
 )
 
 
@@ -216,6 +230,24 @@ def is_anthropic_or_grok_model(model: Any) -> bool:
     return is_anthropic_family_model(model) or is_grok_family_model(model)
 
 
+SUBSCRIPTION_ONLY_PROVIDERS: frozenset[str] = frozenset(
+    {"anthropic", "xai-oauth", "openai-codex"}
+)
+
+
+def subscription_route_config_violation(entry: dict[str, Any], where: str) -> str | None:
+    """Return an error when a subscription route carries API/base-url billing fields."""
+    provider = _norm(entry.get("provider"))
+    if provider not in SUBSCRIPTION_ONLY_PROVIDERS:
+        return None
+    if entry.get("api_key") or entry.get("key") or entry.get("token") or entry.get("key_env"):
+        return f"{where}: {provider} route carries an API-key field — subscription/OAuth only"
+    base_url = _norm(entry.get("base_url") or entry.get("api_base") or entry.get("api_base_url"))
+    if base_url:
+        return f"{where}: {provider} route carries base_url={base_url!r} — must use built-in OAuth endpoint"
+    return None
+
+
 def has_forbidden_frontier_needle(model: Any) -> bool:
     m = _norm(normalize_model_slug(model))
     if not m:
@@ -224,6 +256,8 @@ def has_forbidden_frontier_needle(model: Any) -> bool:
         return False
     # family regex first (absolute)
     if is_anthropic_or_grok_model(m):
+        return True
+    if _OPENAI_FRONTIER_RE.search(m):
         return True
     return any(n in m for n in FORBIDDEN_OR_NEEDLES)
 
@@ -281,8 +315,9 @@ def violation_message(
     return (
         f"BILLING HARD DENY: refused {provider or '?'}/{model or '?'} "
         f"(base_url={base_url or ''}). "
-        "PERIOD FULL STOP: Anthropic/Claude and xAI/Grok MUST NEVER ride OpenRouter "
-        "or any metered aggregator — OAuth only (anthropic / xai-oauth). "
+        "PERIOD FULL STOP: Anthropic/Claude, xAI/Grok, and OpenAI frontier "
+        "MUST NEVER ride OpenRouter or any metered aggregator — OAuth only "
+        "(anthropic / xai-oauth / openai-codex). "
         "OpenRouter is ALLOWLIST-ONLY: DeepSeek flash/chat, Gemini Flash/Lite, gpt-oss."
     )
 
@@ -334,6 +369,10 @@ def scrub_fallback_providers(entries: list) -> tuple[list, list[str]]:
     for i, fb in enumerate(entries):
         if not isinstance(fb, dict):
             cleaned.append(fb)
+            continue
+        sub_err = subscription_route_config_violation(fb, f"fallback_providers[{i}]")
+        if sub_err:
+            logs.append(f"REMOVED {sub_err}")
             continue
         err = violation_for_route(
             provider=fb.get("provider"),
@@ -440,11 +479,15 @@ def walk_config_routes(cfg: Any, where: str = "config") -> list[str]:
         elif isinstance(pool, list):
             for i, entry in enumerate(pool):
                 if isinstance(entry, dict):
+                    loc = f"{where}.{pool_key}[{i}]"
+                    sub_err = subscription_route_config_violation(entry, loc)
+                    if sub_err:
+                        errs.append(sub_err)
                     consider(
                         entry.get("provider"),
                         entry.get("model") or entry.get("default"),
                         entry.get("base_url") or entry.get("api_base"),
-                        f"{where}.{pool_key}[{i}]",
+                        loc,
                     )
 
     def deep(obj: Any, path: str, depth: int = 0) -> None:
@@ -453,6 +496,9 @@ def walk_config_routes(cfg: Any, where: str = "config") -> list[str]:
         if isinstance(obj, dict):
             keys = {str(k).lower() for k in obj}
             if keys & {"provider", "base_url", "api_base", "api_base_url"}:
+                sub_err = subscription_route_config_violation(obj, path)
+                if sub_err:
+                    errs.append(sub_err)
                 consider(
                     obj.get("provider"),
                     obj.get("model") or obj.get("default") or obj.get("model_name") or obj.get("model_id"),
@@ -503,9 +549,14 @@ def self_test() -> None:
         ("OPENROUTER", "Grok-beta", None),
         ("openrouter", "google/gemini-2.5-pro", None),
         ("openrouter", "openai/gpt-4o", None),
+        ("openrouter", "openai/gpt-5.6-sol", None),
+        ("openrouter", "gpt-5.6-terra", None),
         ("openrouter", "openai/o1-pro", None),
         ("custom", "claude-sonnet-4-6", "https://openrouter.ai/api/v1"),
         ("xai", "grok-4.5", None),
+        ("openai-api", "gpt-5.6-sol", None),
+        ("openai", "gpt-5.6-luna", None),
+        ("openai-key", "gpt-4o", None),
         ("anthropic", "claude-sonnet-4-6", "https://openrouter.ai/api/v1"),
         ("together", "anthropic/claude-3.5-sonnet", None),
     ]
@@ -514,6 +565,11 @@ def self_test() -> None:
 
     assert check_alias_value("s", "openrouter/x-ai/grok-4.5")
     assert check_alias_value("q", "openrouter/anthropic/claude-sonnet-4-6")
+    assert "OPENAI_API_KEY" in FORBIDDEN_ENV_KEYS
+    assert "OPENAI_AUTH_TOKEN" in FORBIDDEN_ENV_KEYS
+    assert subscription_route_config_violation({"provider": "openai-codex", "model": "gpt-5.6-luna", "api_key": "sk-test"}, "test")
+    assert subscription_route_config_violation({"provider": "openai-codex", "model": "gpt-5.6-luna", "base_url": "https://api.openai.com/v1"}, "test")
+    assert not subscription_route_config_violation({"provider": "openai-codex", "model": "gpt-5.6-luna"}, "test")
 
     # MUST ALLOW
     allow = [
@@ -526,6 +582,9 @@ def self_test() -> None:
         ("anthropic", "claude-sonnet-5", None),
         ("xai-oauth", "grok-4.5", None),
         ("xai-oauth", "grok-4.6", None),
+        ("openai-codex", "gpt-5.6-sol", None),
+        ("openai-codex", "gpt-5.6-terra", None),
+        ("openai-codex", "gpt-5.6-luna", None),
     ]
     for p, m, bu in allow:
         assert not is_billing_violation(p, m, bu), f"false positive {p}/{m}: {violation_message(p,m,bu)}"
@@ -545,4 +604,4 @@ def self_test() -> None:
 
 if __name__ == "__main__":
     self_test()
-    print("or_billing_policy: self_test OK (OR allowlist + absolute Claude/Grok deny)")
+    print("or_billing_policy: self_test OK (OR allowlist + absolute Claude/Grok/OpenAI-frontier deny)")

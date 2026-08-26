@@ -1,4 +1,4 @@
-"""carrier-billing-guard — runtime HARD DENY for OpenRouter Claude/Grok/frontier.
+"""carrier-billing-guard — runtime HARD DENY for OpenRouter Claude/Grok/OpenAI frontier.
 
 Uses BaseException (not Exception) on block so Hermes middleware cannot
 fail-open to the real provider. No HTTP request is made.
@@ -44,7 +44,7 @@ def _load_policy():
             return _POLICY
         except Exception as exc:  # noqa: BLE001
             logger.error("carrier-billing-guard: import failed from %s: %s", root, exc)
-    logger.error("carrier-billing-guard: or_billing_policy not found — fail-closed on OR+Claude/Grok")
+    logger.error("carrier-billing-guard: or_billing_policy not found — fail-closed on OR+Claude/Grok/OpenAI frontier")
     return None
 
 
@@ -68,7 +68,7 @@ def _check(**kwargs: Any) -> str | None:
     # Fail-closed if policy missing and route looks like OR + frontier family
     p, m, bu = provider.lower(), model.lower(), base_url.lower()
     if "openrouter" in p or "openrouter" in bu:
-        if any(x in m for x in ("claude", "anthropic", "grok", "x-ai", "sonnet", "opus", "haiku", "fable")):
+        if any(x in m for x in ("claude", "anthropic", "grok", "x-ai", "sonnet", "opus", "haiku", "fable", "gpt-4", "gpt-5", "o1", "o3", "o4")):
             return f"BILLING HARD DENY (policy missing): refused {provider}/{model}"
     return None
 

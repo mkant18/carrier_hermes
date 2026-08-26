@@ -1,6 +1,6 @@
 # Cost Model — Carrier Hermes
 
-Subscription-first. Pay-per-token only for high-volume structured ops. **Never** free-rotate live email / calendar / Todoist.
+Subscription-first. **No automatic API/per-token fallback.** OpenRouter remains human-gated emergency overflow only; never free-rotate live email / calendar / Todoist.
 
 ---
 
@@ -11,8 +11,7 @@ Once a local LLM is available on the host, apply this routing hierarchy:
 ### Decision-making tier — NEVER local LLM
 These bots stay on subscription OAuth regardless:
 - **Helm** (chief_of_staff): `grok-4.5/xai-oauth` primary
-- **Marshal**: `claude-sonnet-5/anthropic` primary
-- **All 4 LTs** (Wrench, Deck, Stacks, Chart): `claude-sonnet-5/anthropic` primary
+- **Marshal + all LTs** (Wrench, Deck, Stacks, Chart/Bosun): `grok-4.5/xai-oauth` primary → `openai-codex/gpt-5.6-sol` → `anthropic/claude-sonnet-4-6`
 
 Rationale: routing, coordination, and judgment calls need frontier-quality reasoning. Latency and reliability of local LLM are not acceptable for dispatch decisions.
 
@@ -20,7 +19,9 @@ Rationale: routing, coordination, and judgment calls need frontier-quality reaso
 All remaining bots (Vigil, Ledger, Sonar, Inbox, Chronos, Tasker, Yeoman, Mate, Probe, Quill, Purse, Librarian, Clerk, LockBox) use:
 ```
 local-llm (primary — $0, zero quota)
-  → claude-sonnet-5/anthropic OR grok-4.5/xai-oauth (fallback — ONLY when tool calls required)
+  → grok-4.5/xai-oauth
+  → gpt-5.6-luna/openai-codex (cheap OpenAI OAuth local substitute)
+  → claude-haiku-4-5/anthropic
 ```
 **NOT** OpenRouter for the fallback — use subscription OAuth so fallback is still $0 marginal.
 
@@ -43,41 +44,38 @@ Verify with `billing_guard.py` after — expected PASS (local = $0, fallback = O
 
 ## Rules
 
-1. Subscription OAuth first (xAI SuperGrok, Anthropic Claude Max).
-2. OpenRouter **paid** only for high-volume structured ops (Inbox, Chronos, Tasker) and optional watcher narratives.
+1. Subscription OAuth first (xAI SuperGrok, OpenAI ChatGPT/Codex OAuth, Anthropic Claude Max).
+2. OpenRouter **paid** only with explicit human authorization under the emergency policy; never a standing fallback.
 3. OpenRouter `:free` only for: aux slots, MoA **references**, throwaway scrapes. Never sole decider on live ops.
 4. Watcher heartbeats must be `no_agent` scripts (zero tokens).
 5. Never rotate free models on `email_reader`, `calendar_manager`, or `todoist_manager`.
 6. Coding defaults to Mate on subscription tiers.
 7. Helm classification stays on SuperGrok (do not burn Claude on “what is this request?”).
-8. **HARD BILLING LOCK (PERIOD, FULL STOP):** Anthropic/Claude and xAI/Grok are **OAuth/subscription only**.
-   - Allowed providers: `anthropic`, `xai-oauth`.
+8. **HARD BILLING LOCK (PERIOD, FULL STOP):** Anthropic/Claude, xAI/Grok, and OpenAI/GPT/Codex are **OAuth/subscription only**.
+   - Allowed providers: `anthropic`, `xai-oauth`, `openai-codex`.
    - **OpenRouter / metered aggregators are ALLOWLIST-ONLY** (DeepSeek flash/chat, Gemini Flash/Lite, gpt-oss). Default deny.
-   - **Absolute deny** on metered transports for any model slug matching Claude/Anthropic/Sonnet/Opus/Haiku **or** Grok/x-ai — even if someone edits the allowlist.
-   - **Forbidden:** `ANTHROPIC_API_KEY`, `XAI_API_KEY`, bare provider `xai`, `base_url` openrouter.ai + Claude/Grok.
+   - **Absolute deny** on metered transports for any model slug matching Claude/Anthropic/Sonnet/Opus/Haiku, Grok/x-ai, or OpenAI GPT-4/5/o-series — even if someone edits the allowlist.
+   - **Forbidden:** `ANTHROPIC_API_KEY`, `XAI_API_KEY`, `OPENAI_API_KEY`, bare provider `xai`/`openai`/`openai-api`, `base_url` openrouter.ai + Claude/Grok/OpenAI frontier.
    - Enforced by `scripts/or_billing_policy.py` + `scripts/billing_guard.py` + optional `scripts/sync_or_billing_guardrail.py` (OpenRouter workspace allowlist).
 
 ---
 
-## Fleet default chain (all 18 bots)
+## Fleet default chain (all profiles)
 
-Every bot boots on the same chain; only the **paid tail** differs.
+Every decision bot uses the subscription-only chain; local workers keep local primary and use subscription-only fallbacks.
 
 ```text
 grok-4.5 (xai-oauth, SuperGrok $0)
-  → claude-sonnet-5 (anthropic, Claude Max $0)
-    → <paid tail — LAST RESORT ONLY>
+  → gpt-5.6-sol (openai-codex, ChatGPT/Codex OAuth $0 marginal)
+    → claude-sonnet-4-6 (anthropic, Claude Max $0 marginal)
 ```
 
-| Tier | Who | Paid tail | Blended $/M |
-|---|---|---|---|
-| `command` | Helm + Lieutenants (Wrench, Deck, Stacks) | `deepseek/deepseek-chat-v3-0324` → `google/gemini-3.7-flash` | 0.44 → 0.75 |
-| `cheap` | All other subagents (watchers, readers, drafters, Mate) | `deepseek/deepseek-v4-flash-0731` → `google/gemini-2.5-flash-lite` | **0.05 → 0.18** |
-| `nocn` | LockBox only (never DeepSeek/PRC) | `openai/gpt-oss-120b` → `google/gemini-2.5-flash-lite` | 0.07 → 0.18 |
+| Tier | Who | Subscription fallback |
+|---|---|---|
+| `decision` | Helm + Marshal + Lieutenants + planners/reviewers | `openai-codex/gpt-5.6-sol` → `anthropic/claude-sonnet-4-6` (Opus tail for Opus-tier Shipwright bots) |
+| `worker-local` | Watchers, readers, drafters, Mate, Probe, Yeoman, LockBox, Shipwright workers | `xai-oauth/grok-4.5` → `openai-codex/gpt-5.6-luna` → `anthropic/claude-haiku-4-5` |
 
-Subagent tail is **~9x cheaper** than the old DeepSeek V3 pin (0.4375 → 0.05 blended).
-All tail models are **tool-calling verified** — a worker that cannot emit a tool
-call exits rc=0 without `kanban_complete`, and the board scores that a crash.
+OpenRouter allowlisted models are no longer automatic fallback tails; they are reserved for the existing explicit human-gated OR emergency policy.
 
 Source of truth: `scripts/apply_bot_matrix.sh` (`chain <bot> <tier>`). Editing a
 live `~/.hermes/profiles/*/config.yaml` by hand is reverted on the next run.
@@ -114,13 +112,14 @@ live `~/.hermes/profiles/*/config.yaml` by hand is reverted on the next run.
 
 ```text
 chief-of-staff, smart          → xai-oauth/grok-4.5
-quality                        → anthropic/claude-sonnet-5
-frontier-quality               → anthropic/claude-opus-4-8
-specialist, rote, cheap        → openrouter/deepseek/deepseek-v4-flash-0731
-specialist-coding              → anthropic/claude-sonnet-5
-watcher-summary                → openrouter/deepseek/deepseek-v4-flash-0731
-gemini-flash, fallback-flash   → openrouter/google/gemini-2.5-flash-lite
-lockbox, security-cheap        → openrouter/openai/gpt-oss-120b
+quality                        → openai-codex/gpt-5.6-terra
+frontier-quality               → openai-codex/gpt-5.6-sol
+openai-cheap                   → openai-codex/gpt-5.6-luna
+specialist, rote, cheap        → local primary; if remote needed use openai-cheap before Anthropic
+specialist-coding              → openai-codex/gpt-5.6-terra
+watcher-summary                → no_agent/local first; OR only under explicit emergency authorization
+gemini-flash, fallback-flash   → openrouter/google/gemini-2.5-flash-lite (emergency OR only)
+lockbox, security-cheap        → openai-codex/gpt-5.6-luna before Anthropic; OR gpt-oss only under explicit emergency authorization
 lockbox-fallback               → openrouter/google/gemini-2.5-flash-lite
 ```
 

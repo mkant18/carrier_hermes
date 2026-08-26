@@ -98,12 +98,10 @@ PY
 # Every bot defaults to Grok 4.5 (SuperGrok sub, $0 marginal), then Sonnet 5
 # (Claude Max, $0 marginal). Paid OpenRouter models are LAST-RESORT ONLY.
 #
-# Two paid tails:
-#   command  — CoS + Lieutenants. Quality tail (DeepSeek V3 / Gemini 3.7 Flash).
-#   cheap    — every other subagent. ~9x cheaper tail; these are high-volume
-#              rote workers (watchers, readers, drafters) so the paid tail must
-#              be as close to free as possible.
-#   nocn     — LockBox only: non-China, never DeepSeek (see LockBox note below).
+# Subscription-only fallback tiers:
+#   command  — CoS + Lieutenants. Grok → OpenAI frontier → Claude Sonnet.
+#   cheap    — rote/local workers. Grok → OpenAI cheap → Claude Haiku.
+#   nocn     — LockBox only. Same subscription-only cheap tail; no OR/API spend.
 #
 # All tail models are tool-calling verified — a worker that cannot emit a
 # tool call exits rc=0 without kanban_complete and the board scores it a crash.
@@ -120,24 +118,20 @@ ROOT = Path(os.environ.get("CARRIER_HERMES_ROOT", Path.home() / "carrier_hermes"
 sys.path.insert(0, str(ROOT / "scripts"))
 from billing_policy import violation_for_route, scrub_aliases
 
-# OpenRouter tails — NEVER Anthropic/Claude or Grok. Guarded by billing_policy.
-TAILS = {
-    "command": [
-        {"provider": "openrouter", "model": "deepseek/deepseek-chat-v3-0324"},
-        {"provider": "openrouter", "model": "google/gemini-3.7-flash"},
-    ],
-    "cheap": [
-        {"provider": "openrouter", "model": "deepseek/deepseek-v4-flash-0731"},
-        {"provider": "openrouter", "model": "google/gemini-2.5-flash-lite"},
-    ],
-    "nocn": [
-        {"provider": "openrouter", "model": "openai/gpt-oss-120b"},
-        {"provider": "openrouter", "model": "google/gemini-2.5-flash-lite"},
-    ],
+GROK = {"provider": "xai-oauth", "model": "grok-4.5"}
+OPENAI = {
+    "command": {"provider": "openai-codex", "model": "gpt-5.6-sol"},
+    "cheap": {"provider": "openai-codex", "model": "gpt-5.6-luna"},
+    "nocn": {"provider": "openai-codex", "model": "gpt-5.6-luna"},
+}
+ANTHROPIC = {
+    "command": {"provider": "anthropic", "model": "claude-sonnet-4-6"},
+    "cheap": {"provider": "anthropic", "model": "claude-haiku-4-5"},
+    "nocn": {"provider": "anthropic", "model": "claude-haiku-4-5"},
 }
 
-for tier_name, entries in TAILS.items():
-    for e in entries:
+for tier_name, entries in {k: [OPENAI[k], ANTHROPIC[k]] for k in OPENAI}.items():
+    for e in [GROK] + entries:
         err = violation_for_route(
             provider=e["provider"], model=e["model"], where=f"TAILS[{tier_name!r}]"
         )
@@ -149,7 +143,7 @@ tier = os.environ["CHAIN_TIER"]
 primary_model = os.environ.get("CHAIN_PRIMARY_MODEL", "grok-4.5")
 primary_provider = os.environ.get("CHAIN_PRIMARY_PROVIDER", "xai-oauth")
 
-# Primary may be anthropic OAuth or xai-oauth — never openrouter+claude/grok
+# Primary may be xai-oauth, openai-codex, or anthropic OAuth — never API/OR frontier.
 err = violation_for_route(
     provider=primary_provider, model=primary_model, where=f"primary:{bot}"
 )
@@ -166,9 +160,8 @@ m["provider"] = primary_provider
 m.pop("fallback", None)
 cfg.pop("fallback_model", None)
 
-fb_list = [
-    {"provider": "anthropic", "model": "claude-sonnet-5"},
-] + [dict(x) for x in TAILS[tier]]
+ordered = [dict(GROK), dict(OPENAI[tier]), dict(ANTHROPIC[tier])]
+fb_list = [e for e in ordered if e["provider"] != primary_provider]
 for i, fb in enumerate(fb_list):
     err = violation_for_route(
         provider=fb.get("provider"), model=fb.get("model"), where=f"{bot}.fallback[{i}]"
@@ -185,7 +178,7 @@ if isinstance(aliases, dict):
 
 p.parent.mkdir(parents=True, exist_ok=True)
 p.write_text(yaml.safe_dump(cfg, sort_keys=False, default_flow_style=False))
-print(f"chain {bot} -> {primary_provider}/{primary_model} > {TAILS[tier][0]['provider']}/{TAILS[tier][0]['model']} > {tier} tail")
+print(f"chain {bot} -> {primary_provider}/{primary_model} > " + " > ".join(f"{e['provider']}/{e['model']}" for e in fb_list))
 PY
 }
 
@@ -226,11 +219,10 @@ cfg.pop("fallback_model", None)
 bu = str(m.get("base_url") or "")
 if "opencode" in bu or ":free" in bu or bu.strip() == "" or "openrouter" in bu.lower():
     m.pop("base_url", None)
-# Helm QUALITY paid tail — OpenRouter NEVER carries Claude/Grok
+# Helm QUALITY paid tail — subscription-only; OpenRouter NEVER carries frontier.
 cfg["fallback_providers"] = [
-    {"provider": "anthropic", "model": "claude-sonnet-5"},
-    {"provider": "openrouter", "model": "deepseek/deepseek-chat-v3-0324"},
-    {"provider": "openrouter", "model": "google/gemini-3.7-flash"},
+    {"provider": "openai-codex", "model": "gpt-5.6-sol"},
+    {"provider": "anthropic", "model": "claude-sonnet-4-6"},
 ]
 for i, fb in enumerate(cfg["fallback_providers"]):
     err = violation_for_route(
@@ -246,13 +238,15 @@ if not isinstance(aliases, dict):
 aliases.update({
     "smart": "xai-oauth/grok-4.5",
     "chief-of-staff": "xai-oauth/grok-4.5",
-    "quality": "anthropic/claude-sonnet-5",
-    # NO openrouter/anthropic/*, openrouter/x-ai/*, openrouter/*grok*, openrouter/*claude*
+    "quality": "openai-codex/gpt-5.6-terra",
+    "frontier-quality": "openai-codex/gpt-5.6-sol",
+    "openai-cheap": "openai-codex/gpt-5.6-luna",
+    # NO openrouter/anthropic/*, openrouter/x-ai/*, openrouter/openai/gpt-*, openrouter/*grok*, openrouter/*claude*
     "specialist": "openrouter/deepseek/deepseek-v4-flash-0731",
     "rote": "openrouter/deepseek/deepseek-v4-flash-0731",
     "cheap": "openrouter/deepseek/deepseek-v4-flash-0731",
     "watcher-summary": "openrouter/deepseek/deepseek-v4-flash-0731",
-    "specialist-coding": "anthropic/claude-sonnet-5",
+    "specialist-coding": "openai-codex/gpt-5.6-terra",
     "gemini-flash": "openrouter/google/gemini-2.5-flash-lite",
     "fallback-flash": "openrouter/google/gemini-2.5-flash-lite",
 })
@@ -315,41 +309,39 @@ chain lockbox nocn
 off lockbox browser computer_use image_gen video video_gen x_search tts web delegation code_execution vision cronjob
 mcp_off lockbox todoist hugging_face kiwi vercel dropbox obsidian-second-brain
 
-# Marshal 🎖️ — 2IC to Helm; Kanban Commander. quality Sonnet Max (same tier as Lts).
+# Marshal 🎖️ — 2IC to Helm; Kanban Commander. Grok primary; OpenAI/Claude OAuth fallback.
 # Sequencing and review require judgment — not rote. command tail.
 # No execution tools (terminal, code_exec, browser, web). No domain MCP.
-pin marshal claude-sonnet-4-6 anthropic
-chain marshal command claude-sonnet-4-6 anthropic
+pin marshal grok-4.5 xai-oauth
+chain marshal command grok-4.5 xai-oauth
 off marshal terminal code_execution browser computer_use delegation web \
   image_gen video video_gen tts x_search vision cronjob
 mcp_off marshal todoist hugging_face kiwi vercel dropbox obsidian-second-brain
 
 # ---------------------------------------------------------------------------
 # Lieutenants (Wing Leads) — dispatch / review / routing ONLY.
-# Advanced model: claude-sonnet-4-6 (Sonnet Max, $0 marginal on Claude Max sub).
-# BOT_MATRIX specifies "quality Sonnet Max" for Lts — NOT grok-4.5.
-# Grok-4.5 is the squadron default; Lts get Sonnet for coordination judgment.
+# Advanced routing: Grok primary, OpenAI frontier fallback, Anthropic Sonnet final.
 # Lts must NEVER hold execution tools. Stripping tools is the point of this layer.
 # ---------------------------------------------------------------------------
 LT_EXEC_OFF="terminal code_execution browser computer_use delegation web \
 image_gen video video_gen tts x_search vision cronjob"
 
 # Wrench 🔧 — Coding Wing lead over Mate
-pin coding_lt claude-sonnet-4-6 anthropic
-chain coding_lt command claude-sonnet-4-6 anthropic
+pin coding_lt grok-4.5 xai-oauth
+chain coding_lt command grok-4.5 xai-oauth
 off coding_lt $LT_EXEC_OFF
 mcp_off coding_lt todoist hugging_face kiwi vercel dropbox obsidian-second-brain
 
 # Deck 🗂️ — Ops Wing lead over Inbox, Quill, Chronos, Tasker, Purse
-pin ops_lt claude-sonnet-4-6 anthropic
-chain ops_lt command claude-sonnet-4-6 anthropic
+pin ops_lt grok-4.5 xai-oauth
+chain ops_lt command grok-4.5 xai-oauth
 off ops_lt $LT_EXEC_OFF
 mcp_off ops_lt todoist hugging_face kiwi vercel dropbox obsidian-second-brain
 
 # Stacks 📚 — Knowledge Wing lead over Librarian, Clerk.
 # Keeps OSB but READ-ONLY: write tools stay excluded (intake is Clerk's, gated).
-pin knowledge_lt claude-sonnet-4-6 anthropic
-chain knowledge_lt command claude-sonnet-4-6 anthropic
+pin knowledge_lt grok-4.5 xai-oauth
+chain knowledge_lt command grok-4.5 xai-oauth
 off knowledge_lt $LT_EXEC_OFF
 mcp_off knowledge_lt todoist hugging_face kiwi vercel dropbox
 python3 - <<'PY'

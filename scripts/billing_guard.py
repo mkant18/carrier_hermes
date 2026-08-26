@@ -27,6 +27,7 @@ from or_billing_policy import (  # noqa: E402
     FORBIDDEN_ENV_KEYS,
     scrub_aliases,
     scrub_fallback_providers,
+    SUBSCRIPTION_ONLY_PROVIDERS,
     walk_config_routes,
 )
 
@@ -49,7 +50,7 @@ def scan_env_file(path: Path, label: str) -> list[str]:
         if key in FORBIDDEN_ENV_KEYS and val:
             errs.append(
                 f"{label}: {key} is set (len={len(val)}) — "
-                "remove it; use anthropic OAuth / xai-oauth only (no API tokens)"
+                "remove it; use anthropic OAuth / xai-oauth / openai-codex only (no API tokens)"
             )
     return errs
 
@@ -67,7 +68,8 @@ def scan_anthropic_auth(hermes_home: Path) -> list[str]:
     """HARD GATE: the anthropic credential must be OAuth (Claude Max), never a
     paid API key. An Anthropic API key added via `hermes setup` lands in
     auth.json as type=api_key — the env/config scans never see it, so this is
-    the only place that catches it. Same rule for xai (must be oauth).
+    the only place that catches it. Same rule for xai and OpenAI Codex
+    (must be oauth/subscription; never OpenAI API key billing).
 
     Fails closed on ANY of:
       - a credential whose type is 'api_key' for the anthropic/xai families
@@ -84,7 +86,7 @@ def scan_anthropic_auth(hermes_home: Path) -> list[str]:
     except Exception as e:  # noqa: BLE001
         return [f"auth.json: cannot parse (fail-closed): {e}"]
 
-    SUB_ONLY = ("anthropic", "claude", "xai", "grok")
+    SUB_ONLY = ("anthropic", "claude", "xai", "grok", "openai")
 
     def check_cred(provider: str, cred: dict, where: str) -> None:
         pl = provider.lower()
@@ -96,9 +98,10 @@ def scan_anthropic_auth(hermes_home: Path) -> list[str]:
         if ctype == "api_key" or (has_key and ctype != "oauth"):
             errs.append(
                 f"auth.json [{where}]: '{provider}' credential is API-KEY "
-                f"(type={ctype or '?'}) — Anthropic/Grok are SUBSCRIPTION/OAUTH "
+                f"(type={ctype or '?'}) — Anthropic/Grok/OpenAI are SUBSCRIPTION/OAUTH "
                 "ONLY. Remove it and re-auth via Claude Max / SuperGrok OAuth "
-                "(`hermes setup`). A paid API key for these families is forbidden."
+                "/ ChatGPT-Codex OAuth (`hermes setup` or `hermes auth add openai-codex`). "
+                "A paid API key for these families is forbidden."
             )
 
     # providers block
@@ -173,13 +176,15 @@ def fix_config(path: Path) -> list[str]:
                 model.pop("fallback", None)
                 logs.append(f"{path.name}: REMOVED model.fallback string {fb!r}")
                 changed = True
-        # Never leave openrouter base_url on anthropic/xai-oauth primary
+        # Never leave API/base_url fields on subscription-only primaries
         bu = str(model.get("base_url") or "")
         prov = str(model.get("provider") or "").lower()
-        if "openrouter" in bu.lower() and prov in {"anthropic", "xai-oauth", "xai"}:
-            model.pop("base_url", None)
-            logs.append(f"{path.name}: REMOVED openrouter base_url on {prov}")
-            changed = True
+        if prov in SUBSCRIPTION_ONLY_PROVIDERS:
+            for key in ("base_url", "api_base", "api_base_url", "api_key", "key", "token", "key_env"):
+                if key in model:
+                    model.pop(key, None)
+                    logs.append(f"{path.name}: REMOVED {key} on subscription provider {prov}")
+                    changed = True
         if "openrouter" in bu.lower() and prov == "openrouter":
             # OK for OR primary only if model allowlisted — walk catches it
             pass
@@ -240,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
                 for key in FORBIDDEN_ENV_KEYS:
                     if stripped.startswith(key + "=") and not stripped.startswith("#"):
                         out.append(
-                            f"# BLOCKED_BY_billing_guard (no Anthropic/Grok API tokens): {line}"
+                            f"# BLOCKED_BY_billing_guard (no Anthropic/Grok/OpenAI API tokens): {line}"
                         )
                         blocked = True
                         break
@@ -270,7 +275,7 @@ def main(argv: list[str] | None = None) -> int:
         for x in errs:
             print(f"  - {x}")
         print(
-            "\nRemediation: anthropic OAuth + xai-oauth only for Claude/Grok; "
+            "\nRemediation: anthropic OAuth + xai-oauth + openai-codex only for Claude/Grok/OpenAI; "
             "OpenRouter ALLOWLIST only (DeepSeek/Gemini Flash/gpt-oss); "
             "python3 scripts/billing_guard.py --fix-env --fix-config; "
             "python3 scripts/sync_or_billing_guardrail.py; "
@@ -280,7 +285,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.quiet_ok:
         print(
-            "billing_guard: PASS — no Anthropic/Grok/frontier on OpenRouter or API tokens"
+            "billing_guard: PASS — no Anthropic/Grok/OpenAI frontier on OpenRouter or API tokens"
         )
     return 0
 

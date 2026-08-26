@@ -89,7 +89,7 @@ def patch_conversation_loop(root: Path) -> bool:
                     _ml = str(api_kwargs.get("model") or getattr(agent, "model", "") or "").lower()
                     _bl = (getattr(agent, "base_url", "") or "").lower()
                     if ("openrouter" in _pl or "openrouter" in _bl) and any(
-                        x in _ml for x in ("claude", "anthropic", "grok", "x-ai", "sonnet", "opus", "haiku")
+                        x in _ml for x in ("claude", "anthropic", "grok", "x-ai", "sonnet", "opus", "haiku", "gpt-4", "gpt-5", "o1", "o3", "o4")
                     ):
                         raise RuntimeError(f"BILLING HARD DENY: {{agent.provider}}/{{api_kwargs.get('model') or agent.model}}")
                 # --- end {MARKER} ---
@@ -145,7 +145,7 @@ def patch_runtime_switch(root: Path) -> bool:
     except Exception:
         pl, ml, bl = (new_provider or "").lower(), (new_model or "").lower(), (base_url or "").lower()
         if ("openrouter" in pl or "openrouter" in bl) and any(
-            x in ml for x in ("claude", "anthropic", "grok", "x-ai", "sonnet", "opus")
+            x in ml for x in ("claude", "anthropic", "grok", "x-ai", "sonnet", "opus", "gpt-4", "gpt-5", "o1", "o3", "o4")
         ):
             raise RuntimeError(f"BILLING HARD DENY: {{new_provider}}/{{new_model}}")
 
@@ -171,7 +171,7 @@ def patch_runtime_switch(root: Path) -> bool:
     except Exception:
         pl, ml, bl = (new_provider or "").lower(), (new_model or "").lower(), (base_url or "").lower()
         if ("openrouter" in pl or "openrouter" in bl) and any(
-            x in ml for x in ("claude", "anthropic", "grok", "x-ai", "sonnet", "opus")
+            x in ml for x in ("claude", "anthropic", "grok", "x-ai", "sonnet", "opus", "gpt-4", "gpt-5", "o1", "o3", "o4")
         ):
             raise RuntimeError(f"BILLING HARD DENY: {{new_provider}}/{{new_model}}")
 
@@ -215,7 +215,7 @@ def patch_fallback(root: Path) -> bool:
         logger.warning("{MARKER} fallback check error: %s", _bill_exc)
         _ml = (fb_model or "").lower()
         if fb_provider == "openrouter" and any(
-            x in _ml for x in ("claude", "anthropic", "grok", "x-ai", "sonnet", "opus")
+            x in _ml for x in ("claude", "anthropic", "grok", "x-ai", "sonnet", "opus", "gpt-4", "gpt-5", "o1", "o3", "o4")
         ):
             unavailable.add(fb_key)
             return agent._try_activate_fallback(reason)
@@ -261,7 +261,7 @@ def patch_model_switch(root: Path) -> bool:
         except Exception:
             pl, ml, bl = (provider or "").lower(), (model or "").lower(), (base_url or "").lower()
             if "openrouter" in pl or "openrouter" in bl:
-                if any(x in ml for x in ("claude", "anthropic", "grok", "x-ai", "sonnet", "opus", "haiku")):
+                if any(x in ml for x in ("claude", "anthropic", "grok", "x-ai", "sonnet", "opus", "haiku", "gpt-4", "gpt-5", "o1", "o3", "o4")):
                     return f"model_switch: BILLING HARD DENY openrouter/{{model}}"
             return None
 '''

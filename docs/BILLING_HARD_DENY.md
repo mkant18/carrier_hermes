@@ -1,4 +1,4 @@
-# Billing HARD DENY — OpenRouter must never carry Claude / Grok / frontier
+# Billing HARD DENY — OpenRouter must never carry Claude / Grok / OpenAI frontier
 
 **PERIOD. FULL STOP.**
 
@@ -6,6 +6,7 @@
 |--------|--------------|-----------|
 | Claude / Anthropic | `provider: anthropic` (Claude Max OAuth) only | Any OpenRouter / metered aggregator route |
 | Grok / xAI | `provider: xai-oauth` (SuperGrok) only | OpenRouter, bare `xai` API key |
+| OpenAI / ChatGPT Codex | `provider: openai-codex` (ChatGPT/Codex OAuth) only | OpenAI API keys, bare `openai`/`openai-api`, OpenRouter GPT-4/5/o-series |
 | OpenRouter | Allowlist only: DeepSeek flash/chat, Gemini Flash·Lite, `gpt-oss` | Everything else (GPT-4/5, Gemini Pro, …) |
 
 ## Why denylists failed before
@@ -80,7 +81,7 @@ PY
 
 | Path | Role |
 |------|------|
-| `scripts/or_billing_policy.py` | Single policy SoT (allowlist + absolute Claude/Grok deny) |
+| `scripts/or_billing_policy.py` | Single policy SoT (allowlist + absolute Claude/Grok/OpenAI-frontier deny) |
 | `scripts/billing_policy.py` | Compat shim |
 | `scripts/billing_guard.py` | Scan/fix all profile configs + env |
 | `scripts/sync_or_billing_guardrail.py` | Push OR workspace allowlist via management key |
