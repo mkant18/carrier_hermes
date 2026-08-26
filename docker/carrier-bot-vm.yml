@@ -1,0 +1,189 @@
+version: "3.9"
+
+# Carrier Bot VM — isolated execution environment per fleet bot.
+# Each bot runs in its own container, preventing cross-bot side effects
+# and resource contention. Inspired by OpenMausBot's per-bot cloud computer
+# (server/drivers/claude.ts containerProxyEnv pattern).
+#
+# Usage:
+#   docker compose -f docker/carrier-bot-vm.yml up -d
+#   docker compose -f docker/carrier-bot-vm.yml --profile coding_lt up -d
+
+networks:
+  carrier-fleet:
+    name: carrier-fleet
+    driver: bridge
+    labels:
+      carrier.managed: "true"
+
+# ── Base service template ──────────────────────────────────────────────────────
+# Individual bot services extend this via YAML anchors.
+x-bot-defaults: &bot-defaults
+  image: python:3.11-slim
+  restart: unless-stopped
+  networks:
+    - carrier-fleet
+  deploy:
+    resources:
+      limits:
+        cpus: "2"
+        memory: 4G
+      reservations:
+        cpus: "0.5"
+        memory: 512M
+  volumes:
+    # carrier_hermes repo mounted read-only (shared across all bots)
+    - type: bind
+      source: C:/Users/micha/carrier_hermes
+      target: /app/carrier_hermes
+      read_only: true
+    # Bot-specific profile data (read-write, isolated per bot)
+    - type: bind
+      source: C:/Users/micha/AppData/Local/hermes/profiles/${BOT_ID:-default}
+      target: /app/bot-profile
+      read_only: false
+  environment:
+    - BOT_ID=${BOT_ID:-unknown}
+    - HERMES_HOME=/app/bot-profile
+    - CARRIER_HERMES_REPO=/app/carrier_hermes
+    - PYTHONPATH=/app/carrier_hermes
+    - PYTHONUNBUFFERED=1
+  working_dir: /app/carrier_hermes
+  command: >
+    sh -c "
+      pip install --quiet --no-cache-dir requests &&
+      echo 'Bot VM ready: BOT_ID=$BOT_ID' &&
+      sleep infinity
+    "
+  healthcheck:
+    test: ["CMD", "python", "-c", "print('ok')"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 10s
+  labels:
+    carrier.managed: "true"
+    carrier.bot_id: "${BOT_ID:-unknown}"
+
+# ── Per-bot services ───────────────────────────────────────────────────────────
+services:
+
+  coding_lt:
+    <<: *bot-defaults
+    container_name: carrier-bot-coding_lt
+    profiles: [coding_lt, coding, all]
+    environment:
+      - BOT_ID=coding_lt
+      - HERMES_HOME=/app/bot-profile
+      - CARRIER_HERMES_REPO=/app/carrier_hermes
+      - PYTHONPATH=/app/carrier_hermes
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - type: bind
+        source: C:/Users/micha/carrier_hermes
+        target: /app/carrier_hermes
+        read_only: true
+      - type: bind
+        source: C:/Users/micha/AppData/Local/hermes/profiles/coding_lt
+        target: /app/bot-profile
+        read_only: false
+
+  research_lt:
+    <<: *bot-defaults
+    container_name: carrier-bot-research_lt
+    profiles: [research_lt, research, all]
+    environment:
+      - BOT_ID=research_lt
+      - HERMES_HOME=/app/bot-profile
+      - CARRIER_HERMES_REPO=/app/carrier_hermes
+      - PYTHONPATH=/app/carrier_hermes
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - type: bind
+        source: C:/Users/micha/carrier_hermes
+        target: /app/carrier_hermes
+        read_only: true
+      - type: bind
+        source: C:/Users/micha/AppData/Local/hermes/profiles/research_lt
+        target: /app/bot-profile
+        read_only: false
+
+  helm:
+    <<: *bot-defaults
+    container_name: carrier-bot-helm
+    profiles: [helm, all]
+    environment:
+      - BOT_ID=helm
+      - HERMES_HOME=/app/bot-profile
+      - CARRIER_HERMES_REPO=/app/carrier_hermes
+      - PYTHONPATH=/app/carrier_hermes
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - type: bind
+        source: C:/Users/micha/carrier_hermes
+        target: /app/carrier_hermes
+        read_only: true
+      - type: bind
+        source: C:/Users/micha/AppData/Local/hermes/profiles/helm
+        target: /app/bot-profile
+        read_only: false
+
+  ob1:
+    <<: *bot-defaults
+    container_name: carrier-bot-ob1
+    profiles: [ob1, all]
+    environment:
+      - BOT_ID=ob1
+      - HERMES_HOME=/app/bot-profile
+      - CARRIER_HERMES_REPO=/app/carrier_hermes
+      - PYTHONPATH=/app/carrier_hermes
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - type: bind
+        source: C:/Users/micha/carrier_hermes
+        target: /app/carrier_hermes
+        read_only: true
+      - type: bind
+        source: C:/Users/micha/AppData/Local/hermes/profiles/ob1
+        target: /app/bot-profile
+        read_only: false
+
+  viking:
+    <<: *bot-defaults
+    container_name: carrier-bot-viking
+    profiles: [viking, all]
+    environment:
+      - BOT_ID=viking
+      - HERMES_HOME=/app/bot-profile
+      - CARRIER_HERMES_REPO=/app/carrier_hermes
+      - PYTHONPATH=/app/carrier_hermes
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - type: bind
+        source: C:/Users/micha/carrier_hermes
+        target: /app/carrier_hermes
+        read_only: true
+      - type: bind
+        source: C:/Users/micha/AppData/Local/hermes/profiles/viking
+        target: /app/bot-profile
+        read_only: false
+
+  peers:
+    <<: *bot-defaults
+    container_name: carrier-bot-peers
+    profiles: [peers, all]
+    environment:
+      - BOT_ID=peers
+      - HERMES_HOME=/app/bot-profile
+      - CARRIER_HERMES_REPO=/app/carrier_hermes
+      - PYTHONPATH=/app/carrier_hermes
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - type: bind
+        source: C:/Users/micha/carrier_hermes
+        target: /app/carrier_hermes
+        read_only: true
+      - type: bind
+        source: C:/Users/micha/AppData/Local/hermes/profiles/peers
+        target: /app/bot-profile
+        read_only: false
