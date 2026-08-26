@@ -94,10 +94,30 @@ def clean_subscription_route(route: dict) -> dict:
     return out
 
 
+DEEPSEEK_FLASH = {"provider": "openrouter", "model": "deepseek/deepseek-v4-flash-0731"}
+
+# maintenance_lt gets a 4-tier chain so expensive patch tasks have deep fallback
+# with a DeepSeek OR last-resort that is cheap but still capable:
+#   Grok OAuth -> OpenAI frontier OAuth -> Anthropic Sonnet OAuth -> DeepSeek OR
+# The primary model is pinned per-task via model_override (e.g. gpt-5.5);
+# this defines what happens if that primary fails.
+MAINTENANCE_LT_FALLBACKS = [
+    dict(GROK),
+    dict(OPENAI_FRONTIER),
+    dict(CLAUDE_SONNET),
+    dict(DEEPSEEK_FLASH),
+]
+
+
 def set_decision_chain(cfg: dict, bot: str) -> tuple[dict, list[dict]]:
-    # Frontier/decision: Grok -> OpenAI Sol -> Anthropic. Keep Opus as the
-    # Anthropic terminal fallback for the two Shipwright planner/reviewer bots
-    # that were explicitly Opus-tier; everyone else gets Sonnet.
+    # Frontier/decision: Grok -> OpenAI Sol -> Anthropic.
+    # maintenance_lt gets an extended chain with DeepSeek OR as last resort.
+    # Keep Opus as the Anthropic terminal fallback for Shipwright planner/reviewer bots.
+    if bot == "maintenance_lt":
+        model = {"default": GROK["model"], "provider": GROK["provider"]}
+        fallbacks = MAINTENANCE_LT_FALLBACKS[1:]  # grok is primary; rest are fallbacks
+        fallbacks = [dict(OPENAI_FRONTIER), dict(CLAUDE_SONNET), dict(DEEPSEEK_FLASH)]
+        return model, fallbacks
     anthropic_tail = CLAUDE_OPUS if bot in {"repair_planner", "pr_reviewer"} else CLAUDE_SONNET
     model = {"default": GROK["model"], "provider": GROK["provider"]}
     fallbacks = [dict(OPENAI_FRONTIER), dict(anthropic_tail)]
