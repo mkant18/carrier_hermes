@@ -767,15 +767,16 @@ def list_memories(
 
         memories = []
         for r in rows:
+            r = dict(r)
             tags = []
             try:
-                tags = json.loads(r["tags"] or "[]")
+                tags = json.loads(r.get("tags") or "[]")
             except (json.JSONDecodeError, TypeError):
                 pass
             memories.append({
                 "id": r["id"],
                 "type": r["type"],
-                "content_l0": r["content_l0"] or "",
+                "content_l0": r.get("content_l0") or "",
                 "content": r["content"],
                 "tags": tags,
                 "created_at": r["created_at"],
@@ -1094,17 +1095,18 @@ def search_memories(
         total = 0
 
         for r in rows:
+            r = dict(r)
             content = r["content"] or ""
             if compiled.search(content):
                 tags = []
                 try:
-                    tags = json.loads(r["tags"] or "[]")
+                    tags = json.loads(r.get("tags") or "[]")
                 except (json.JSONDecodeError, TypeError):
                     pass
                 entry = {
                     "id": r["id"],
                     "bot_id": r["bot_id"],
-                    "content_l0": r["content_l0"] or "",
+                    "content_l0": r.get("content_l0") or "",
                     "content": content,
                     "tags": tags,
                     "created_at": r["created_at"],
