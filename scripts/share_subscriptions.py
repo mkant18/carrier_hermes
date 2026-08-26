@@ -4,7 +4,7 @@ share_subscriptions.py — make EVERY Carrier Hermes bot share subscription OAut
 providers in Michael's billing-safe priority order, THEN OpenRouter if present.
 
 Policy (Michael, updated 2026-08-26):
-  subscription priority = Grok/xai-oauth → OpenAI/openai-codex → Anthropic/OAuth
+  subscription priority = Grok/xai-oauth → OpenAI/openai-codex → OpenAI/openai-oauth → Anthropic/OAuth
 
   - primary stays whatever the bot is pinned to when it is already a subscription
   - fallbacks are rebuilt from the remaining subscription routes in priority order
@@ -34,7 +34,12 @@ OPENAI_MID = {"provider": "openai-codex", "model": "gpt-5.6-terra"}
 OPENAI_CHEAP = {"provider": "openai-codex", "model": "gpt-5.6-luna"}
 CLAUDE = {"provider": "anthropic", "model": "claude-sonnet-4-6"}
 
-SUBSCRIPTION_PRIORITY = [GROK, OPENAI_FRONTIER, CLAUDE]
+# openai-oauth = ChatGPT Plus subscription OAuth (NEW — different from openai-codex)
+OPENAI_OAUTH_CHEAP = {"provider": "openai-oauth", "model": "gpt-4o-mini"}
+OPENAI_OAUTH_MID   = {"provider": "openai-oauth", "model": "gpt-4o"}
+OPENAI_OAUTH_FRONT = {"provider": "openai-oauth", "model": "o3"}
+
+SUBSCRIPTION_PRIORITY = [GROK, OPENAI_FRONTIER, OPENAI_OAUTH_MID, CLAUDE]
 
 
 def subscription_chain_after(primary_provider: str, primary_model: str) -> list[dict]:
@@ -56,7 +61,7 @@ def is_openrouter(fb: dict) -> bool:
 def normalize(cfg: dict) -> tuple[dict, str]:
     model = cfg.get("model") or {}
     primary_provider = (model.get("provider") or "").lower()
-    if primary_provider not in ("xai-oauth", "openai-codex", "anthropic"):
+    if primary_provider not in ("xai-oauth", "openai-codex", "openai-oauth", "anthropic"):
         return cfg, f"SKIP (primary provider '{primary_provider}' not a subscription)"
 
     primary_model = str(model.get("default") or model.get("model") or "")
@@ -68,7 +73,7 @@ def normalize(cfg: dict) -> tuple[dict, str]:
 
     # Safety: strip any accidental api_key/base_url on subscription entries.
     for e in new_chain:
-        if e.get("provider") in ("xai-oauth", "openai-codex", "anthropic"):
+        if e.get("provider") in ("xai-oauth", "openai-codex", "openai-oauth", "anthropic"):
             e.pop("base_url", None)
             e.pop("api_key", None)
 

@@ -120,6 +120,9 @@ GROK = {"provider": "xai-oauth", "model": "grok-4.5"}
 OPENAI_FRONTIER = {"provider": "openai-codex", "model": "gpt-5.6-sol"}
 OPENAI_MID = {"provider": "openai-codex", "model": "gpt-5.6-terra"}
 OPENAI_CHEAP = {"provider": "openai-codex", "model": "gpt-5.6-luna"}
+# openai-oauth = ChatGPT Plus subscription OAuth (gpt-4o tier — ChatGPT web)
+OPENAI_OAUTH_MID   = {"provider": "openai-oauth", "model": "gpt-4o"}
+OPENAI_OAUTH_CHEAP = {"provider": "openai-oauth", "model": "gpt-4o-mini"}
 CLAUDE_SONNET = {"provider": "anthropic", "model": "claude-sonnet-4-6"}
 CLAUDE_HAIKU = {"provider": "anthropic", "model": "claude-haiku-4-5"}
 
@@ -128,14 +131,14 @@ CLAUDE_HAIKU = {"provider": "anthropic", "model": "claude-haiku-4-5"}
 DECISION_CHAINS = {
     "chief_of_staff": {
         "model": {"default": GROK["model"], "provider": GROK["provider"]},
-        "fallback_providers": [dict(OPENAI_FRONTIER), dict(CLAUDE_SONNET)],
+        "fallback_providers": [dict(OPENAI_FRONTIER), dict(OPENAI_OAUTH_MID), dict(CLAUDE_SONNET)],
     },
 }
 
 for _bot in ("marshal", "coding_lt", "ops_lt", "knowledge_lt", "hermes_ai_explorer"):
     DECISION_CHAINS[_bot] = {
         "model": {"default": GROK["model"], "provider": GROK["provider"]},
-        "fallback_providers": [dict(OPENAI_FRONTIER), dict(CLAUDE_SONNET)],
+        "fallback_providers": [dict(OPENAI_FRONTIER), dict(OPENAI_OAUTH_MID), dict(CLAUDE_SONNET)],
     }
 
 # Worker/watcher bots: local LLM primary, OAuth fallback only (NO OpenRouter)
@@ -162,6 +165,7 @@ WORKER_CHAIN = {
     "fallback_providers": [
         dict(GROK),
         dict(OPENAI_CHEAP),
+        dict(OPENAI_OAUTH_CHEAP),   # openai-oauth/gpt-4o-mini — ChatGPT Plus OAuth cheap fallback
         dict(CLAUDE_HAIKU),
         # NO OpenRouter — subscription OAuth is already $0, no metered fallback needed
     ],

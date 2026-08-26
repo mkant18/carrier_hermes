@@ -86,7 +86,7 @@ def scan_anthropic_auth(hermes_home: Path) -> list[str]:
     except Exception as e:  # noqa: BLE001
         return [f"auth.json: cannot parse (fail-closed): {e}"]
 
-    SUB_ONLY = ("anthropic", "claude", "xai", "grok", "openai")
+    SUB_ONLY = ("anthropic", "claude", "xai", "grok", "openai", "openai-oauth", "chatgpt")
 
     def check_cred(provider: str, cred: dict, where: str) -> None:
         pl = provider.lower()
@@ -275,7 +275,7 @@ def main(argv: list[str] | None = None) -> int:
         for x in errs:
             print(f"  - {x}")
         print(
-            "\nRemediation: anthropic OAuth + xai-oauth + openai-codex only for Claude/Grok/OpenAI; "
+            "\nRemediation: anthropic OAuth + xai-oauth + openai-codex + openai-oauth only for Claude/Grok/OpenAI; "
             "OpenRouter ALLOWLIST only (DeepSeek/Gemini Flash/gpt-oss); "
             "python3 scripts/billing_guard.py --fix-env --fix-config; "
             "python3 scripts/sync_or_billing_guardrail.py; "
