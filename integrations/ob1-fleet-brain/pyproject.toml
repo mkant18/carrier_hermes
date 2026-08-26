@@ -1,0 +1,19 @@
+[project]
+name = "ob1-fleet-brain"
+version = "0.1.0"
+description = "OB1-compatible shared fleet brain MCP server (local SQLite, no Supabase)"
+requires-python = ">=3.11"
+dependencies = [
+  "mcp>=1.0,<2",
+  "numpy>=1.26",
+  # sentence-transformers is optional — server degrades gracefully to keyword search
+  # without it. Install for full semantic search:
+  #   uv pip install sentence-transformers
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["schema.py", "store.py", "embedder.py", "server.py"]
