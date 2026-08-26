@@ -146,7 +146,7 @@ def callsign_for(bot_id: str) -> str:
 
 
 def or_flash_summarize(wing_label: str, lt_callsign: str, wing_data: dict[str, Any],
-                       or_key: str) -> str:
+                       or_key: str, kanban: dict[str, dict]) -> str:
     """
     Call OpenRouter gemini-2.5-flash-lite to have the Lt 'write' a compact
     wing summary. Returns a 2-3 sentence summary string, or falls back gracefully.
@@ -154,26 +154,35 @@ def or_flash_summarize(wing_label: str, lt_callsign: str, wing_data: dict[str, A
     Model: google/gemini-2.5-flash-lite (~$0.015/M in, $0.04/M out → <$0.0001/call)
     This is on the OR allowlist and costs essentially nothing at this scale.
     """
-    # Build compact structured input for the LLM
+    # Build compact structured input — enrich with kanban title + run_summary
     bot_lines: list[str] = []
     for bot_id, sessions in wing_data.items():
         cs = callsign_for(bot_id)
         for s in sessions:
             title = s["title"]
-            # Use last_msg if it has meaningful content, else just the title
-            msg = s["last_msg"]
-            # Strip very long boilerplate prefixes (callsign lines etc.)
-            if msg and "\n" in msg:
-                # Take the first 500 chars, stripping the callsign bold prefix line
-                lines_clean = [ln.strip() for ln in msg.splitlines()
-                               if ln.strip() and not (ln.strip().startswith("**") and len(ln.strip()) < 60)]
-                msg = " ".join(lines_clean)[:500]
-            elif msg:
-                msg = msg[:500]
-            if msg:
-                bot_lines.append(f"- {cs}: [{title}] {msg}")
+            # Extract task IDs from this session and enrich
+            task_ids = _TASK_ID_RE.findall(title + " " + s.get("last_msg", "")[:300])
+            task_detail_parts: list[str] = []
+            for tid in task_ids:
+                kb = kanban.get(tid)
+                if kb:
+                    task_detail_parts.append(
+                        f'[{tid} "{kb["title"]}" status={kb["status"]}'
+                        + (f' outcome: {kb["run_summary"][:200]}' if kb["run_summary"] else "")
+                        + "]"
+                    )
+            # Fall back to last_msg if no kanban detail
+            if task_detail_parts:
+                detail = " | ".join(task_detail_parts)
             else:
-                bot_lines.append(f"- {cs}: [{title}]")
+                msg = s.get("last_msg", "")
+                if msg and "\n" in msg:
+                    lines_clean = [ln.strip() for ln in msg.splitlines()
+                                   if ln.strip() and not (ln.strip().startswith("**") and len(ln.strip()) < 60)]
+                    detail = " ".join(lines_clean)[:500]
+                else:
+                    detail = msg[:500]
+            bot_lines.append(f"- {cs}: {detail}" if detail else f"- {cs}: [{title}]")
 
     activity_block = "\n".join(bot_lines) if bot_lines else "(no sessions this hour)"
 
@@ -280,7 +289,88 @@ def format_spend_block(ledger: dict, dispatch_lock: bool, spend_halt: bool) -> s
     return "\n".join(lines)
 
 
-# ── Discord ────────────────────────────────────────────────────────────────────
+# ── Kanban enrichment ─────────────────────────────────────────────────────────
+
+KANBAN_DB = HOME / "kanban" / "boards" / "carrier" / "kanban.db"
+import re as _re
+_TASK_ID_RE = _re.compile(r"\bt_[a-f0-9]{8}\b")
+
+
+def kanban_enrich(task_ids: list[str]) -> dict[str, dict]:
+    """
+    Given a list of task IDs, return {task_id: {title, body_short, run_summary,
+    status, assignee, trace}} from the carrier kanban.db.
+    trace is a compact one-liner: "🛫 claimed → 🛬 done (Xm Ys) by <bot>"
+    """
+    if not task_ids or not KANBAN_DB.exists():
+        return {}
+    try:
+        conn = sqlite3.connect(str(KANBAN_DB))
+        conn.row_factory = sqlite3.Row
+        result: dict[str, dict] = {}
+        for tid in task_ids:
+            task = conn.execute(
+                "SELECT id, title, body, assignee, status FROM tasks WHERE id=?", (tid,)
+            ).fetchone()
+            if not task:
+                continue
+            # Best run: last completed/blocked run with a summary
+            run = conn.execute(
+                "SELECT profile, outcome, summary, started_at, ended_at, metadata "
+                "FROM task_runs WHERE task_id=? ORDER BY id DESC LIMIT 1", (tid,)
+            ).fetchone()
+            # Build trace from task_events
+            events = conn.execute(
+                "SELECT kind, payload, created_at FROM task_events "
+                "WHERE task_id=? ORDER BY created_at ASC", (tid,)
+            ).fetchall()
+            trace = _build_trace(events, run)
+            run_summary = (run["summary"] or "") if run else ""
+            result[tid] = {
+                "title":       task["title"] or tid,
+                "body_short":  (task["body"] or "")[:120].replace("\n", " "),
+                "status":      task["status"],
+                "assignee":    task["assignee"],
+                "run_summary": run_summary[:400],
+                "trace":       trace,
+            }
+        conn.close()
+        return result
+    except Exception as e:
+        print(f"  [kanban_enrich] {e}", file=sys.stderr)
+        return {}
+
+
+def _build_trace(events, run) -> str:
+    """Build a compact trace string from task_events + run timing."""
+    icons = {"created": "📋", "assigned": "👤", "claimed": "🛫",
+             "spawned": "⚙️", "completed": "🛬", "blocked": "🚧",
+             "reclaimed": "♻️", "commented": "💬"}
+    key_kinds = {"claimed", "completed", "blocked", "reclaimed", "assigned"}
+    parts: list[str] = []
+    for e in events:
+        kind = e["kind"]
+        if kind not in key_kinds:
+            continue
+        icon = icons.get(kind, "•")
+        parts.append(f"{icon} {kind}")
+    # Duration from run
+    if run and run["started_at"] and run["ended_at"]:
+        secs = int(run["ended_at"] - run["started_at"])
+        dur = f"{secs // 60}m {secs % 60}s" if secs >= 60 else f"{secs}s"
+        assignee = run["profile"] or ""
+        parts.append(f"({dur}, {assignee})")
+    return " → ".join(parts) if parts else ""
+
+
+def extract_task_ids(sessions: list[dict]) -> list[str]:
+    """Pull all kanban task IDs out of session titles and last messages."""
+    ids: set[str] = set()
+    for s in sessions:
+        ids.update(_TASK_ID_RE.findall(s.get("title", "")))
+        ids.update(_TASK_ID_RE.findall(s.get("last_msg", "")[:300]))
+    return list(ids)
+
 
 def discord_post(token: str, channel_id: str, content: str) -> bool:
     """POST to Discord REST. Returns True on success."""
@@ -434,7 +524,17 @@ def main() -> int:
     spend_halt    = SPEND_HALT.exists()
     ledger        = get_ledger_snapshot()
 
-    # ── Phase 2: LT summaries (cheap LLM per active wing) ─────────────────────
+    # ── Phase 2: Collect all task IDs and enrich from kanban ──────────────────
+    all_task_ids: list[str] = []
+    for wr in wing_results:
+        for sessions in wr["data"].values():
+            all_task_ids.extend(extract_task_ids(sessions))
+    for sessions in command_data.values():
+        all_task_ids.extend(extract_task_ids(sessions))
+    kanban = kanban_enrich(list(set(all_task_ids)))
+    print(f"  [kanban] enriched {len(kanban)}/{len(set(all_task_ids))} task IDs")
+
+    # ── Phase 3: LT summaries (cheap LLM per active wing) ─────────────────────
     if not or_key:
         print("  [warn] OPENROUTER_API_KEY not found — falling back to title-only summaries")
 
@@ -446,7 +546,7 @@ def main() -> int:
         print(f"  [llm] Summarizing {wing['label']} via gemini-2.5-flash-lite ...")
         if or_key:
             wr["summary"] = or_flash_summarize(
-                wing["label"], wing["callsign"], wr["data"], or_key
+                wing["label"], wing["callsign"], wr["data"], or_key, kanban
             )
         else:
             # No key: list titles
@@ -464,7 +564,23 @@ def main() -> int:
         bots_str = " · ".join(callsign_for(b) for b in wing["bots"])
         label_line = f"{wing['emoji']} **{wing['label']}** — {bots_str}"
         if wr["active"] and wr.get("summary"):
-            wing_lines.append(f"{label_line}\n{wr['summary']}")
+            # Collect traces for all tasks this wing touched — deduplicated
+            seen_tids: set[str] = set()
+            trace_lines: list[str] = []
+            for sessions in wr["data"].values():
+                for tid in extract_task_ids(sessions):
+                    if tid in seen_tids:
+                        continue
+                    seen_tids.add(tid)
+                    kb = kanban.get(tid)
+                    if kb and kb.get("trace"):
+                        short_title = kb["title"][:55] + "…" if len(kb["title"]) > 55 else kb["title"]
+                        trace_lines.append(
+                            f'  `{tid}` **{short_title}** [{kb["status"]}]\n'
+                            f'  ↳ {kb["trace"]}'
+                        )
+            trace_block = ("\n" + "\n".join(trace_lines)) if trace_lines else ""
+            wing_lines.append(f"{label_line}\n{wr['summary']}{trace_block}")
         else:
             wing_lines.append(f"{label_line}\n✅ All quiet this hour.")
 
