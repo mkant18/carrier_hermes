@@ -343,12 +343,25 @@ def buzz_post(bot_id: str, text: str, channel: str = "fleet") -> bool:
 
 # ── Telegram ──────────────────────────────────────────────────────────────────
 
-def telegram_send(chat_id: str | int, text: str, tg_token: str) -> bool:
-    """Send via Telegram Bot API directly (token from chief_of_staff profile)."""
+def telegram_send(chat_id: str | int, text: str, tg_token: str,
+                  mention_uid: str = "") -> bool:
+    """Send via Telegram Bot API directly (token from chief_of_staff profile).
+    Prepends an inline @mention if mention_uid is set (HTML parse mode)."""
     if not chat_id or not tg_token:
         print(f"  [telegram] missing chat_id or token — skipping", file=sys.stderr)
         return False
-    payload = json.dumps({"chat_id": str(chat_id), "text": text}).encode()
+    # HTML-escape the body (strip Discord ** markdown, escape HTML special chars)
+    import html
+    body = html.escape(text.replace("**", ""))
+    if mention_uid:
+        tg_text = f'<a href="tg://user?id={mention_uid}">👋</a>\n{body}'
+    else:
+        tg_text = body
+    payload = json.dumps({
+        "chat_id": str(chat_id),
+        "text": tg_text,
+        "parse_mode": "HTML",
+    }).encode()
     req = urllib.request.Request(
         f"https://api.telegram.org/bot{tg_token}/sendMessage",
         data=payload,
@@ -383,14 +396,17 @@ def main() -> int:
     tg_chat_id       = BUZZ_CHANNELS.get("command", {}).get("telegram_chat_id", "")
     michael_uid      = "174349224870150144"
 
-    # Telegram token lives in chief_of_staff profile (not default home)
+    # Telegram token + user ID for mention — both in chief_of_staff profile
     cos_env_path = HOME / "profiles" / "chief_of_staff" / ".env"
     tg_token = ""
+    tg_mention_uid = ""
     if cos_env_path.exists():
         for line in cos_env_path.read_text(encoding="utf-8").splitlines():
             if line.startswith("TELEGRAM_BOT_TOKEN="):
                 tg_token = line.partition("=")[2].strip().strip('"').strip("'")
-                break
+            elif line.startswith("TELEGRAM_ALLOWED_USERS="):
+                # first user ID in the comma-separated list = Michael
+                tg_mention_uid = line.partition("=")[2].strip().split(",")[0].strip()
 
     now_dt   = datetime.fromtimestamp(now_ts, tz=timezone.utc).astimezone(
         timezone(timedelta(hours=-4))  # EDT
@@ -496,7 +512,7 @@ def main() -> int:
 
     # Telegram
     if tg_chat_id:
-        ok_telegram = telegram_send(tg_chat_id, message, tg_token)
+        ok_telegram = telegram_send(tg_chat_id, message, tg_token, tg_mention_uid)
     else:
         print("  [telegram] no chat_id in buzz_channels.json — skipping")
 
