@@ -431,6 +431,133 @@ def extract_task_ids(sessions: list[dict]) -> list[str]:
     return list(ids)
 
 
+def build_kanban_board() -> list[str]:
+    """
+    Read ALL tasks from carrier kanban.db and return a list of message chunks,
+    each ≤ 1900 chars, ready to post sequentially.
+
+    Active tasks (blocked/running/ready/todo) get full detail per task.
+    Done/completed collapse to one count-line per assignee (board can have 40+ tasks).
+    """
+    if not KANBAN_DB.exists():
+        return []
+    try:
+        conn = sqlite3.connect(str(KANBAN_DB))
+        conn.row_factory = sqlite3.Row
+        tasks = conn.execute(
+            "SELECT t.id, t.title, t.status, t.assignee, t.priority, "
+            "r.profile AS last_worker, r.outcome AS last_outcome "
+            "FROM tasks t "
+            "LEFT JOIN task_runs r ON r.id = ("
+            "  SELECT id FROM task_runs WHERE task_id=t.id ORDER BY id DESC LIMIT 1"
+            ") ORDER BY t.priority ASC, t.created_at DESC"
+        ).fetchall()
+        conn.close()
+    except Exception as e:
+        print(f"  [kanban_board] {e}", file=sys.stderr)
+        return []
+
+    STATUS_ORDER = ["blocked", "running", "ready", "todo", "completed", "done"]
+    STATUS_ICON  = {
+        "blocked": "🚧", "running": "⚙️", "ready": "🟡",
+        "todo": "📝", "completed": "✅", "done": "✅",
+    }
+    TERMINAL = {"done", "completed"}
+
+    grouped: dict[str, list] = {s: [] for s in STATUS_ORDER}
+    for t in tasks:
+        s = t["status"] if t["status"] in grouped else "todo"
+        grouped[s].append(t)
+
+    # Build line blocks
+    all_lines: list[str] = [f"📋 **Kanban Board snapshot** — {len(tasks)} tasks\n"]
+
+    # Active statuses — full detail
+    for status in ["blocked", "running", "ready", "todo"]:
+        bucket = grouped[status]
+        if not bucket:
+            continue
+        icon = STATUS_ICON[status]
+        all_lines.append(f"\n{icon} **{status.upper()}** ({len(bucket)})")
+        for t in bucket:
+            title = t["title"][:54] + "…" if len(t["title"]) > 54 else t["title"]
+            assignee = callsign_for(t["assignee"]) if t["assignee"] else "—"
+            # Show last worker only if different from assignee
+            last_str = ""
+            if t["last_worker"] and t["last_worker"] != t["assignee"]:
+                last_str = f", last touched by {callsign_for(t['last_worker'])}"
+            outcome_tag = ""
+            if t["last_outcome"] and t["last_outcome"] not in ("completed", "done", "None", None):
+                outcome_tag = f" ⚠️ {t['last_outcome']}"
+            all_lines.append(
+                f"  `{t['id']}` **{title}**\n"
+                f"  ↳ assigned: {assignee}{last_str}{outcome_tag}"
+            )
+
+    # Done/completed — compact: one line per assignee
+    terminal_tasks = grouped["done"] + grouped["completed"]
+    if terminal_tasks:
+        by_assignee: dict[str, list[str]] = {}
+        for t in terminal_tasks:
+            a = t["assignee"] or "unassigned"
+            by_assignee.setdefault(a, []).append(t["id"])
+        total = len(terminal_tasks)
+        all_lines.append(f"\n✅ **DONE / COMPLETED** ({total} total)")
+        for bot_id, ids in sorted(by_assignee.items()):
+            cs = callsign_for(bot_id)
+            all_lines.append(f"  {cs} — {len(ids)} tasks: " + " ".join(f"`{i}`" for i in ids))
+
+    # Chunk into ≤ 1900-char messages
+    return _chunk_lines(all_lines, limit=1900)
+
+
+def _chunk_lines(lines: list[str], limit: int = 1900) -> list[str]:
+    """Pack lines into chunks, each ≤ limit chars, splitting on newlines."""
+    chunks: list[str] = []
+    current: list[str] = []
+    current_len = 0
+    for line in lines:
+        # Each line may itself be multi-line; measure with newline separator
+        add_len = len(line) + (1 if current else 0)
+        if current and current_len + add_len > limit:
+            chunks.append("\n".join(current))
+            current = [line]
+            current_len = len(line)
+        else:
+            current.append(line)
+            current_len += add_len
+    if current:
+        chunks.append("\n".join(current))
+    return chunks
+
+
+def broadcast_messages(
+    messages: list[str],
+    discord_token: str, fleet_channel_id: str,
+    buzz_bot: str,
+    tg_chat_id: str | int, tg_token: str, tg_mention_uid: str,
+) -> tuple[bool, bool, bool]:
+    """Send a list of message chunks to all three platforms sequentially."""
+    ok_discord = ok_buzz = ok_telegram = False
+    for i, msg in enumerate(messages):
+        # Only include @mention on the FIRST message
+        mention = tg_mention_uid if i == 0 else ""
+
+        if discord_token:
+            r = discord_post(discord_token, fleet_channel_id, msg)
+            ok_discord = ok_discord or r
+
+        buzz_text = msg.replace("**", "").replace("`", "")
+        r = buzz_post(buzz_bot, buzz_text, "fleet")
+        ok_buzz = ok_buzz or r
+
+        if tg_chat_id and tg_token:
+            r = telegram_send(tg_chat_id, msg, tg_token, mention)
+            ok_telegram = ok_telegram or r
+
+    return ok_discord, ok_buzz, ok_telegram
+
+
 def discord_post(token: str, channel_id: str, content: str) -> bool:
     """POST to Discord REST. Returns True on success."""
     # Discord 2000-char limit; trim if needed (shouldn't happen with tight summaries)
@@ -679,26 +806,23 @@ def main() -> int:
     print(message)
     print("--- END ---\n")
 
-    # ── Phase 4–6: Broadcast ──────────────────────────────────────────────────
-    ok_discord  = False
-    ok_buzz     = False
-    ok_telegram = False
+    # ── Phase 4: Build kanban board snapshot ──────────────────────────────────
+    kanban_chunks = build_kanban_board()
+    print(f"  [kanban_board] {len(kanban_chunks)} chunk(s)")
 
-    # Discord
-    if discord_token:
-        ok_discord = discord_post(discord_token, fleet_channel_id, message)
-    else:
-        print("  [discord] no DISCORD_FLEET_BOT_TOKEN — skipping")
+    # ── Phase 5–7: Broadcast — summary first, then kanban pages ──────────────
+    # Split the main summary into 1900-char chunks too (trace blocks can be long)
+    summary_chunks = _chunk_lines(message.splitlines(), limit=1900)
+    all_chunks = summary_chunks + kanban_chunks
 
-    # Buzz — plain text (no Discord markdown for Nostr)
-    buzz_text = message.replace("**", "").replace("`", "")
-    ok_buzz = buzz_post("marshal", buzz_text, "fleet")
+    print(f"  [broadcast] {len(all_chunks)} total message(s)")
 
-    # Telegram
-    if tg_chat_id:
-        ok_telegram = telegram_send(tg_chat_id, message, tg_token, tg_mention_uid)
-    else:
-        print("  [telegram] no chat_id in buzz_channels.json — skipping")
+    ok_discord, ok_buzz, ok_telegram = broadcast_messages(
+        all_chunks,
+        discord_token, fleet_channel_id,
+        "marshal",
+        tg_chat_id, tg_token, tg_mention_uid,
+    )
 
     summary = (
         f"[fleet_checkin] done | discord={'OK' if ok_discord else 'FAIL'} | "
