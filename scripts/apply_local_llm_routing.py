@@ -4,27 +4,21 @@ apply_local_llm_routing.py — Wire the local LLM routing policy fleet-wide.
 
 Policy (from COST_MODEL.md §Local LLM Policy):
   DECISION-MAKING TIER (never local LLM):
-    chief_of_staff  → grok-4.5/xai-oauth  → claude-sonnet-4-6/anthropic
-    marshal         → claude-sonnet-4-6/anthropic → grok-4.5/xai-oauth
-    coding_lt       → claude-sonnet-4-6/anthropic → grok-4.5/xai-oauth
-    ops_lt          → claude-sonnet-4-6/anthropic → grok-4.5/xai-oauth
-    knowledge_lt    → claude-sonnet-4-6/anthropic → grok-4.5/xai-oauth
-    hermes_ai_explorer → claude-sonnet-4-6/anthropic → grok-4.5/xai-oauth
+    Grok/xai-oauth primary → OpenAI Codex OAuth frontier fallback → Anthropic OAuth
 
   WORKER/WATCHER TIER (local LLM primary, OAuth fallback only):
     All others → local/qwen2.5:7b-instruct-q4_K_M
-                  → anthropic/claude-sonnet-4-6  (fallback — tool calls or local unavail)
-                  → xai-oauth/grok-4.5         (final fallback)
+                  → xai-oauth/grok-4.5
+                  → openai-codex/gpt-5.6-luna  (cheap OpenAI OAuth local substitute)
+                  → anthropic/claude-haiku-4-5 (cheap Claude OAuth final fallback)
     NO OpenRouter in fallback chain — subscription OAuth only.
 
   LOCKBOX EXCEPTION:
-    lockbox → local/llama3.1:8b or qwen2.5 → claude-sonnet-4-6 → grok-4.5
-               → anthropic/claude-sonnet-4-6
-               → xai-oauth/grok-4.5
+    lockbox → local/llama3.1:8b or qwen2.5 → grok-4.5 → gpt-5.6-luna → claude-haiku-4-5
     (DeepSeek allowed — no PRC restriction applies)
 
 BILLING HARD-GUARD:
-  - Verifies auth.json has no Anthropic/xAI API keys (OAuth only)
+  - Verifies auth.json has no Anthropic/xAI/OpenAI API keys (OAuth only)
   - Runs billing_guard.py — aborts on FAIL
   - Removes all OpenRouter entries from worker/watcher fallback chains
   - No metered frontier models anywhere in the config
@@ -55,7 +49,7 @@ print("=== BILLING HARD-GUARD ===")
 auth = json.loads((HERMES_HOME / "auth.json").read_text(encoding="utf-8"))
 pool = auth.get("credential_pool", auth.get("providers", {}))
 for provider, creds in pool.items():
-    if provider.lower() in ("anthropic", "xai", "xai-oauth", "grok"):
+    if provider.lower() in ("anthropic", "xai", "xai-oauth", "grok", "openai", "openai-api", "openai-codex"):
         for cred in (creds if isinstance(creds, list) else [creds]):
             if isinstance(cred, dict) and cred.get("type") == "api_key":
                 print(f"ABORT: {provider} has API key cred — OAuth only!")
@@ -96,45 +90,27 @@ print()
 
 # ── Routing tables ────────────────────────────────────────────────────────────
 
-# Decision-making bots: NEVER local LLM
+GROK = {"provider": "xai-oauth", "model": "grok-4.5"}
+OPENAI_FRONTIER = {"provider": "openai-codex", "model": "gpt-5.6-sol"}
+OPENAI_MID = {"provider": "openai-codex", "model": "gpt-5.6-terra"}
+OPENAI_CHEAP = {"provider": "openai-codex", "model": "gpt-5.6-luna"}
+CLAUDE_SONNET = {"provider": "anthropic", "model": "claude-sonnet-4-6"}
+CLAUDE_HAIKU = {"provider": "anthropic", "model": "claude-haiku-4-5"}
+
+# Decision-making bots: NEVER local LLM. Grok remains highest priority; OpenAI
+# frontier sits below Grok and above Anthropic, all via OAuth/subscription.
 DECISION_CHAINS = {
     "chief_of_staff": {
-        "model": {"default": "grok-4.5", "provider": "xai-oauth"},
-        "fallback_providers": [
-            {"provider": "anthropic", "model": "claude-sonnet-4-6"},
-        ],
-    },
-    "marshal": {
-        "model": {"default": "claude-sonnet-4-6", "provider": "anthropic"},
-        "fallback_providers": [
-            {"provider": "xai-oauth", "model": "grok-4.5"},
-        ],
-    },
-    "coding_lt": {
-        "model": {"default": "claude-sonnet-4-6", "provider": "anthropic"},
-        "fallback_providers": [
-            {"provider": "xai-oauth", "model": "grok-4.5"},
-        ],
-    },
-    "ops_lt": {
-        "model": {"default": "claude-sonnet-4-6", "provider": "anthropic"},
-        "fallback_providers": [
-            {"provider": "xai-oauth", "model": "grok-4.5"},
-        ],
-    },
-    "knowledge_lt": {
-        "model": {"default": "claude-sonnet-4-6", "provider": "anthropic"},
-        "fallback_providers": [
-            {"provider": "xai-oauth", "model": "grok-4.5"},
-        ],
-    },
-    "hermes_ai_explorer": {
-        "model": {"default": "claude-sonnet-4-6", "provider": "anthropic"},
-        "fallback_providers": [
-            {"provider": "xai-oauth", "model": "grok-4.5"},
-        ],
+        "model": {"default": GROK["model"], "provider": GROK["provider"]},
+        "fallback_providers": [dict(OPENAI_FRONTIER), dict(CLAUDE_SONNET)],
     },
 }
+
+for _bot in ("marshal", "coding_lt", "ops_lt", "knowledge_lt", "hermes_ai_explorer"):
+    DECISION_CHAINS[_bot] = {
+        "model": {"default": GROK["model"], "provider": GROK["provider"]},
+        "fallback_providers": [dict(OPENAI_FRONTIER), dict(CLAUDE_SONNET)],
+    }
 
 # Worker/watcher bots: local LLM primary, OAuth fallback only (NO OpenRouter)
 # LockBox is included here — same chain, DeepSeek allowed (PRC restriction removed 2026-08-26)
@@ -158,8 +134,9 @@ WORKER_BOTS = [
 WORKER_CHAIN = {
     "model": {"default": LOCAL_MODEL, "provider": "custom", "base_url": LOCAL_BASE_URL},
     "fallback_providers": [
-        {"provider": "anthropic", "model": "claude-sonnet-4-6"},
-        {"provider": "xai-oauth",  "model": "grok-4.5"},
+        dict(GROK),
+        dict(OPENAI_CHEAP),
+        dict(CLAUDE_HAIKU),
         # NO OpenRouter — subscription OAuth is already $0, no metered fallback needed
     ],
 }
@@ -243,7 +220,7 @@ for b in WORKER_BOTS:
     print(f"  {b:25} custom/{LOCAL_MODEL}")
 print()
 print("Fallback chain for ALL workers (tool calls / local unavail):")
-print("  anthropic/claude-sonnet-4-6  →  xai-oauth/grok-4.5")
+print("  xai-oauth/grok-4.5  →  openai-codex/gpt-5.6-luna  →  anthropic/claude-haiku-4-5")
 print("  NO OpenRouter — subscription OAuth only ($0 marginal)")
 print()
 if not ollama_up or not (available_models if ollama_up else []):

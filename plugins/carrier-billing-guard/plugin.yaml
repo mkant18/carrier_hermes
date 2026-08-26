@@ -1,7 +1,7 @@
 name: carrier-billing-guard
 version: "1.0.0"
 description: >-
-  HARD DENY: never send Anthropic/Claude, xAI/Grok, or other expensive frontier
+  HARD DENY: never send Anthropic/Claude, xAI/Grok, OpenAI frontier, or other expensive frontier
   models through OpenRouter or metered aggregators. Blocks at llm_execution
   (short-circuit, no network) and logs pre_api_request. Policy from
   ~/carrier_hermes/scripts/or_billing_policy.py.

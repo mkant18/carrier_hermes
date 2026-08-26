@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 """
-share_subscriptions.py — make EVERY Carrier Hermes bot share the two OAuth
-subscriptions and fall back on each other, THEN OpenRouter.
+share_subscriptions.py — make EVERY Carrier Hermes bot share subscription OAuth
+providers in Michael's billing-safe priority order, THEN OpenRouter if present.
 
-Policy (Michael, 2026-08-25):
-  chain = [ primary-subscription , OTHER-subscription , <existing OpenRouter tiers> ]
+Policy (Michael, updated 2026-08-26):
+  subscription priority = Grok/xai-oauth → OpenAI/openai-codex → Anthropic/OAuth
 
-  - primary stays whatever the bot is pinned to (xai-oauth/grok or anthropic/claude)
-  - the OTHER subscription is inserted as the FIRST fallback (mutual failover)
-  - existing OpenRouter allowlisted fallbacks (deepseek/gemini flash, gpt-oss)
-    are preserved AFTER both subscriptions
+  - primary stays whatever the bot is pinned to when it is already a subscription
+  - fallbacks are rebuilt from the remaining subscription routes in priority order
+    so OpenAI OAuth sits below Grok and above Anthropic
+  - OpenRouter/API-key tails are NOT preserved automatically; per-token billing
+    remains human-gated by the separate emergency policy, never a standing fallback
   - any duplicate / same-sub redundant entry is collapsed
 
-Never adds an API-key route. Anthropic + xAI are OAuth/subscription only.
+Never adds an API-key route. Anthropic + xAI + OpenAI are OAuth/subscription only.
 Idempotent. Uses Hermes venv python (PyYAML). No secrets touched.
 
 Usage:  <venv-python> share_subscriptions.py [--dry-run]
@@ -25,16 +26,27 @@ import yaml
 HOME = Path(os.environ.get("HERMES_HOME", r"C:\Users\micha\AppData\Local\hermes"))
 DRY = "--dry-run" in sys.argv
 
-# Canonical subscription routes.
+# Canonical subscription routes. OpenAI models use ChatGPT/Codex OAuth via
+# provider=openai-codex, NOT OpenAI API or OpenRouter.
 GROK = {"provider": "xai-oauth", "model": "grok-4.5"}
+OPENAI_FRONTIER = {"provider": "openai-codex", "model": "gpt-5.6-sol"}
+OPENAI_MID = {"provider": "openai-codex", "model": "gpt-5.6-terra"}
+OPENAI_CHEAP = {"provider": "openai-codex", "model": "gpt-5.6-luna"}
 CLAUDE = {"provider": "anthropic", "model": "claude-sonnet-4-6"}
 
+SUBSCRIPTION_PRIORITY = [GROK, OPENAI_FRONTIER, CLAUDE]
 
-def other_sub(primary_provider: str) -> dict:
-    """Return the subscription that is NOT the primary."""
-    if primary_provider == "xai-oauth":
-        return dict(CLAUDE)
-    return dict(GROK)
+
+def subscription_chain_after(primary_provider: str, primary_model: str) -> list[dict]:
+    """Return fallback subscriptions after the primary, in fleet priority order."""
+    out: list[dict] = []
+    for route in SUBSCRIPTION_PRIORITY:
+        if route["provider"] == primary_provider and route["model"] == primary_model:
+            continue
+        if route["provider"] == primary_provider:
+            continue
+        out.append(dict(route))
+    return out
 
 
 def is_openrouter(fb: dict) -> bool:
@@ -44,20 +56,19 @@ def is_openrouter(fb: dict) -> bool:
 def normalize(cfg: dict) -> tuple[dict, str]:
     model = cfg.get("model") or {}
     primary_provider = (model.get("provider") or "").lower()
-    if primary_provider not in ("xai-oauth", "anthropic"):
+    if primary_provider not in ("xai-oauth", "openai-codex", "anthropic"):
         return cfg, f"SKIP (primary provider '{primary_provider}' not a subscription)"
 
-    fbs = cfg.get("fallback_providers") or []
-    # Keep ONLY the OpenRouter tiers from the existing chain (drop old sub entries;
-    # we re-add both subs deterministically). Preserve their order + models.
-    or_tiers = [dict(f) for f in fbs if is_openrouter(f)]
+    primary_model = str(model.get("default") or model.get("model") or "")
 
-    # Build: [other-sub] + [openrouter tiers]. (primary is already model.*)
-    new_chain = [other_sub(primary_provider)] + or_tiers
+    # Build: remaining subscriptions in priority order. Per-token/OpenRouter
+    # tails are deliberately NOT automatic fallbacks under Michael's policy.
+    # The primary is already model.*.
+    new_chain = subscription_chain_after(primary_provider, primary_model)
 
     # Safety: strip any accidental api_key/base_url on subscription entries.
     for e in new_chain:
-        if e.get("provider") in ("xai-oauth", "anthropic"):
+        if e.get("provider") in ("xai-oauth", "openai-codex", "anthropic"):
             e.pop("base_url", None)
             e.pop("api_key", None)
 
@@ -90,7 +101,7 @@ def main() -> int:
                 encoding="utf-8",
             )
     print(f"\n{'(dry-run) ' if DRY else ''}{changed} config(s) updated. "
-          "Every bot now: primary-sub -> other-sub -> OpenRouter.")
+          "Every bot now: primary-sub -> Grok/OpenAI/Anthropic priority (no automatic OpenRouter tail).")
     print("Run billing_guard + restart affected gateways to load.")
     return 0
 

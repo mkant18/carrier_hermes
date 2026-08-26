@@ -109,6 +109,24 @@ PY
   fi
 }
 ping_model grok xai-oauth grok-4.5
+if python3 - <<'PY'
+import json
+from pathlib import Path
+p = Path.home() / '.hermes' / 'auth.json'
+try:
+    d = json.loads(p.read_text(encoding='utf-8'))
+except Exception:
+    raise SystemExit(1)
+pool = d.get('credential_pool') or {}
+providers = d.get('providers') or {}
+ok = bool(pool.get('openai-codex') or providers.get('openai-codex'))
+raise SystemExit(0 if ok else 1)
+PY
+then
+  ping_model openai_codex openai-codex gpt-5.6-luna
+else
+  skip "ping_openai_codex" "openai-codex OAuth credential not configured — fail-closed"
+fi
 ping_model claude anthropic claude-sonnet-4-6
 # DeepSeek requires OPENROUTER_API_KEY
 if grep -qE '^OPENROUTER_API_KEY=.' "${HERMES_HOME:-$HOME/.hermes}/.env" 2>/dev/null; then
@@ -176,10 +194,10 @@ IDS
 for lt in coding_lt ops_lt knowledge_lt; do
   m=$(hermes -p "$lt" config get model.default 2>/dev/null \
     || hermes -p "$lt" config get model 2>/dev/null || true)
-  if [[ "$m" == *"claude-sonnet-4-6"* ]]; then
+  if [[ "$m" == *"grok-4.5"* ]]; then
     pass "lt_model_$lt"
   else
-    failc "lt_model_$lt" "expected claude-sonnet-4-6, got '$m' (check lt_pin_disk_* for authoritative YAML state)"
+    failc "lt_model_$lt" "expected grok-4.5 primary, got '$m' (check lt_pin_disk_* for authoritative YAML state)"
   fi
 done
 
@@ -257,10 +275,10 @@ p = pathlib.Path.home() / '.hermes/profiles' / sys.argv[1] / 'config.yaml'
 cfg = yaml.safe_load(p.read_text()) if p.exists() else {}
 print((cfg or {}).get('model', {}).get('provider', ''))
 " "$lt_bot" 2>/dev/null || true)
-  if [[ "$lt_model" == "claude-sonnet-4-6" && "$lt_prov" == "anthropic" ]]; then
+  if [[ "$lt_model" == "grok-4.5" && "$lt_prov" == "xai-oauth" ]]; then
     pass "lt_pin_disk_$lt_bot"
   else
-    failc "lt_pin_disk_$lt_bot" "wanted anthropic/claude-sonnet-4-6, got $lt_prov/$lt_model"
+    failc "lt_pin_disk_$lt_bot" "wanted xai-oauth/grok-4.5, got $lt_prov/$lt_model"
   fi
 done
 
@@ -271,15 +289,15 @@ else
   failc "github_auth" "run: bash scripts/smoke_github_auth.sh for full report"
 fi
 
-# Billing hard-guard: never Anthropic/Grok via API token or OpenRouter
+# Billing hard-guard: never Anthropic/Grok/OpenAI via API token or OpenRouter frontier
 if [[ -f "$ROOT/scripts/billing_guard.py" ]]; then
   if python3 "$ROOT/scripts/billing_guard.py" --quiet-ok; then
-    pass "billing_guard_no_anthropic_grok_api"
+    pass "billing_guard_no_subscription_api"
   else
-    failc "billing_guard_no_anthropic_grok_api" "Anthropic/Grok API token or OpenRouter frontier route detected"
+    failc "billing_guard_no_subscription_api" "Anthropic/Grok/OpenAI API token or OpenRouter frontier route detected"
   fi
 else
-  failc "billing_guard_no_anthropic_grok_api" "scripts/billing_guard.py missing"
+  failc "billing_guard_no_subscription_api" "scripts/billing_guard.py missing"
 fi
 
 echo "=== done fail=$fail ==="
