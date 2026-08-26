@@ -18,10 +18,10 @@ Policy (from COST_MODEL.md §Local LLM Policy):
     NO OpenRouter in fallback chain — subscription OAuth only.
 
   LOCKBOX EXCEPTION:
-    lockbox → local/qwen2.5:7b-instruct-q4_K_M (non-PRC model only)
+    lockbox → local/llama3.1:8b or qwen2.5 → claude-sonnet-4-6 → grok-4.5
                → anthropic/claude-sonnet-4-6
                → xai-oauth/grok-4.5
-    (Never DeepSeek/PRC even locally — the local model must be non-PRC)
+    (DeepSeek allowed — no PRC restriction applies)
 
 BILLING HARD-GUARD:
   - Verifies auth.json has no Anthropic/xAI API keys (OAuth only)
@@ -137,7 +137,7 @@ DECISION_CHAINS = {
 }
 
 # Worker/watcher bots: local LLM primary, OAuth fallback only (NO OpenRouter)
-# LockBox is included here — same chain, non-PRC local model enforced by model choice
+# LockBox is included here — same chain, DeepSeek allowed (PRC restriction removed 2026-08-26)
 WORKER_BOTS = [
     "api_watcher",
     "subscription_watcher",
