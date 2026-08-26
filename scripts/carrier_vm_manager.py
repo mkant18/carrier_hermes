@@ -6,22 +6,16 @@ This module manages the full lifecycle: build, start, stop, exec, logs, health.
 """
 from __future__ import annotations
 
-<<<<<<< HEAD
-=======
 import concurrent.futures
->>>>>>> origin/main
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
-<<<<<<< HEAD
 from typing import Any
-=======
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from scripts.carrier_bot_vm import _docker_available, get_bot_vm
->>>>>>> origin/main
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
@@ -55,8 +49,6 @@ ALL_BOT_IDS: list[str] = [
     "obsidian_archivist",
 ]
 
-<<<<<<< HEAD
-=======
 # Bots represented by the OpenMausBot-style compose file.  Keep this smaller
 # compatibility fleet separate from the canonical 20-bot production fleet.
 FLEET_BOT_IDS: list[str] = [
@@ -68,7 +60,6 @@ FLEET_BOT_IDS: list[str] = [
     "peers",
 ]
 
->>>>>>> origin/main
 
 def _container_name(bot_id: str) -> str:
     return f"carrier-{bot_id}"
@@ -391,8 +382,6 @@ def vm_health_summary() -> str:
     return f"FLEET_DEGRADED:{len(down)}_down"
 
 
-<<<<<<< HEAD
-=======
 # ── OpenMausBot-compatible fleet API ─────────────────────────────────────────
 
 def _parallel_botvm_call(bot_ids: list[str], method: str, max_workers: int) -> dict:
@@ -461,7 +450,6 @@ def exec_all(command: str, bot_ids: list[str] | None = None) -> dict:
     return results
 
 
->>>>>>> origin/main
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
@@ -474,16 +462,6 @@ if __name__ == "__main__":
     sub.add_parser("network", help="Create carrier-fleet network")
     sub.add_parser("start-fleet", help="Start all 20 bots")
     sub.add_parser("stop-fleet", help="Stop all 20 bots")
-<<<<<<< HEAD
-    sub.add_parser("status", help="Show status of all bots")
-    sub.add_parser("health", help="Print FLEET_HEALTHY or FLEET_DEGRADED:N")
-
-    start_p = sub.add_parser("start", help="Start a specific bot")
-    start_p.add_argument("bot_id")
-
-    stop_p = sub.add_parser("stop", help="Stop a specific bot")
-    stop_p.add_argument("bot_id")
-=======
     status_p = sub.add_parser("status", help="Show status of all bots")
     status_p.add_argument(
         "--openmaus",
@@ -497,21 +475,14 @@ if __name__ == "__main__":
 
     stop_p = sub.add_parser("stop", help="Stop one bot, or the OpenMausBot fleet")
     stop_p.add_argument("bot_id", nargs="?")
->>>>>>> origin/main
 
     log_p = sub.add_parser("logs", help="Show logs for a bot")
     log_p.add_argument("bot_id")
     log_p.add_argument("--tail", type=int, default=50)
 
-<<<<<<< HEAD
-    exec_p = sub.add_parser("exec", help="Execute command in bot container")
-    exec_p.add_argument("bot_id")
-    exec_p.add_argument("command")
-=======
     exec_p = sub.add_parser("exec", help="Execute in one bot, or across the OpenMausBot fleet")
     exec_p.add_argument("target_or_command")
     exec_p.add_argument("command", nargs="?")
->>>>>>> origin/main
 
     ensure_p = sub.add_parser("ensure", help="Ensure a bot VM is running")
     ensure_p.add_argument("bot_id")
@@ -532,24 +503,6 @@ if __name__ == "__main__":
         for bid, ok in results.items():
             print(f"  {'✓' if ok else '✗'} {bid}")
     elif args.cmd == "status":
-<<<<<<< HEAD
-        status = vm_status_all()
-        for bid, s in status.items():
-            icon = "✓" if s["running"] else "✗"
-            print(f"  {icon} {bid:30} {s['status']:12} {s.get('error') or ''}")
-    elif args.cmd == "health":
-        print(vm_health_summary())
-    elif args.cmd == "start":
-        sys.exit(0 if start_bot_vm(args.bot_id) else 1)
-    elif args.cmd == "stop":
-        sys.exit(0 if stop_bot_vm(args.bot_id) else 1)
-    elif args.cmd == "logs":
-        print(vm_logs(args.bot_id, tail=args.tail))
-    elif args.cmd == "exec":
-        rc, out = exec_in_bot_vm(args.bot_id, args.command)
-        print(out)
-        sys.exit(rc)
-=======
         if args.openmaus:
             print(json.dumps(vm_status(), indent=2, default=str))
         else:
@@ -576,7 +529,6 @@ if __name__ == "__main__":
             rc, out = exec_in_bot_vm(args.target_or_command, args.command)
             print(out)
             sys.exit(rc)
->>>>>>> origin/main
     elif args.cmd == "ensure":
         sys.exit(0 if ensure_bot_vm_running(args.bot_id) else 1)
     else:
