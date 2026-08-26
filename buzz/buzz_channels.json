@@ -132,6 +132,20 @@
     "whatsapp": false,
     "topic": "Recon wing home: Chart + Sonar, Probe."
   },
+  "maintenance": {
+    "uuid": "88b31ab2-0bad-48c7-a7a7-769a2e340331",
+    "discord_id": "1542052741889663077",
+    "members": [
+      "chief_of_staff",
+      "maintenance_lt",
+      "code_auditor",
+      "repair_planner",
+      "patch_writer",
+      "pr_reviewer"
+    ],
+    "whatsapp": false,
+    "topic": "Shipwright maintenance wing home: Bosun + Diver, Rigger, Caulker, Surveyor."
+  },
   "email": {
     "uuid": "3af588b1-6265-46e1-9fdb-ea769b825e1a",
     "discord_id": "1541155152726204416",
