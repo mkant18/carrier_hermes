@@ -79,6 +79,14 @@ WINGS = [
         "label":    "Recon Wing",
         "bots":     ["hermes_ai_explorer", "passive_watch", "research_agent"],
     },
+    {
+        "key":      "shipwright",
+        "lt":       "maintenance_lt",
+        "callsign": "Bosun ⚓",
+        "emoji":    "⚓",
+        "label":    "Shipwright Wing",
+        "bots":     ["maintenance_lt", "code_auditor", "repair_planner", "patch_writer", "pr_reviewer"],
+    },
 ]
 
 # Command bots (not LT-wrapped): we mine but don't LLM-summarize
