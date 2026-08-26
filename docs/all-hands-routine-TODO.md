@@ -28,6 +28,18 @@ wing — everyone who can meaningfully contribute.
     cheap allowlist: DeepSeek flash/chat, Google Gemini Flash / Flash-Lite, gpt-oss.
   - `billing_guard.py` must still PASS after any change.
 
+## Message attribution (fleet comms rule)
+
+- **Normal, wing-scoped messages come from the WING that owns the work** — e.g. a
+  maintenance update is posted **as Shipwright** (Bosun / maintenance_lt) to
+  #maintenance.
+- **During ALL-HANDS, status/broadcast messages go out as First Watch** (the
+  fleet-wide REST outbound identity, `DISCORD_FLEET_BOT_TOKEN`), because all-hands
+  is a fleet-level mobilization, not a single wing's business. Attribute the body
+  as First Watch, not the owning wing.
+- **Silent Running is unaffected** — it keeps using its usual per-report delegates
+  (Marshal for hourly check-ins, Helm for the EMCON enter/exit broadcast, etc.).
+
 ## Shape (proposed — refine on build)
 
 1. Helm classifies the emergency and decomposes it into parallel work units.
