@@ -104,6 +104,8 @@ def get_context_length(model_name: str) -> int | None:
 
 def smoke_test_tool_calls(model_name: str) -> bool:
     """Return True if model can make structured tool calls."""
+    # Large models (gemma4:26b ~15GB) need extra time for cold VRAM load
+    timeout = 180 if "gemma4" in model_name else 60
     payload = {
         "model": model_name,
         "messages": [{"role": "user", "content": "Call the ping tool now."}],
@@ -124,7 +126,7 @@ def smoke_test_tool_calls(model_name: str) -> bool:
                     f"{OLLAMA_URL}/v1/chat/completions",
                     data=json.dumps(payload).encode(),
                     headers={"Content-Type": "application/json"}
-                ), timeout=60
+                ), timeout=timeout
             ).read()
         )
         tc = resp.get("choices", [{}])[0].get("message", {}).get("tool_calls") or []
@@ -134,34 +136,72 @@ def smoke_test_tool_calls(model_name: str) -> bool:
         return False
 
 def smoke_test_classification(model_name: str) -> bool:
-    """Return True if classifier returns a clean single label."""
-    payload = {
-        "model": model_name,
-        "messages": [{
-            "role": "user",
-            "content": "Classify this Kanban task title into ONE of [bug, feature, maintenance, research]:\n"
-                       "\"Fix crash when context window exceeds 64K\""
-        }],
-        "stream": False
-    }
-    try:
-        resp = json.loads(
-            urllib.request.urlopen(
-                urllib.request.Request(
-                    f"{OLLAMA_URL}/v1/chat/completions",
-                    data=json.dumps(payload).encode(),
-                    headers={"Content-Type": "application/json"}
-                ), timeout=60
-            ).read()
-        )
-        content = resp.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
-        print(f"    classifier output: {repr(content[:120])}")
-        # Good if it's one of the expected labels (or contains one)
-        labels = ["bug", "feature", "maintenance", "research"]
-        return any(lbl in content.lower() for lbl in labels)
-    except Exception as e:
-        print(f"    classification smoke error: {e}")
-        return False
+    """Run a battery of classification smoke tests. Return True if all pass."""
+
+    TESTS = [
+        # (description, prompt, acceptable_labels)
+        (
+            "Kanban triage (bug)",
+            "Classify into ONE of [bug, feature, maintenance, research]:\n"
+            "\"Fix crash when context window exceeds 64K\"",
+            ["bug"],
+        ),
+        (
+            "Intent detection (command)",
+            "Classify intent into ONE of [command, question, statement, error-report, status-update]:\n"
+            "\"Deploy the new routing script to production now\"",
+            ["command"],
+        ),
+        (
+            "Bot routing (research_agent)",
+            "Which fleet bot should handle this? Reply with ONLY the bot name.\n"
+            "Task: \"Search arXiv for recent papers on MoE transformers\"\n"
+            "Bots: chief_of_staff, research_agent, coding_lt, email_reader, vault_librarian",
+            ["research_agent"],
+        ),
+        (
+            "Error classification (transient or misconfiguration)",
+            "Classify error type into ONE of [transient, permanent, misconfiguration, unknown]:\n"
+            "\"Connection refused to localhost:11434 - service not running\"",
+            ["transient", "misconfiguration"],
+        ),
+        (
+            "Code review severity (blocking)",
+            "Classify code review severity into ONE of [blocking, non-blocking, nit, praise]:\n"
+            "\"This function deletes all database records without a WHERE clause\"",
+            ["blocking"],
+        ),
+    ]
+
+    all_pass = True
+    for desc, prompt, expected in TESTS:
+        payload = {
+            "model": model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+        }
+        try:
+            resp = json.loads(
+                urllib.request.urlopen(
+                    urllib.request.Request(
+                        f"{OLLAMA_URL}/v1/chat/completions",
+                        data=json.dumps(payload).encode(),
+                        headers={"Content-Type": "application/json"},
+                    ),
+                    timeout=60,
+                ).read()
+            )
+            content = resp.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+            ok = any(lbl in content.lower() for lbl in expected)
+            icon = "✓" if ok else "✗"
+            print(f"    [{icon}] {desc}: {repr(content[:60])}")
+            if not ok:
+                all_pass = False
+        except Exception as e:
+            print(f"    [✗] {desc}: ERROR — {e}")
+            all_pass = False
+
+    return all_pass
 
 
 # ── Create mistral-nemo-classifier via ollama CLI ─────────────────────────────
@@ -173,35 +213,33 @@ def create_classifier_model() -> bool:
     if not model_is_pulled("mistral-nemo"):
         print("  ⚠  mistral-nemo base not yet pulled — skipping classifier creation")
         return False
-    print("  Creating mistral-nemo-classifier from Modelfile...")
+
+    # Check if already exists
+    if model_is_pulled("mistral-nemo-classifier"):
+        print("  ✓  mistral-nemo-classifier already exists — skipping creation")
+        return True
+
+    print("  Creating mistral-nemo-classifier from Modelfile (via WSL ollama CLI)...")
     try:
+        # Strategy: pipe Modelfile into WSL via stdin so no path translation needed
+        mf_content = MODELFILE.read_text(encoding="utf-8")
+        # Write to WSL /tmp first (most reliable)
+        write = subprocess.run(
+            ["bash", "-c", "cat > /tmp/nemo_classifier_build.Modelfile"],
+            input=mf_content, capture_output=True, text=True, timeout=10
+        )
+        if write.returncode != 0:
+            raise RuntimeError(f"Failed to write WSL tmp file: {write.stderr}")
+
         result = subprocess.run(
-            ["ollama", "create", "mistral-nemo-classifier", "-f", str(MODELFILE)],
+            ["bash", "-c", "wsl ollama create mistral-nemo-classifier -f /tmp/nemo_classifier_build.Modelfile"],
             capture_output=True, text=True, timeout=120
         )
         if result.returncode == 0:
             print("  ✓  mistral-nemo-classifier created")
             return True
-        else:
-            # Try via REST (ollama CLI might not be on PATH)
-            print(f"  ollama CLI failed ({result.returncode}), trying via WSL...")
-            wsl = subprocess.run(
-                ["bash", "-c",
-                 f"wsl ollama create mistral-nemo-classifier -f '{str(MODELFILE).replace(chr(92), '/')}'"],
-                capture_output=True, text=True, timeout=120
-            )
-            if wsl.returncode == 0:
-                print("  ✓  mistral-nemo-classifier created via WSL")
-                return True
-            # Try pushing via REST /api/create
-            mf_content = MODELFILE.read_text(encoding="utf-8")
-            payload = {"name": "mistral-nemo-classifier", "modelfile": mf_content}
-            resp = ollama_post("/api/create", payload, timeout=120)
-            if resp.get("status") == "success":
-                print("  ✓  mistral-nemo-classifier created via REST")
-                return True
-            print(f"  ✗  All creation methods failed. Last: {resp}")
-            return False
+        print(f"  ✗  WSL ollama create failed: {result.stdout} {result.stderr}")
+        return False
     except Exception as e:
         print(f"  ✗  classifier creation error: {e}")
         return False

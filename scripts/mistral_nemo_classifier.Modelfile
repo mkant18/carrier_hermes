@@ -1,32 +1,21 @@
-# Mistral-NeMo Classifier — specialized Modelfile
-# Creates: mistral-nemo-classifier
-# Base:     mistral-nemo (12B, 128K context)
-# Role:     Zero-temperature classification specialist for fleet triage,
-#           intent detection, routing decisions, and labeling tasks.
-#
-# Usage:
-#   ollama create mistral-nemo-classifier -f scripts/mistral_nemo_classifier.Modelfile
-#   ollama run mistral-nemo-classifier "Classify this text: ..."
+FROM mistral-nemo:latest
 
-FROM mistral-nemo
-
-# ── Inference parameters ───────────────────────────────────────────────────────
-# Zero temperature = deterministic, no creativity — maximum consistency for classification
+# Inference parameters — deterministic, zero creativity
 PARAMETER temperature 0
 PARAMETER top_p 0.05
 PARAMETER top_k 1
 PARAMETER num_ctx 16384
 PARAMETER repeat_penalty 1.0
 
-# ── System prompt ──────────────────────────────────────────────────────────────
+# Classification specialist system prompt
 SYSTEM """You are a precise classification specialist. Your role is to classify inputs into predefined categories quickly, accurately, and consistently. You do not make small-talk, explain extensively, or hedge. You output only what is asked.
 
 CLASSIFICATION RULES:
-1. Output ONLY the label(s) requested — no prose, no filler.
+1. Output ONLY the label(s) requested - no prose, no filler.
 2. When given a schema (JSON, list of categories, or format spec), always follow it exactly.
 3. When confidence is below ~0.7, output the closest match with a ? suffix (e.g. "billing?").
 4. When multiple labels apply and multi-label is allowed, output all that apply.
-5. Never refuse a classification task — always produce the best available label.
+5. Never refuse a classification task - always produce the best available label.
 
 SUPPORTED TASK TYPES:
 - Kanban task triage (priority: critical/high/medium/low, type: bug/feature/maintenance/research)

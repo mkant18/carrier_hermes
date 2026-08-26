@@ -1,125 +1,67 @@
-# Local LLM Registry — carrier_hermes fleet
-# Auto-updated by scripts/register_new_local_llms.py
-# Manual edits allowed; script will merge, not overwrite, existing entries.
-#
-# tier values:
-#   worker-primary    — the default local primary for worker/watcher bots
-#   worker-alternate  — available as a drop-in swap, not default
-#   specialist        — purpose-built custom model (do NOT use as a general worker)
-#
-# To set a specific bot to use an alternate model, edit that bot's config.yaml:
-#   model:
-#     default: gemma4:26b
-#     provider: custom
-#     base_url: http://localhost:11434/v1
-#
-# Or re-run apply_local_llm_routing.py --local-model <model> to flip ALL workers.
-
 local_models:
-
-  # ── PRIMARY (fleet default) ──────────────────────────────────────────────────
-
   qwen2.5:7b-instruct-q4_K_M:
     display_name: Qwen 2.5 7B Instruct Q4_K_M
     tier: worker-primary
     speciality: general instruction following, tool calling, structured output
-    notes: >
-      Current fleet default for all worker/watcher bots. 7B, fast, reliable tool calls.
-      WARNING: context_length = 32,768 — below Hermes 64K floor. Cannot be used as a
-      Kanban worker (crashes at spawn). Use only for cron scripts / direct Ollama API calls.
+    notes: 'Current fleet default for all worker/watcher bots. 7B, fast, reliable
+      tool calls. WARNING: context_length = 32,768 — below Hermes 64K floor. Cannot
+      be used as a Kanban worker (crashes at spawn). Use only for cron scripts / direct
+      Ollama API calls.
+
+      '
     context_length: 32768
     tool_calls: true
     status: ctx-too-small-for-kanban-worker
     ollama_tag: qwen2.5:7b-instruct-q4_K_M
     base_url: http://localhost:11434/v1
-
   llama3.1:8b-instruct-q4_K_M:
     display_name: LLaMA 3.1 8B Instruct Q4_K_M
     tier: worker-primary
     speciality: general rote work, 128K context, reliable Kanban worker
-    notes: >
-      Verified 128K context. Passes Hermes 64K floor. Recommended as the
-      primary Kanban worker bot model. Slightly slower than Qwen 7B but
-      handles full-context tasks. Tool call capable.
+    notes: 'Verified 128K context. Passes Hermes 64K floor. Recommended as the primary
+      Kanban worker bot model. Slightly slower than Qwen 7B but handles full-context
+      tasks. Tool call capable.
+
+      '
     context_length: 131072
     tool_calls: true
     status: ready
     ollama_tag: llama3.1:8b-instruct-q4_K_M
     base_url: http://localhost:11434/v1
-
-  # ── ADDED 2026-08-26 ─────────────────────────────────────────────────────────
-
   gemma4:26b:
-    display_name: Gemma 4 26B (MoE — 4B active)
+    display_name: Gemma 4 26B (MoE)
     tier: worker-alternate
     speciality: reasoning, agentic workflows, coding, multimodal understanding
-    notes: >
-      Google Gemma 4 MoE model. 26B total parameters, ~4B active per token (MoE).
-      Frontier-quality reasoning at near-7B inference speed due to sparse activation.
-      Configurable thinking modes. Great for coding_lt, ops_lt, research_agent when
-      deeper reasoning is needed without going to OAuth. Supports tool calls.
-      VERIFY context_length before assigning as Kanban worker (expected ≥128K).
-      ~14-16GB VRAM when loaded — may not coexist with another large model.
-    context_length: null  # set by register_new_local_llms.py after pull
+    notes: 26B total / ~4B active params (MoE). Frontier-quality at rote speed. Good
+      drop-in replacement for qwen when reasoning depth matters more than pure speed.
+    context_length: 262144
     tool_calls: true
-    status: pending  # updated after smoke test
-    registered: "2026-08-26"
+    status: ready
+    registered: '2026-08-26'
     ollama_tag: gemma4:26b
     base_url: http://localhost:11434/v1
-
   mistral-nemo:
     display_name: Mistral NeMo 12B
     tier: worker-alternate
-    speciality: general purpose, 128K context, strong instruction following
-    notes: >
-      Mistral AI × NVIDIA collaboration. 12B params, 128K context window.
-      Strong at structured output, instruction following, and tool use.
-      Base model for mistral-nemo-classifier. Good general-purpose alternative
-      when you need longer context than LLaMA 3.1 8B but don't need Gemma4's
-      reasoning depth. ~7GB VRAM.
-    context_length: null  # set by register_new_local_llms.py after pull
+    speciality: general purpose, instruction following, tool use
+    notes: 12B, 128K context. Strong at structured output and instruction following.
+      Base model for mistral-nemo-classifier.
+    context_length: 1024000
     tool_calls: true
-    status: pending
-    registered: "2026-08-26"
+    status: ready
+    registered: '2026-08-26'
     ollama_tag: mistral-nemo
     base_url: http://localhost:11434/v1
-
   mistral-nemo-classifier:
     display_name: Mistral NeMo Classifier (custom)
     tier: specialist
     speciality: classification, triage, intent detection, routing, labeling
-    notes: >
-      Custom Modelfile built from mistral-nemo with temperature=0, top_k=1, top_p=0.05.
-      Fully deterministic — same input ALWAYS gives the same output. Specialized for:
-        - Kanban task triage (priority, type)
-        - Intent detection (command/question/statement/error-report/status-update)
-        - Sentiment (positive/neutral/negative/mixed)
-        - Urgency scoring
-        - Fleet bot routing (which bot should handle this)
-        - Code review severity (blocking/non-blocking/nit/praise)
-        - Error classification (transient/permanent/misconfiguration/unknown)
-        - Any custom label schema passed in the prompt
-      
-      DO NOT use for open-ended generation, coding, or reasoning tasks — the
-      zero-temp setting makes it repetitive and useless outside classification.
-      
-      Usage (direct REST):
-        curl http://localhost:11434/v1/chat/completions \
-          -H "Content-Type: application/json" \
-          -d '{"model":"mistral-nemo-classifier","messages":[{"role":"user","content":"Classify: ..."}],"stream":false}'
-      
-      Usage (Hermes bot config):
-        model:
-          default: mistral-nemo-classifier
-          provider: custom
-          base_url: http://localhost:11434/v1
-      
-      Suitable bots: subscription_watcher (alert triage), api_watcher (error classification),
-      passive_watch (intent detection), any bot doing Kanban auto-triage.
-    context_length: 16384   # set in Modelfile (num_ctx=16384)
+    notes: Built from mistral-nemo with temperature=0, top_k=1. Deterministic zero-temp
+      classifier for Kanban triage, intent detection, severity labeling, and fleet
+      routing decisions. Do NOT use for open-ended generation.
+    context_length: 1024000
     tool_calls: false
-    status: pending  # updated after build + smoke test
-    registered: "2026-08-26"
+    status: ready
+    registered: '2026-08-26'
     ollama_tag: mistral-nemo-classifier
     base_url: http://localhost:11434/v1
-    modelfile: scripts/mistral_nemo_classifier.Modelfile
