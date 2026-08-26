@@ -3,7 +3,10 @@ carrier_approval_listener.py — Discord interaction poller for the approval gat
 
 Runs as a background daemon thread. Polls Discord's channel messages for
 button interactions (Approve / Deny) and resolves matching pending approvals
-via carrier_approval_gate.resolve_approval().
+via carrier_approval_gate.resolve_approval(). This is a best-effort secondary
+path: the primary resolution path is carrier-webhook (see
+docker-compose.carrier-infrastructure.yml), since Discord button clicks
+normally arrive via webhook, not REST polling.
 
 Start it as part of your fleet boot sequence:
     from scripts.carrier_approval_listener import start_listener_daemon
@@ -12,12 +15,9 @@ Start it as part of your fleet boot sequence:
 Or run standalone:
     python scripts/carrier_approval_listener.py
 """
-
 from __future__ import annotations
 
 import json
-import os
-import subprocess
 import sys
 import threading
 import time
@@ -28,35 +28,25 @@ from typing import Optional
 
 # Allow direct execution from repo root
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from scripts.carrier_approval_gate import get_pending_approvals, resolve_approval
+from scripts.carrier_approval_gate import (  # noqa: E402
+    _get_discord_token,
+    get_pending_approvals,
+    resolve_approval,
+)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
-FLEET_CHANNEL_ID = "1541866378255011980"
-POLL_INTERVAL = 5          # seconds between Discord polls
-INTERACTION_ENDPOINT_POLL_INTERVAL = 3  # seconds for interaction polling
-
-
-def _get_discord_token() -> Optional[str]:
-    """Fetch DISCORD_FLEET_BOT_TOKEN from env or Doppler."""
-    env_val = os.environ.get("DISCORD_FLEET_BOT_TOKEN")
-    if env_val:
-        return env_val
-    try:
-        result = subprocess.run(
-            ["doppler", "secrets", "get", "DISCORD_FLEET_BOT_TOKEN", "--plain"],
-            capture_output=True, text=True, timeout=10,
-        )
-        if result.returncode == 0:
-            return result.stdout.strip()
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
-    return None
+DISCORD_CHANNEL_ID = "1541866378255011980"
+POLL_INTERVAL = 3  # seconds between Discord polls
 
 
 def _discord_get(url: str, token: str) -> Optional[dict]:
     req = urllib.request.Request(
         url,
-        headers={"Authorization": f"Bot {token}", "Content-Type": "application/json"},
+        headers={
+            "Authorization": f"Bot {token}",
+            "Content-Type": "application/json",
+            "User-Agent": "DiscordBot (https://carrier-hermes, 1.0)",
+        },
     )
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
@@ -68,19 +58,14 @@ def _discord_get(url: str, token: str) -> Optional[dict]:
             time.sleep(retry_after)
         elif exc.code not in (403, 404):
             print(f"[approval_listener] Discord GET error {exc.code}: {exc.read()[:200]}")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         print(f"[approval_listener] Discord GET failed: {exc}")
     return None
 
 
-def _fetch_recent_interactions(token: str, after_message_id: Optional[str] = None) -> list[dict]:
-    """
-    Fetch recent messages from the fleet channel that contain component interactions.
-    Discord bots see button clicks as messages in the channel timeline.
-
-    We look for messages whose components reference our approval button custom_ids.
-    """
-    url = f"https://discord.com/api/v10/channels/{FLEET_CHANNEL_ID}/messages?limit=20"
+def _fetch_recent_messages(token: str, after_message_id: Optional[str] = None) -> list[dict]:
+    """Fetch recent messages from the fleet channel, newest first."""
+    url = f"https://discord.com/api/v10/channels/{DISCORD_CHANNEL_ID}/messages?limit=20"
     if after_message_id:
         url += f"&after={after_message_id}"
     data = _discord_get(url, token)
@@ -89,39 +74,33 @@ def _fetch_recent_interactions(token: str, after_message_id: Optional[str] = Non
 
 def _parse_button_click(message: dict) -> Optional[tuple[str, str]]:
     """
-    Parse a Discord message/interaction for our approval button clicks.
+    Parse a Discord message for one of our approve_/deny_ button clicks.
 
     Returns (action, approval_id) where action is 'approve' or 'deny', or None.
-
-    Discord sends button interactions as webhook events. Since we're polling
-    the channel, we look for messages with interaction metadata whose
-    referenced component matches our custom_id pattern.
     """
-    # Check interaction field (set when a user clicks a component)
     interaction = message.get("interaction")
     if interaction:
         custom_id = interaction.get("data", {}).get("custom_id", "")
-        if custom_id.startswith("approve:") or custom_id.startswith("deny:"):
-            parts = custom_id.split(":", 1)
-            return parts[0], parts[1]
+        if custom_id.startswith("approve_") or custom_id.startswith("deny_"):
+            approved = custom_id.startswith("approve_")
+            approval_id = custom_id[len("approve_"):] if approved else custom_id[len("deny_"):]
+            return ("approve" if approved else "deny"), approval_id
 
-    # Also check message components for echoed interactions (some bot setups)
     for component_row in message.get("components", []):
         for button in component_row.get("components", []):
             cid = button.get("custom_id", "")
-            if cid.startswith("approve:") or cid.startswith("deny:"):
-                # Only act if this looks like it's been interacted with
-                # (style changed to indicate pressed / disabled)
+            if cid.startswith("approve_") or cid.startswith("deny_"):
                 if button.get("disabled"):
-                    parts = cid.split(":", 1)
-                    return parts[0], parts[1]
+                    approved = cid.startswith("approve_")
+                    approval_id = cid[len("approve_"):] if approved else cid[len("deny_"):]
+                    return ("approve" if approved else "deny"), approval_id
 
     return None
 
 
 def _poll_interactions_once(token: str, seen_message_ids: set, pending_ids: set) -> None:
     """Single poll cycle: fetch messages, match to pending approvals, resolve."""
-    messages = _fetch_recent_interactions(token)
+    messages = _fetch_recent_messages(token)
 
     for msg in messages:
         msg_id = msg.get("id")
@@ -150,7 +129,6 @@ def _listener_loop(stop_event: threading.Event) -> None:
     if not token:
         print("[approval_listener] WARNING: DISCORD_FLEET_BOT_TOKEN not available. "
               "Listener running in no-op mode (approvals will auto-timeout).")
-        # Keep thread alive so it can be stopped cleanly
         while not stop_event.is_set():
             stop_event.wait(timeout=30)
         return
@@ -164,7 +142,7 @@ def _listener_loop(stop_event: threading.Event) -> None:
             pending_ids = {a["id"] for a in pending}
             if pending_ids:
                 _poll_interactions_once(token, seen_message_ids, pending_ids)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             print(f"[approval_listener] Error in poll loop: {exc}")
 
         stop_event.wait(timeout=POLL_INTERVAL)
@@ -194,6 +172,7 @@ def start_listener_daemon() -> threading.Thread:
         daemon=True,
     )
     _listener_thread.start()
+    print(f"[approval_listener] Daemon thread started (id={_listener_thread.ident})")
     return _listener_thread
 
 
@@ -209,7 +188,6 @@ def stop_listener_daemon() -> None:
 if __name__ == "__main__":
     import signal
 
-    stop = threading.Event()
     thread = start_listener_daemon()
     print("[approval_listener] Running standalone. Ctrl+C to stop.")
 
