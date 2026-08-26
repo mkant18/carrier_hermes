@@ -2,6 +2,14 @@
 # Fleet smokes. Prints PASS/FAIL per check. Exit 1 if any required check fails.
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Windows/MSYS: `pwd` returns /c/Users/... which native python/git misread as
+# C:\c\Users\... . Normalize to a native path when pwd -W is available (Git Bash).
+if command -v cygpath >/dev/null 2>&1; then
+  ROOT="$(cygpath -m "$ROOT")"
+elif [[ "$ROOT" =~ ^/([a-zA-Z])/ ]]; then
+  drive="${BASH_REMATCH[1]}"
+  ROOT="${drive^^}:/${ROOT:3}"
+fi
 VAULT="${OBSIDIAN_VAULT_PATH:-$HOME/Desktop/Existing Folders/OBSIDIAN}"
 fail=0
 pass() { echo "PASS  $1"; }
@@ -63,31 +71,41 @@ else
 fi
 
 # 5 model pings (one-shot, short timeout)
+# Windows-robust: resolve the hermes launcher (may be hermes.cmd/.exe), route
+# via shutil.which, feed stdin=DEVNULL (else the CLI can block), and write
+# capture files into a tmp dir that exists on this OS.
+PING_TMP="${TMPDIR:-${TEMP:-/tmp}}"
+mkdir -p "$PING_TMP" 2>/dev/null || PING_TMP="/tmp"
 ping_model() {
   local name="$1" provider="$2" model="$3"
-  if python3 - "$provider" "$model" "/tmp/ping_${name}.out" "/tmp/ping_${name}.err" <<'PY'
-import subprocess, sys
+  if python3 - "$provider" "$model" "$PING_TMP/ping_${name}.out" "$PING_TMP/ping_${name}.err" <<'PY'
+import subprocess, sys, shutil, os
 provider, model, outp, errp = sys.argv[1:5]
+hermes = shutil.which("hermes") or shutil.which("hermes.cmd") or shutil.which("hermes.exe") or "hermes"
 try:
     r = subprocess.run(
-        ["hermes", "-z", "Reply with the single word PONG.", "--provider", provider, "-m", model],
-        capture_output=True, text=True, timeout=60,
+        [hermes, "-z", "Reply with the single word PONG.", "--provider", provider, "-m", model],
+        capture_output=True, text=True, timeout=90,
+        stdin=subprocess.DEVNULL, shell=(os.name == "nt" and hermes.lower().endswith(".cmd")),
     )
-    open(outp, "w").write(r.stdout)
-    open(errp, "w").write(r.stderr)
+    open(outp, "w").write(r.stdout or "")
+    open(errp, "w").write(r.stderr or "")
     sys.exit(r.returncode)
 except subprocess.TimeoutExpired:
     open(errp, "w").write("timed out")
     sys.exit(124)
+except Exception as e:
+    open(errp, "w").write(f"launch error: {e}")
+    sys.exit(125)
 PY
   then
-    if grep -qi pong /tmp/ping_"$name".out; then
+    if grep -qi pong "$PING_TMP/ping_$name.out"; then
       pass "ping_$name"
     else
-      failc "ping_$name" "no PONG in $(head -c 120 /tmp/ping_"$name".out)"
+      failc "ping_$name" "no PONG in $(head -c 120 "$PING_TMP/ping_$name.out")"
     fi
   else
-    failc "ping_$name" "$(tr '\n' ' ' </tmp/ping_"$name".err | head -c 200)"
+    failc "ping_$name" "$(tr '\n' ' ' <"$PING_TMP/ping_$name.err" | head -c 200)"
   fi
 }
 ping_model grok xai-oauth grok-4.5
@@ -111,9 +129,9 @@ else
   grep -q 'Tasker' "$ROOT/bots/calendar_manager/SOUL.md" && pass "chronos_handoff_tasker" || failc "chronos_handoff_tasker" "Chronos SOUL missing Tasker handoff"
 fi
 
-# 7 eighteen bots defined
+# 7 twenty bots defined (canonical roster per bots/BOT_MATRIX.md — 18 core + Marshal + Yeoman)
 n=$(ls "$ROOT"/bots/*/SOUL.md | wc -l | tr -d ' ')
-[[ "$n" == "18" ]] && pass "eighteen_souls" || failc "eighteen_souls" "count=$n"
+[[ "$n" == "20" ]] && pass "twenty_souls" || failc "twenty_souls" "count=$n"
 
 # 7b no SOUL left as an unfilled scaffold stub
 stubs=$(grep -l "TODO: fill in purpose" "$ROOT"/bots/*/SOUL.md 2>/dev/null | wc -l | tr -d ' ')
@@ -130,11 +148,13 @@ while read -r id; do
   fi
 done <<'IDS'
 chief_of_staff
+marshal
 subscription_watcher
 api_watcher
 lockbox
 coding_lt
 firstmate
+git_yeoman
 hermes_ai_explorer
 passive_watch
 ops_lt
@@ -148,7 +168,7 @@ obsidian_archivist
 research_agent
 finance_reader
 IDS
-[[ "$homes" == "18" ]] && pass "eighteen_bot_homes" || failc "eighteen_bot_homes" "homes=$homes missing:$missing_homes"
+[[ "$homes" == "20" ]] && pass "twenty_bot_homes" || failc "twenty_bot_homes" "homes=$homes missing:$missing_homes"
 
 # 8b Lieutenants model check via hermes config get (serve-based, may lag apply script)
 # NOTE: check #11 (lt_pin_disk_*) reads directly from YAML and is authoritative.
@@ -203,10 +223,10 @@ import sys; sys.path.insert(0, '$ROOT/scripts')
 from bot_identities import BOTS
 print(len(BOTS))
 " 2>/dev/null || echo "0")
-  if [[ "$reg_count" == "18" ]]; then
-    pass "bot_identities_registry (18 bots)"
+  if [[ "$reg_count" == "20" ]]; then
+    pass "bot_identities_registry (20 bots)"
   else
-    failc "bot_identities_registry" "expected 18, got $reg_count"
+    failc "bot_identities_registry" "expected 20, got $reg_count"
   fi
 else
   failc "bot_identities_registry" "scripts/bot_identities.py not found"

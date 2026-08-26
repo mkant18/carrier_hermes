@@ -59,6 +59,12 @@ fi
 
 # 6. carrier_hermes remote reachable + push dry-run
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Windows/MSYS: normalize /c/Users/... to native so native git -C works.
+if command -v cygpath >/dev/null 2>&1; then
+  REPO_ROOT="$(cygpath -m "$REPO_ROOT")"
+elif [[ "$REPO_ROOT" =~ ^/([a-zA-Z])/ ]]; then
+  _d="${BASH_REMATCH[1]}"; REPO_ROOT="${_d^^}:/${REPO_ROOT:3}"
+fi
 if [[ -d "$REPO_ROOT/.git" ]]; then
   remote_url=$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null || echo "")
   if [[ -n "$remote_url" ]]; then

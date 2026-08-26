@@ -23,7 +23,12 @@ from __future__ import annotations
 
 import argparse
 import errno
-import fcntl
+try:
+    import fcntl  # POSIX advisory dir-lock
+    _HAVE_FCNTL = True
+except ImportError:  # Windows: no fcntl. Replay-prevention still holds because
+    fcntl = None      # the guarantee comes from os.O_EXCL (atomic on NTFS too),
+    _HAVE_FCNTL = False  # not from the advisory flock wrapping it.
 import hashlib
 import hmac
 import json
@@ -126,7 +131,8 @@ def consume_jti_atomic(jti_dir: Path, jti: str) -> bool:
     lock_path.touch(exist_ok=True)
     target = jti_dir / f"{jti}.redeemed"
     with lock_path.open("a+", encoding="utf-8") as lockf:
-        fcntl.flock(lockf.fileno(), fcntl.LOCK_EX)
+        if _HAVE_FCNTL:
+            fcntl.flock(lockf.fileno(), fcntl.LOCK_EX)
         try:
             fd = os.open(str(target), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
         except OSError as e:

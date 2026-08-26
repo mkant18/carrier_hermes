@@ -12,8 +12,33 @@ date -u +%Y-%m-%dT%H:%M:%SZ >"$HB"
 
 alerts=()
 
-if ! pgrep -f 'hermes gateway' >/dev/null 2>&1; then
-  if ! pgrep -f 'hermes-agent' >/dev/null 2>&1; then
+# Portable process-presence check. On macOS/Linux uses pgrep; on Windows
+# (Git Bash, no pgrep in the cron runtime) falls back to PowerShell CIM.
+# CRITICAL: only alert when a check DEFINITELY finds no process — never when
+# the tooling to check is itself missing (that path caused a false
+# "gateway_not_found" every run on Windows, which wrongly set DISPATCH_LOCK).
+_proc_matches() {
+  # _proc_matches <substring> -> prints count, exit 0 if check ran, 2 if no tool
+  local pat="$1"
+  if command -v pgrep >/dev/null 2>&1; then
+    pgrep -f "$pat" >/dev/null 2>&1 && echo 1 || echo 0
+    return 0
+  fi
+  if command -v powershell >/dev/null 2>&1; then
+    local esc n
+    esc=$(printf '%s' "$pat" | sed "s/'/''/g")
+    n=$(powershell -NoProfile -Command "@(Get-CimInstance Win32_Process | Where-Object { \$_.CommandLine -like '*${esc}*' }).Count" 2>/dev/null | tr -d '
+')
+    [[ -n "$n" && "$n" -gt 0 ]] && echo 1 || echo 0
+    return 0
+  fi
+  return 2   # no tool to check — do NOT alarm
+}
+
+gw=$(_proc_matches 'gateway'); gw_rc=$?
+if [[ "$gw_rc" -eq 0 && "$gw" == "0" ]]; then
+  ha=$(_proc_matches 'hermes'); ha_rc=$?
+  if [[ "$ha_rc" -eq 0 && "$ha" == "0" ]]; then
     alerts+=("gateway_or_hermes_process_not_found")
   fi
 fi

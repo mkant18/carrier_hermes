@@ -28,6 +28,14 @@ set -euo pipefail
 
 HERMES_ENV_FILE="${HERMES_ENV_FILE:-$HOME/.hermes/.env}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Windows/MSYS: `pwd` yields /c/Users/... which native python misreads as
+# C:\c\Users\... on sys.path. Normalize to a native path so bot_identities.py
+# imports correctly (else every bot_id resolves as "unknown").
+if command -v cygpath >/dev/null 2>&1; then
+  SCRIPT_DIR="$(cygpath -m "$SCRIPT_DIR")"
+elif [[ "$SCRIPT_DIR" =~ ^/([a-zA-Z])/ ]]; then
+  _d="${BASH_REMATCH[1]}"; SCRIPT_DIR="${_d^^}:/${SCRIPT_DIR:3}"
+fi
 IDENTITIES_PY="$SCRIPT_DIR/bot_identities.py"
 
 # ---------------------------------------------------------------------------

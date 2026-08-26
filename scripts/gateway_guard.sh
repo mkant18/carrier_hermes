@@ -38,23 +38,56 @@ warn() { echo "WARN  $1"; }
 echo "=== gateway_guard ==="
 
 # ---------------------------------------------------------------------------
-# 1. Check for unauthorized gateway processes
+# 1. Check for unauthorized DISCORD gateways
+#
+# The single-gateway rule is about DISCORD INBOUND, not the cron scheduler.
+# On the Windows primary host the watcher bots (Vigil/Ledger/Sonar/Chart) run
+# scheduler-only gateways (platforms=NONE) so their crons fire — that is
+# REQUIRED and safe. What must never happen is a second bot opening a Discord
+# connection. So we assert on gateway_state.json's platforms.discord.state,
+# not on the mere presence of a gateway process.
+#
+# Authoritative source: ~/.hermes/profiles/<bot>/gateway_state.json
+#   platforms.discord.state == "connected"  => a live Discord gateway
 # ---------------------------------------------------------------------------
+_discord_state() {
+  # prints the discord platform state for a bot, or empty
+  local bot_id="$1"
+  local gs="$HOME/.hermes/profiles/$bot_id/gateway_state.json"
+  [[ -f "$gs" ]] || { echo ""; return; }
+  python3 - "$gs" <<'PY' 2>/dev/null || echo ""
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    print(((d.get("platforms") or {}).get("discord") or {}).get("state") or "")
+except Exception:
+    print("")
+PY
+}
+
 for bot_id in "${NON_GATEWAY_BOTS[@]}"; do
-  pids=$(pgrep -f "profile ${bot_id} gateway" 2>/dev/null || true)
-  if [[ -n "$pids" ]]; then
-    failc "no_rogue_gateway_$bot_id" "gateway process running (pids: $pids) — kill with: hermes -p $bot_id gateway stop"
+  st=$(_discord_state "$bot_id")
+  if [[ "$st" == "connected" ]]; then
+    failc "no_rogue_discord_$bot_id" "bot has a CONNECTED Discord gateway — kill with: hermes -p $bot_id gateway stop"
+  else
+    pass "no_rogue_discord_$bot_id"
   fi
 done
 
-# Check permitted gateways are actually running (warn only, not a fail)
-for bot_id in "${GATEWAY_PERMITTED[@]}"; do
-  pids=$(pgrep -f "profile ${bot_id} gateway" 2>/dev/null || \
-         (pgrep -f "hermes.*gateway" 2>/dev/null | head -1) || true)
-  if [[ -z "$pids" ]]; then
-    warn "permitted_gateway_$bot_id not running (expected)"
-  fi
+# Exactly one Discord-connected gateway, and it must be chief_of_staff (Helm)
+connected_discord=""
+for bot_id in "${GATEWAY_PERMITTED[@]}" "${NON_GATEWAY_BOTS[@]}"; do
+  st=$(_discord_state "$bot_id")
+  [[ "$st" == "connected" ]] && connected_discord="$connected_discord $bot_id"
 done
+connected_discord=$(echo "$connected_discord" | xargs 2>/dev/null || true)
+if [[ "$connected_discord" == "chief_of_staff" ]]; then
+  pass "single_discord_gateway_helm_only"
+elif [[ -z "$connected_discord" ]]; then
+  warn "no Discord gateway connected (Helm gateway may be starting)"
+else
+  failc "single_discord_gateway_helm_only" "expected only chief_of_staff, got: $connected_discord"
+fi
 
 # ---------------------------------------------------------------------------
 # 2. Verify .env guardrails on all non-gateway bots

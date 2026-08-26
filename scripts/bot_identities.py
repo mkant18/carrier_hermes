@@ -54,6 +54,13 @@ BOTS = {
         "color": 0xcc0000,                              # red — secrets / security
         "avatar_url": None,
     },
+    "marshal": {
+        "callsign": "Marshal",
+        "emoji": "🎖️",
+        "wing_token_env": "DISCORD_FLEET_BOT_TOKEN",    # First Watch — #fleet only, never #command
+        "color": 0xb8860b,                              # dark goldenrod — command 2IC
+        "avatar_url": None,
+    },
 
     # ── Coding Wing ─────────────────────────────────────────────────────────
     "coding_lt": {
@@ -195,12 +202,12 @@ CHANNELS = {
 
 # Wing membership (for wire_wing_tokens.sh)
 WINGS = {
-    "CODING_WING_DISCORD_TOKEN":    ["coding_lt", "firstmate"],
+    "CODING_WING_DISCORD_TOKEN":    ["coding_lt", "firstmate", "git_yeoman"],
     "OPS_WING_DISCORD_TOKEN":       ["ops_lt", "email_reader", "email_drafter",
                                      "calendar_manager", "todoist_manager", "finance_reader"],
     "KNOWLEDGE_WING_DISCORD_TOKEN": ["knowledge_lt", "vault_librarian", "obsidian_archivist"],
     "RECON_WING_DISCORD_TOKEN":     ["hermes_ai_explorer", "passive_watch", "research_agent"],
-    "DISCORD_FLEET_BOT_TOKEN":      ["subscription_watcher", "api_watcher", "lockbox"],
+    "DISCORD_FLEET_BOT_TOKEN":      ["subscription_watcher", "api_watcher", "lockbox", "marshal"],
 }
 
 # Michael's Discord user ID — the ONLY user permitted to trigger agent turns
