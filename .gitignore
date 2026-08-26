@@ -5,3 +5,8 @@ __pycache__/
 # Local runtime artifacts — bot working output, not fleet source
 _agent/
 .tmp_*
+
+# Buzz Nostr secret keys — never commit
+buzz-keys/
+*.sk
+.env.carrier

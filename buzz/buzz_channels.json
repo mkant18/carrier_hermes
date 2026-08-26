@@ -1,0 +1,241 @@
+{
+  "command": {
+    "uuid": "44792c77-11ae-4b2a-8350-2d35ddb54694",
+    "discord_id": "1541866378255011980",
+    "members": [
+      "chief_of_staff",
+      "marshal",
+      "subscription_watcher",
+      "api_watcher",
+      "lockbox",
+      "coding_lt",
+      "ops_lt",
+      "knowledge_lt",
+      "hermes_ai_explorer"
+    ],
+    "whatsapp": true,
+    "topic": "Command net: Helm, Marshal, watchers, LockBox, Lieutenants. Bridged to WhatsApp."
+  },
+  "fleet": {
+    "uuid": "fbbe66bd-9535-4e01-b704-c295a73164c4",
+    "discord_id": "1541866443765977138",
+    "members": [
+      "chief_of_staff",
+      "marshal",
+      "subscription_watcher",
+      "api_watcher",
+      "lockbox",
+      "coding_lt",
+      "ops_lt",
+      "knowledge_lt",
+      "hermes_ai_explorer",
+      "firstmate",
+      "git_yeoman",
+      "passive_watch",
+      "research_agent",
+      "email_reader",
+      "email_drafter",
+      "calendar_manager",
+      "todoist_manager",
+      "finance_reader",
+      "vault_librarian",
+      "obsidian_archivist"
+    ],
+    "whatsapp": false,
+    "topic": "All-hands fleet channel — DISPATCH / ACK / TRAP."
+  },
+  "alerts": {
+    "uuid": "f4677d7f-e1e6-484b-8ef9-0b5608dd72d0",
+    "discord_id": "1541866423427801148",
+    "members": [
+      "chief_of_staff",
+      "marshal",
+      "subscription_watcher",
+      "api_watcher",
+      "lockbox"
+    ],
+    "whatsapp": false,
+    "topic": "Vigil stalls, Ledger spend, LockBox security — redacted alerts."
+  },
+  "drafts": {
+    "uuid": "97600fc4-9af6-4e5f-8282-d35aef0eaae4",
+    "discord_id": "1541866401432871002",
+    "members": [
+      "chief_of_staff",
+      "ops_lt",
+      "email_drafter"
+    ],
+    "whatsapp": false,
+    "topic": "Quill drafts land here for review. Never sent."
+  },
+  "ready-room": {
+    "uuid": "045ab92e-1ff5-4588-a0f8-fc22c8a49307",
+    "discord_id": "1541919952599130132",
+    "members": [
+      "chief_of_staff",
+      "coding_lt",
+      "firstmate",
+      "git_yeoman"
+    ],
+    "whatsapp": false,
+    "topic": "Coding wing standup."
+  },
+  "catapult": {
+    "uuid": "f6966aa1-daf7-4d90-abc5-14a8120e87b2",
+    "discord_id": "1541919999894229053",
+    "members": [
+      "chief_of_staff",
+      "coding_lt",
+      "firstmate"
+    ],
+    "whatsapp": false,
+    "topic": "Wrench dispatches coding jobs to Mate."
+  },
+  "quarterdeck": {
+    "uuid": "7218b5a0-63b2-401b-8e32-c41d722c45c6",
+    "discord_id": "1541929900586565783",
+    "members": [
+      "chief_of_staff",
+      "ops_lt",
+      "email_reader",
+      "email_drafter",
+      "calendar_manager",
+      "todoist_manager",
+      "finance_reader"
+    ],
+    "whatsapp": false,
+    "topic": "Ops wing home: Deck + Inbox, Quill, Chronos, Tasker, Purse."
+  },
+  "chart-room": {
+    "uuid": "dae1dd8d-ed76-40e9-b4dd-8ad1fb41cd8e",
+    "discord_id": "1541929921176281170",
+    "members": [
+      "chief_of_staff",
+      "knowledge_lt",
+      "vault_librarian",
+      "obsidian_archivist"
+    ],
+    "whatsapp": false,
+    "topic": "Knowledge wing home: Stacks + Librarian, Clerk."
+  },
+  "war-room": {
+    "uuid": "c7797a42-529e-4a4f-be16-613245b7e3ee",
+    "discord_id": "1541931585220255894",
+    "members": [
+      "chief_of_staff",
+      "hermes_ai_explorer",
+      "passive_watch",
+      "research_agent"
+    ],
+    "whatsapp": false,
+    "topic": "Recon wing home: Chart + Sonar, Probe."
+  },
+  "email": {
+    "uuid": "3af588b1-6265-46e1-9fdb-ea769b825e1a",
+    "discord_id": "1541155152726204416",
+    "members": [
+      "chief_of_staff",
+      "ops_lt",
+      "email_reader",
+      "email_drafter"
+    ],
+    "whatsapp": false,
+    "topic": "Email triage + drafts (read/draft only, never send)."
+  },
+  "calendar": {
+    "uuid": "3dd36601-78b3-4ff9-96fb-6db3831dd6ab",
+    "discord_id": "1541155189019517078",
+    "members": [
+      "chief_of_staff",
+      "ops_lt",
+      "calendar_manager"
+    ],
+    "whatsapp": false,
+    "topic": "Chronos calendar."
+  },
+  "tasks": {
+    "uuid": "9438089b-caa0-465e-baff-b525c309be05",
+    "discord_id": "1541155241746239658",
+    "members": [
+      "chief_of_staff",
+      "ops_lt",
+      "todoist_manager"
+    ],
+    "whatsapp": false,
+    "topic": "Tasker / Todoist."
+  },
+  "vault": {
+    "uuid": "ea30c175-3279-4d68-9c17-c1798424089e",
+    "discord_id": "1541155274528915577",
+    "members": [
+      "chief_of_staff",
+      "knowledge_lt",
+      "vault_librarian",
+      "obsidian_archivist"
+    ],
+    "whatsapp": false,
+    "topic": "Obsidian Second Brain: Librarian query, Clerk intake."
+  },
+  "finance": {
+    "uuid": "19790ad1-d146-4603-8954-632042791e2e",
+    "discord_id": "1541155307860795503",
+    "members": [
+      "chief_of_staff",
+      "ops_lt",
+      "finance_reader"
+    ],
+    "whatsapp": false,
+    "topic": "Purse — read-only Monarch."
+  },
+  "audit": {
+    "uuid": "fa9c4175-f044-4269-8fae-bc918290d896",
+    "discord_id": "1541155342833025114",
+    "members": [
+      "chief_of_staff",
+      "marshal",
+      "subscription_watcher",
+      "api_watcher",
+      "lockbox"
+    ],
+    "whatsapp": false,
+    "topic": "Dual-audit trail (the Buzz 'buzz' + maka layer)."
+  },
+  "urgent": {
+    "uuid": "4b4c1705-28c6-4de2-bfe4-afa1de6d22db",
+    "discord_id": "1541155373371621507",
+    "members": [
+      "chief_of_staff",
+      "marshal"
+    ],
+    "whatsapp": false,
+    "topic": "Helm + Marshal — urgent escalations."
+  },
+  "general": {
+    "uuid": "c1fb1911-edf1-4d72-9077-4a27d93325c3",
+    "discord_id": "1541154516811120762",
+    "members": [
+      "chief_of_staff",
+      "marshal",
+      "subscription_watcher",
+      "api_watcher",
+      "lockbox",
+      "coding_lt",
+      "ops_lt",
+      "knowledge_lt",
+      "hermes_ai_explorer",
+      "firstmate",
+      "git_yeoman",
+      "passive_watch",
+      "research_agent",
+      "email_reader",
+      "email_drafter",
+      "calendar_manager",
+      "todoist_manager",
+      "finance_reader",
+      "vault_librarian",
+      "obsidian_archivist"
+    ],
+    "whatsapp": false,
+    "topic": "General / handoff home."
+  }
+}

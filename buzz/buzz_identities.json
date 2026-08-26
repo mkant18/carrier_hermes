@@ -1,0 +1,149 @@
+{
+  "chief_of_staff": {
+    "callsign": "Helm",
+    "emoji": "⚓",
+    "tier": "command",
+    "wing": "command",
+    "pubkey": "f7fc0ac8d43755489539946b40951f2897d4daf98ae7aff43581144b686e8b95"
+  },
+  "marshal": {
+    "callsign": "Marshal",
+    "emoji": "🎖",
+    "tier": "command",
+    "wing": "command",
+    "pubkey": "440b87a82a710f89573be4bbd26323a9ca2b75e86c72725c5c6beadf98f17b19"
+  },
+  "subscription_watcher": {
+    "callsign": "Vigil",
+    "emoji": "📡",
+    "tier": "command",
+    "wing": "command",
+    "pubkey": "263d45130ac9cac4469caf03be3faae941aa34716a905812a2b71135d2814b57"
+  },
+  "api_watcher": {
+    "callsign": "Ledger",
+    "emoji": "💵",
+    "tier": "command",
+    "wing": "command",
+    "pubkey": "1b098cde03f80f9e55f8b75df5d4177f7aa85f8ad6d7b011b3e5faab431404e9"
+  },
+  "lockbox": {
+    "callsign": "LockBox",
+    "emoji": "🔒",
+    "tier": "command",
+    "wing": "command",
+    "pubkey": "b3679d24741b0b1e8a8d8f587bb8c53a8064d19d9ea664deb52349637473cd24"
+  },
+  "coding_lt": {
+    "callsign": "Wrench",
+    "emoji": "🔧",
+    "tier": "lt",
+    "wing": "coding",
+    "pubkey": "5a886c833ac5b4f556f9e32a0bec783acacb20f0185e17862403bbf0acb2e7a2"
+  },
+  "ops_lt": {
+    "callsign": "Deck",
+    "emoji": "🗂",
+    "tier": "lt",
+    "wing": "ops",
+    "pubkey": "1ee7898ad281316a307f7804d59eb0e224e64f333f94b4d8f1e85f8dedd438cf"
+  },
+  "knowledge_lt": {
+    "callsign": "Stacks",
+    "emoji": "📚",
+    "tier": "lt",
+    "wing": "knowledge",
+    "pubkey": "5c538e258b4c0e5e6b96a17cce5b2cc80209824e7adb8baf9adc11d26d569128"
+  },
+  "hermes_ai_explorer": {
+    "callsign": "Chart",
+    "emoji": "🗺",
+    "tier": "lt",
+    "wing": "recon",
+    "pubkey": "1701526c771a949d928c2595872eb5922154fd294a8bcf0099ddff2434eb74dd"
+  },
+  "firstmate": {
+    "callsign": "Mate",
+    "emoji": "⚙",
+    "tier": "worker",
+    "wing": "coding",
+    "pubkey": "7b2e0d90fa12aee708dae63493cbc5ac72ad52e2eca783e5c324d40da9e803ba"
+  },
+  "git_yeoman": {
+    "callsign": "Yeoman",
+    "emoji": "📋",
+    "tier": "worker",
+    "wing": "coding",
+    "pubkey": "81ff71eff5ebf94ff3a517d1a03fb63359c26ba3e13dcf1d5f8e185188f3681d"
+  },
+  "passive_watch": {
+    "callsign": "Sonar",
+    "emoji": "🌊",
+    "tier": "worker",
+    "wing": "recon",
+    "pubkey": "19aafbd2427024e617dc3f0c0c1fb84b1855d4e50661b3c4c9af773582023d29"
+  },
+  "research_agent": {
+    "callsign": "Probe",
+    "emoji": "🔭",
+    "tier": "worker",
+    "wing": "recon",
+    "pubkey": "ed24e5e464b59ccc736e315f09d212ae6ab9cc2bd471922169f4f35f8d26f461"
+  },
+  "email_reader": {
+    "callsign": "Inbox",
+    "emoji": "📬",
+    "tier": "worker",
+    "wing": "ops",
+    "pubkey": "f2d6802e09e9cea4d4efd5d983e1c21ac0598a45779894b81336a366342c80c8"
+  },
+  "email_drafter": {
+    "callsign": "Quill",
+    "emoji": "🪶",
+    "tier": "worker",
+    "wing": "ops",
+    "pubkey": "da5bd7d0220fdc06114d57cd0196b95e6bd48d9df3d1363a8e5d783019a12d6a"
+  },
+  "calendar_manager": {
+    "callsign": "Chronos",
+    "emoji": "🕰",
+    "tier": "worker",
+    "wing": "ops",
+    "pubkey": "2beec796931298c8805b93d1cd3494933450b872b8d58749a953bc0a52b250d9"
+  },
+  "todoist_manager": {
+    "callsign": "Tasker",
+    "emoji": "📋",
+    "tier": "worker",
+    "wing": "ops",
+    "pubkey": "f7354cd1304446cac6ef5db6e5cb2b533eddc6e0765e31c311980b65fd468412"
+  },
+  "finance_reader": {
+    "callsign": "Purse",
+    "emoji": "👛",
+    "tier": "worker",
+    "wing": "ops",
+    "pubkey": "a0022e0df1dacfc5ff7a31009ce946e8755e69a65f4029cfed92282c23d48ebb"
+  },
+  "vault_librarian": {
+    "callsign": "Librarian",
+    "emoji": "📖",
+    "tier": "worker",
+    "wing": "knowledge",
+    "pubkey": "b93fe13bc5bb197e80ac9a66e78b412c06ada12348bcc45cea8c476666496fc9"
+  },
+  "obsidian_archivist": {
+    "callsign": "Clerk",
+    "emoji": "🗄",
+    "tier": "worker",
+    "wing": "knowledge",
+    "pubkey": "b67dcb0def03b168691fad7348b4aab75e9e21aa906bcdf20056c0ee11773a48"
+  },
+  "_michael": {
+    "callsign": "Michael",
+    "emoji": "🧑‍✈",
+    "tier": "human",
+    "wing": "-",
+    "pubkey": "ec0704b7d974995c3ad723f99f7ed46a717ce379114aed4ec72b04765b0e4221"
+  }
+}
