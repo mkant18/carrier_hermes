@@ -10,3 +10,4 @@ _agent/
 buzz-keys/
 *.sk
 .env.carrier
+.worktrees/
