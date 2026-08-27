@@ -5,20 +5,37 @@ patch_omb_source.py — Carrier-fleet patches for OpenMausBot installed source.
 Re-apply after every OMB update. Idempotent: checks for the patch marker
 before writing so running it twice is safe.
 
+Applies patches sequentially, per file, against the in-memory result of
+every earlier patch to the SAME file (not just what is on disk) — so a
+later patch may legitimately depend on an earlier one in this list having
+already run. List order across entries touching the same file IS the
+dependency graph; keep same-file entries in the order they must apply.
+
+Fail-closed by construction: if ANY patch cannot apply (anchor missing —
+OMB source changed upstream) or a target file is missing, this script exits
+nonzero and writes NOTHING — not even the patches that would have applied
+cleanly. See main()'s banner for the reasoning and the fleet-wide mitigation
+if this fires after an auto-update.
+
 Long-term plan: replace with Option C (fork + build) once the patch set
 stabilises — see carrier_openmausbot branch docs.
 
 Usage:
-    python3 scripts/patch_omb_source.py [--check] [--omb-dir PATH]
+    python3 scripts/patch_omb_source.py [--check] [--verify-content] [--omb-dir PATH]
 
-    --check   Verify patches are applied without modifying anything (exit 0=ok,
-              1=needs patching, 2=target file missing).
-    --omb-dir Override the default OMB install path.
+    --check           Verify patches are applied without modifying anything
+                       (exit 0=ok, 1=needs patching, 2=target file missing/mismatch).
+    --verify-content  Stronger than --check: confirms the LIVE file actually
+                       contains each patch's expected text (accounting for
+                       later patches that legitimately layer on top of an
+                       earlier one's output), not just that its marker
+                       string is present somewhere in the file. Read-only;
+                       does not modify anything. Exit 0=clean, 1=drift found.
+    --omb-dir         Override the default OMB install path.
 """
 import sys
 import os
 import argparse
-import re
 
 # ── defaults ──────────────────────────────────────────────────────────────────
 
@@ -35,6 +52,13 @@ PATCH_MARKER = "carrier_openmausbot patch"
 #   marker    : a string that must appear in the patched version (idempotency check)
 #   old       : exact text to replace (must be unique in the file)
 #   new       : replacement text
+#
+# IMPORTANT: entries touching the SAME file are applied in the order they
+# appear in this list, each against the result of every earlier same-file
+# entry — a later entry's `old` is allowed to be text that only exists
+# because an earlier entry's `new` put it there (e.g. patch 7g's anchor is a
+# substring of patch 7b's inserted block). Do not reorder same-file entries
+# without checking whether a later one depends on an earlier one's output.
 
 PATCHES = [
 
@@ -218,7 +242,8 @@ PATCHES = [
     # docs/omb-patches.md "Patch 6" for the evidence (fresh-session test,
     # zero request.opened cards). Kept applied anyway: it is a strict
     # narrowing of trust (removes a blanket allowlist entry) with no
-    # observed downside, but it does NOT close the approval gap by itself.
+    # observed downside, but it does NOT close the approval gap by itself —
+    # patch 7/8's connector-proxy.js gate (below) is the actual gate.
     {
         "file": "drivers/claude.js",
         "marker": PATCH_MARKER + " 6a: do NOT pre-allow mcp__composio",
@@ -254,97 +279,35 @@ PATCHES = [
         ),
     },
 
-    # ── PATCH 6b: RETIRED — folded into patch 7a ────────────────────────────
-    # Patch 6b's entire target region (showConnectorCards + handle) was
-    # rewritten wholesale by patch 7a below, which both keeps 6b's
-    # classifier logic and adds the write-gate. Once 7a is applied, 6b's
-    # "old" text no longer exists in the live file (it IS 7a's "old" text,
-    # consumed) and its marker string is gone too — checking for it here
-    # would report a permanent, unresolvable MISMATCH forever after. This
-    # entry intentionally does nothing; kept only so the patch numbering
-    # history (and the removed dict below, for reference) stays legible.
-    # {
-    #     "file": "connector-proxy.js",
-    #     "marker": PATCH_MARKER + " 6b: classify composio execute calls",
-    #     "old": (
-    #     'async function showConnectorCards(slugs) { ... }\n'
-    #     'async function handle(message) { ... }'
-    # ),
-    # "new": ( ... six-comment-block classifier, superseded verbatim by 7a's "old" below ... ),
-    # },
-
     # ── PATCH 7a: connector-proxy.js — gate write-shaped composio calls ────
+    # Anchored directly on the PRISTINE file (opus review finding 1): the
+    # previous version of this entry anchored on patch 6b's OUTPUT, but 6b is
+    # retired (its transform never runs on a pristine install, since nothing
+    # produces its "old" text either), so this patch could never apply to a
+    # fresh OMB install/update — a fail-open regression an auto-updater would
+    # trigger silently. This entry now folds 6b's classifier directly into
+    # 7a/8 and applies straight from what OMB ships.
+    #
     # Patch 6a's premise (omitting mcp__composio from --allowedTools routes
     # calls through --permission-prompt-tool) was live-verified FALSE on
-    # 2026-08-27 — see docs/omb-patches.md "Patch 6". Patch 7 does not
+    # 2026-08-27 — see docs/omb-patches.md "Patch 6". This gate does not
     # depend on any provider adapter/broker at all: connector-proxy.js
-    # itself blocks the relay of any write-shaped or unresolved
-    # COMPOSIO_(MULTI_)EXECUTE_TOOL call and asks the harness (patch 7c) to
-    # raise a real approval card, waiting for allow/deny/timeout before
-    # deciding whether to relay.
+    # itself blocks the relay of any write-shaped or unresolved/unknown
+    # composio tool call and asks the harness (patch 7c) to raise a real
+    # approval card, waiting for allow/deny/timeout before deciding whether
+    # to relay.
+    #
+    # Patch 8 (opus REQUEST-CHANGES) hardens this further: default-gate-
+    # unknown instead of an allowlist-of-two tool names (finding 3), an
+    # exhaustive recursive+unioned slug extractor instead of first-hit
+    # (finding 2/bypass A), a tightened read-verb set with a write-token
+    # override (finding 4/bypass C), argument digests on the approval card
+    # (finding 6/bypass D), and a timeout that derives from the harness's own
+    # env var instead of a hardcoded value (finding 7).
     {
         "file": "connector-proxy.js",
-        "marker": PATCH_MARKER + " 7a: classify composio execute calls and gate",
+        "marker": PATCH_MARKER + " 8: classify composio execute calls and gate",
         "old": (
-            '// ' + PATCH_MARKER + ' 6b: classify composio execute calls — logging\n'
-            '// only, never blocks or rewrites anything. Originally intended as\n'
-            '// defense-in-depth behind claude.js\'s patch 6a broker gate; live-verified\n'
-            '// 2026-08-27 that patch 6a does NOT gate composio calls (see\n'
-            '// docs/omb-patches.md "Patch 6"). There is currently no gate for Composio\n'
-            '// at all — this log is the only visibility into write-shaped calls that\n'
-            '// exists right now, not a backstop behind a working one.\n'
-            'const READ_ONLY_ACTION_RE = /^([A-Z0-9]+_)?(SEARCH|GET|LIST|FETCH|FIND|READ|RETRIEVE|QUERY|CHECK)_/;\n'
-            'const READ_ONLY_META_TOOLS = new Set(["COMPOSIO_SEARCH_TOOLS", "COMPOSIO_GET_TOOL_SCHEMAS", "COMPOSIO_WAIT_FOR_CONNECTIONS"]);\n'
-            'const EXECUTE_TOOL_NAME_RE = /^COMPOSIO_(MULTI_)?EXECUTE_TOOL$/i;\n'
-            'const UPPER_SNAKE_TOKEN_RE = /\\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+){1,}\\b/g;\n'
-            'function extractActionSlugs(args) {\n'
-            '    if (!args || typeof args !== "object" || Array.isArray(args))\n'
-            '        return [];\n'
-            '    const found = new Set();\n'
-            '    for (const key of ["tool_slug", "toolSlug", "slug", "action", "tool", "name"]) {\n'
-            '        if (typeof args[key] === "string")\n'
-            '            found.add(args[key]);\n'
-            '    }\n'
-            '    for (const key of ["tools", "actions", "tool_slugs", "calls"]) {\n'
-            '        const list = args[key];\n'
-            '        if (!Array.isArray(list))\n'
-            '            continue;\n'
-            '        for (const item of list) {\n'
-            '            if (typeof item === "string") {\n'
-            '                found.add(item);\n'
-            '                continue;\n'
-            '            }\n'
-            '            if (!item || typeof item !== "object")\n'
-            '                continue;\n'
-            '            for (const itemKey of ["tool_slug", "toolSlug", "slug", "action", "tool", "name"]) {\n'
-            '                if (typeof item[itemKey] === "string")\n'
-            '                    found.add(item[itemKey]);\n'
-            '            }\n'
-            '        }\n'
-            '    }\n'
-            '    if (found.size === 0) {\n'
-            '        // Unfamiliar shape: scan the serialized arguments for anything that\n'
-            '        // looks like an action slug rather than silently treating it as safe.\n'
-            '        try {\n'
-            '            for (const token of JSON.stringify(args).match(UPPER_SNAKE_TOKEN_RE) ?? [])\n'
-            '                found.add(token);\n'
-            '        }\n'
-            '        catch {\n'
-            '            // ignore\n'
-            '        }\n'
-            '    }\n'
-            '    return [...found];\n'
-            '}\n'
-            'function isReadOnlyAction(slug) {\n'
-            '    return READ_ONLY_META_TOOLS.has(slug) || READ_ONLY_ACTION_RE.test(slug);\n'
-            '}\n'
-            'function logComposioExecuteClassification(name, args) {\n'
-            '    const slugs = extractActionSlugs(args);\n'
-            '    // Fail-open: no slug found at all is ambiguous, so it logs as write.\n'
-            '    const entries = slugs.length ? slugs.map((slug) => `${slug}:${isReadOnlyAction(slug) ? "read" : "write"}`) : ["<unresolved>:write"];\n'
-            '    const hasWrite = slugs.length === 0 || slugs.some((slug) => !isReadOnlyAction(slug));\n'
-            '    console.error(`[carrier_openmausbot patch 6] ${name} -> ${entries.join(", ")}${hasWrite ? " (write-shaped or unresolved; NOT gated — see docs/omb-patches.md Patch 6)" : " (read-only)"}`);\n'
-            '}\n'
             'async function showConnectorCards(slugs) {\n'
             '    const response = await fetch(`${HARNESS}/api/internal/connectors/request`, {\n'
             '        method: "POST",\n'
@@ -373,10 +336,6 @@ PATCHES = [
             '            send(textResult(id, "OpenMausBot is handling connection completion and will continue the task automatically."));\n'
             '            return;\n'
             '        }\n'
-            '        // ' + PATCH_MARKER + ' 6b: logging only, never blocks or rewrites —\n'
-            '        // see the function comment above (no working gate exists yet).\n'
-            '        if (EXECUTE_TOOL_NAME_RE.test(name))\n'
-            '            logComposioExecuteClassification(name, params.arguments);\n'
             '    }\n'
             '    const response = await relay(message);\n'
             '    if (response && id !== undefined)\n'
@@ -384,85 +343,136 @@ PATCHES = [
             '}'
         ),
         "new": (
-            '// ' + PATCH_MARKER + ' 7a: classify composio execute calls and gate\n'
-            '// write-shaped ones with a real approval card. Read-only calls (existing\n'
-            '// regex + meta tools) relay straight through with no card. Any\n'
-            '// write-shaped or unresolved slug blocks the relay and calls\n'
-            '// /api/internal/connectors/approval (index.js, patch 7c) to raise an\n'
-            '// approval card in the owning thread and wait for a human answer: allow\n'
-            '// relays the original call unchanged, deny or timeout (server default 10\n'
-            '// minutes) returns a denial result to the CLI instead of relaying.\n'
-            '// Supersedes patch 6, whose classifier only logged: patch 6a assumed that\n'
+            '// ' + PATCH_MARKER + ' 8: classify composio execute calls and gate\n'
+            '// write-shaped or unknown ones with a real approval card. Read-only\n'
+            '// calls (explicit safe-name allowlist below) relay straight through with\n'
+            '// no card. Default-gate-unknown (opus finding 3): only a small set of\n'
+            '// known-read/meta tool names skips the gate; every other tools/call name —\n'
+            '// including a renamed or newly-added executor upstream — is classified by\n'
+            '// its action slug(s) and, on any write-shaped or unresolved slug, blocks\n'
+            '// the relay and calls /api/internal/connectors/approval (index.js, patch\n'
+            '// 7c) to raise an approval card in the owning thread and wait for a human\n'
+            '// answer: allow relays the original call unchanged, deny or timeout\n'
+            '// (server default 10 minutes) returns a denial result to the CLI instead\n'
+            '// of relaying. Supersedes patches 6 and 7, whose classifier only logged\n'
+            '// (6) or matched exactly two tool names (7): patch 6a assumed that\n'
             '// omitting mcp__composio from --allowedTools would route calls through\n'
             '// --permission-prompt-tool, and that was live-verified false on\n'
             '// 2026-08-27 (see docs/omb-patches.md "Patch 6"). This gate does not\n'
             '// depend on that broker, or on any provider adapter, at all — it blocks\n'
             '// the relay itself and resolves through the harness respond routes,\n'
             '// mirroring peer-approval.js.\n'
-            'const READ_ONLY_ACTION_RE = /^([A-Z0-9]+_)?(SEARCH|GET|LIST|FETCH|FIND|READ|RETRIEVE|QUERY|CHECK)_/;\n'
+            'const READ_ONLY_ACTION_RE = /^([A-Z0-9]+_)?(SEARCH|GET|LIST|FETCH|READ|RETRIEVE)_/;\n'
             'const READ_ONLY_META_TOOLS = new Set(["COMPOSIO_SEARCH_TOOLS", "COMPOSIO_GET_TOOL_SCHEMAS", "COMPOSIO_WAIT_FOR_CONNECTIONS"]);\n'
-            'const EXECUTE_TOOL_NAME_RE = /^COMPOSIO_(MULTI_)?EXECUTE_TOOL$/i;\n'
+            '// opus finding 4/bypass C: QUERY/FIND/CHECK removed from the read-verb\n'
+            '// set — QUERY in particular can carry arbitrary SQL (supabase is an\n'
+            '// ACTIVE toolkit) and a find/replace mutation can match FIND/SEARCH\n'
+            '// prefixes. A slug containing any of these tokens ANYWHERE is write even\n'
+            '// if it also matches a read prefix — verb-prefix inference alone fails\n'
+            '// open, so a write token anywhere overrides it.\n'
+            'const WRITE_VERB_TOKEN_RE = /(?:^|_)(DELETE|DROP|SEND|CREATE|UPDATE|EXECUTE|RUN|WRITE|REMOVE|INSERT|MODIFY|REPLACE|MERGE|PUBLISH|SUBMIT|REVOKE|GRANT|DISABLE)(?:_|$)/;\n'
+            '// opus finding 3/bypass B: known-read/meta tools are matched by SUFFIX,\n'
+            '// like the MANAGE_CONNECTIONS/WAIT_FOR_CONNECTIONS interception below, so\n'
+            '// a vendor-prefix rename still matches. Anything NOT in this set is\n'
+            '// default-gated rather than transparently relayed — an allowlist of two\n'
+            '// exact tool names (the previous design) let any new or renamed executor\n'
+            '// relay ungated by default.\n'
+            'const KNOWN_SAFE_TOOL_SUFFIX_RE = /(?:^|_)(SEARCH_TOOLS|GET_TOOL_SCHEMAS|WAIT_FOR_CONNECTIONS|MANAGE_CONNECTIONS)$/i;\n'
             'const UPPER_SNAKE_TOKEN_RE = /\\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+){1,}\\b/g;\n'
+            'const SLUG_KEYS = ["tool_slug", "toolSlug", "slug", "action", "tool", "name"];\n'
+            '// opus finding 2/bypass A: recurse arbitrarily nested objects/arrays for\n'
+            '// the 6 slug keys, at any depth — the old code only scanned 6 fixed keys\n'
+            '// at the top level plus one level into 4 fixed array keys, so a slug\n'
+            '// placed under any other key (or two-plus levels deep) was never found,\n'
+            '// and its token-scan fallback only ran when nothing else was found at\n'
+            '// all — letting a read-looking top-level key suppress discovery of a\n'
+            '// deeper write slug entirely.\n'
+            'function collectSlugsDeep(node, found, depth) {\n'
+            '    if (!node || typeof node !== "object" || depth > 12 || found.size > 500)\n'
+            '        return;\n'
+            '    if (Array.isArray(node)) {\n'
+            '        for (const item of node)\n'
+            '            collectSlugsDeep(item, found, depth + 1);\n'
+            '        return;\n'
+            '    }\n'
+            '    for (const key of SLUG_KEYS) {\n'
+            '        if (typeof node[key] === "string")\n'
+            '            found.add(node[key]);\n'
+            '    }\n'
+            '    for (const key of Object.keys(node))\n'
+            '        collectSlugsDeep(node[key], found, depth + 1);\n'
+            '}\n'
             'function extractActionSlugs(args) {\n'
             '    if (!args || typeof args !== "object" || Array.isArray(args))\n'
             '        return [];\n'
             '    const found = new Set();\n'
-            '    for (const key of ["tool_slug", "toolSlug", "slug", "action", "tool", "name"]) {\n'
-            '        if (typeof args[key] === "string")\n'
-            '            found.add(args[key]);\n'
+            '    collectSlugsDeep(args, found, 0);\n'
+            '    // opus finding 2/bypass A: ALWAYS union the serialized-argument token\n'
+            '    // scan too, not only when the key-based walk found nothing.\n'
+            '    // Additive-only — it can only add more upper-snake tokens to classify,\n'
+            '    // never remove a slug the key-based walk already found — so it cannot\n'
+            '    // turn a real write into a false read, only catch shapes the 6 key\n'
+            '    // names do not cover.\n'
+            '    try {\n'
+            '        for (const token of JSON.stringify(args).match(UPPER_SNAKE_TOKEN_RE) ?? [])\n'
+            '            found.add(token);\n'
             '    }\n'
-            '    for (const key of ["tools", "actions", "tool_slugs", "calls"]) {\n'
-            '        const list = args[key];\n'
-            '        if (!Array.isArray(list))\n'
-            '            continue;\n'
-            '        for (const item of list) {\n'
-            '            if (typeof item === "string") {\n'
-            '                found.add(item);\n'
-            '                continue;\n'
-            '            }\n'
-            '            if (!item || typeof item !== "object")\n'
-            '                continue;\n'
-            '            for (const itemKey of ["tool_slug", "toolSlug", "slug", "action", "tool", "name"]) {\n'
-            '                if (typeof item[itemKey] === "string")\n'
-            '                    found.add(item[itemKey]);\n'
-            '            }\n'
-            '        }\n'
-            '    }\n'
-            '    if (found.size === 0) {\n'
-            '        // Unfamiliar shape: scan the serialized arguments for anything that\n'
-            '        // looks like an action slug rather than silently treating it as safe.\n'
-            '        try {\n'
-            '            for (const token of JSON.stringify(args).match(UPPER_SNAKE_TOKEN_RE) ?? [])\n'
-            '                found.add(token);\n'
-            '        }\n'
-            '        catch {\n'
-            '            // ignore\n'
-            '        }\n'
+            '    catch {\n'
+            '        // ignore\n'
             '    }\n'
             '    return [...found];\n'
             '}\n'
             'function isReadOnlyAction(slug) {\n'
+            '    if (WRITE_VERB_TOKEN_RE.test(slug))\n'
+            '        return false;\n'
             '    return READ_ONLY_META_TOOLS.has(slug) || READ_ONLY_ACTION_RE.test(slug);\n'
             '}\n'
             'function logComposioExecuteClassification(name, slugs, hasWrite) {\n'
             '    const entries = slugs.length ? slugs.map((slug) => `${slug}:${isReadOnlyAction(slug) ? "read" : "write"}`) : ["<unresolved>:write"];\n'
-            '    console.error(`[carrier_openmausbot patch 7] ${name} -> ${entries.join(", ")}${hasWrite ? " (write-shaped or unresolved; gated — see docs/omb-patches.md Patch 7)" : " (read-only)"}`);\n'
+            '    console.error(`[carrier_openmausbot patch 8] ${name} -> ${entries.join(", ")}${hasWrite ? " (write-shaped or unresolved; gated — see docs/omb-patches.md Patch 8)" : " (read-only)"}`);\n'
             '}\n'
-            '// Must exceed the harness\'s own default approval timeout (10 minutes,\n'
-            '// index.js patch 7c) so a legitimate deny-by-timeout response has time to\n'
-            '// come back before this client-side abort fires first.\n'
-            'const COMPOSIO_APPROVAL_TIMEOUT_MS = 11 * 60_000;\n'
+            '// opus finding 7: derive the abort deadline from the same env var the\n'
+            '// harness itself reads (index.js, patch 7b), plus a 60s margin, instead\n'
+            '// of a hardcoded 11 minutes — a hardcoded value silently inverts the\n'
+            '// ordering (this abort fires before the harness\'s own deny-by-timeout)\n'
+            '// if OMB_COMPOSIO_APPROVAL_TIMEOUT_MS is ever raised above it. Known\n'
+            '// remaining gap, documented in docs/omb-patches.md "Patch 8": a human\n'
+            '// "Allow" that arrives after the CLI\'s own MCP tool-call timeout still\n'
+            '// relays to Composio with no return path to the turn.\n'
+            'const COMPOSIO_APPROVAL_TIMEOUT_MS = Math.max(60_000, Number(process.env.OMB_COMPOSIO_APPROVAL_TIMEOUT_MS) || 10 * 60_000) + 60_000;\n'
+            'function summarizeArgs(args) {\n'
+            '    if (args === undefined)\n'
+            '        return "";\n'
+            '    let text;\n'
+            '    try {\n'
+            '        text = JSON.stringify(args);\n'
+            '    }\n'
+            '    catch {\n'
+            '        text = String(args);\n'
+            '    }\n'
+            '    if (!text)\n'
+            '        return "";\n'
+            '    return text.length > 400 ? `${text.slice(0, 400)}\\u2026` : text;\n'
+            '}\n'
             '/** Ask the harness to raise a real approval card and wait for a human\n'
             ' * answer. Fail-closed: any error here (no thread identity, network error,\n'
             ' * non-2xx, malformed body) returns false, never relaying a write-shaped\n'
             ' * Composio call it could not get an explicit allow for. */\n'
-            'async function requestComposioApproval(name, slugs) {\n'
+            'async function requestComposioApproval(name, slugs, args) {\n'
             '    if (!BOT_ID || !THREAD_ID)\n'
             '        return false;\n'
             '    const tool = `Composio: ${name}`;\n'
-            '    const summary = slugs.length\n'
-            '        ? `Run Composio action(s): ${slugs.join(", ")}`\n'
-            '        : "Run an unresolved/unrecognized Composio action";\n'
+            '    // opus finding 6/bypass D: include a bounded, unredacted digest of\n'
+            '    // the call arguments — the human approving must see the\n'
+            '    // recipient/body/SQL/etc. to make the decision the card exists for.\n'
+            '    // This also re-arms auto-approve.js\'s DESTRUCTIVE/SENSITIVE guards,\n'
+            '    // which can only match against what is in `summary`. Kept out of\n'
+            '    // console.error logs (logComposioExecuteClassification above never\n'
+            '    // touches args) — the card summary is the only place arguments are\n'
+            '    // ever surfaced.\n'
+            '    const argsText = summarizeArgs(args);\n'
+            '    const summary = (slugs.length ? `Run Composio action(s): ${slugs.join(", ")}` : "Run an unresolved/unrecognized Composio action") +\n'
+            '        (argsText ? `\\nArguments: ${argsText}` : "");\n'
             '    try {\n'
             '        const response = await fetch(`${HARNESS}/api/internal/connectors/approval`, {\n'
             '            method: "POST",\n'
@@ -507,17 +517,19 @@ PATCHES = [
             '            send(textResult(id, "OpenMausBot is handling connection completion and will continue the task automatically."));\n'
             '            return;\n'
             '        }\n'
-            '        // ' + PATCH_MARKER + ' 7a: gate write-shaped/unresolved Composio\n'
-            '        // execute calls behind a real approval card; read-only calls relay\n'
-            '        // straight through with no card (both are still logged).\n'
-            '        if (EXECUTE_TOOL_NAME_RE.test(name)) {\n'
+            '        // opus finding 3/bypass B: default-gate-unknown — every tools/call\n'
+            '        // whose name is not an explicit known-safe read/meta tool goes\n'
+            '        // through classification, not only names matching\n'
+            '        // COMPOSIO_(MULTI_)EXECUTE_TOOL. An unresolved/empty slug set is\n'
+            '        // write-shaped by construction (allReadOnly requires a non-empty set).\n'
+            '        if (!KNOWN_SAFE_TOOL_SUFFIX_RE.test(name)) {\n'
             '            const execSlugs = extractActionSlugs(params.arguments);\n'
             '            const allReadOnly = execSlugs.length > 0 && execSlugs.every(isReadOnlyAction);\n'
             '            logComposioExecuteClassification(name, execSlugs, !allReadOnly);\n'
             '            if (!allReadOnly) {\n'
-            '                const allowed = await requestComposioApproval(name, execSlugs);\n'
+            '                const allowed = await requestComposioApproval(name, execSlugs, params.arguments);\n'
             '                if (!allowed) {\n'
-            '                    send(textResult(id, `OpenMausBot: this Composio action (${execSlugs.length ? execSlugs.join(", ") : "unresolved"}) requires approval and was denied/timed out.`, true));\n'
+            '                    send(textResult(id, `OpenMausBot: this Composio action (${execSlugs.length ? execSlugs.join(", ") : name}) requires approval and was denied/timed out.`, true));\n'
             '                    return;\n'
             '                }\n'
             '            }\n'
@@ -682,6 +694,12 @@ PATCHES = [
     # falls straight through to plain card creation, never touching the
     # adapter-dependent auto-approve branch above it in that fold. Function
     # names/signatures are unchanged, so patches 7c/7d/7e/7f need no edits.
+    #
+    # This entry's `old` is text that only exists because patch 7b (above,
+    # same file) already ran — the apply engine below applies same-file
+    # entries in list order against each other's output, so on a pristine
+    # install 7b applies first and 7g's anchor exists by the time this
+    # entry is checked.
     {
         "file": "index.js",
         "marker": PATCH_MARKER + " 7g: composio-approval gate reuses the real",
@@ -874,7 +892,7 @@ PATCHES = [
     # option.
     {
         "file": "index.js",
-        "marker": PATCH_MARKER + " 7c: connector-proxy.js calls this for",
+        "marker": PATCH_MARKER + " 7c/8: connector-proxy.js calls this for",
         "old": (
             '            if (method === "POST" && path === "/api/internal/connectors/mcp") {\n'
             '                const body = await readBody(req);\n'
@@ -908,7 +926,7 @@ PATCHES = [
             '                return res.end(Buffer.from(upstream.bytes));\n'
             '            }\n'
             '            if (method === "POST" && path === "/api/internal/connectors/approval") {\n'
-            '                // ' + PATCH_MARKER + ' 7c: connector-proxy.js calls this for\n'
+            '                // ' + PATCH_MARKER + ' 7c/8: connector-proxy.js calls this for\n'
             '                // any write-shaped or unresolved Composio execute call instead of\n'
             '                // relaying it. Fail-closed by construction: connector-proxy.js\n'
             '                // treats anything other than an explicit {decision:"allow"} 200\n'
@@ -923,10 +941,22 @@ PATCHES = [
             '                    return json(res, 403, { error: "conversation does not belong to this bot" });\n'
             '                if (!tool)\n'
             '                    return json(res, 400, { error: "tool is required" });\n'
+            '                // opus finding 10: match the sibling\n'
+            '                // /api/internal/connectors/request route\'s check below — a bot\n'
+            '                // with composio explicitly disabled (or Composio unconfigured)\n'
+            '                // must not be able to raise or auto-answer an approval either.\n'
+            '                if (!composio.configured(cfg) || owner.bot.composio === false) {\n'
+            '                    return json(res, 409, { error: "connected apps are not enabled for this bot" });\n'
+            '                }\n'
             '                // Same rule native tools use: autoApprove or a matching alwaysAllow\n'
             '                // grant may answer for the bot; destructive/sensitive guards and the\n'
             '                // unattended override still apply via autoVerdict itself.\n'
-            '                const verdict = autoVerdict(owner.bot, tool, summary, { unattended: isUnattended(owner.bot.id) });\n'
+            '                // opus finding 9 (cheap part): pass scope:"composio" so this\n'
+            '                // matches the request.opened fold\'s own recompute (index.js,\n'
+            '                // ~line 762) — see docs/omb-patches.md "Patch 8" for the\n'
+            '                // remaining alwaysAllow/wrapper-name-keying gap, left\n'
+            '                // documented rather than fixed here.\n'
+            '                const verdict = autoVerdict(owner.bot, tool, summary, { unattended: isUnattended(owner.bot.id), scope: "composio" });\n'
             '                if (verdict.approve) {\n'
             '                    appendDecision(DATA_DIR, {\n'
             '                        threadId,\n'
@@ -1029,7 +1059,10 @@ def read(path):
         return f.read()
 
 def write(path, content):
-    with open(path, "w", encoding="utf-8") as f:
+    # opus finding 11: newline="" stops Python's universal-newline translation
+    # from flipping the file's line endings on every apply (this rewrites a
+    # ~300 KB index.js), which made every future diff of the live tree noisy.
+    with open(path, "w", encoding="utf-8", newline="") as f:
         f.write(content)
 
 def check_patch(content, patch):
@@ -1043,11 +1076,92 @@ def check_patch(content, patch):
 def apply_patch(content, patch):
     return content.replace(patch["old"], patch["new"], 1)
 
+def plan(omb_dir):
+    """Walk PATCHES once, applying each in-memory against the running result
+    for its file (not just what is on disk) so a later same-file entry can
+    depend on an earlier one's output. Returns (results, file_contents) where
+    results is a list of (patch, status, path) and file_contents is the
+    final {path: content} map — including patches not yet written to disk.
+    status is one of "applied" (marker already present), "needed" (applied
+    in-memory here, pending write), "mismatch" (neither marker nor old-text
+    found), or "missing" (target file does not exist)."""
+    file_contents = {}
+    unavailable = set()
+    results = []
+    for p in PATCHES:
+        path = os.path.join(omb_dir, p["file"])
+        if path in unavailable:
+            results.append((p, "missing", path))
+            continue
+        if path not in file_contents:
+            if not os.path.isfile(path):
+                unavailable.add(path)
+                results.append((p, "missing", path))
+                continue
+            file_contents[path] = read(path)
+        content = file_contents[path]
+        status = check_patch(content, p)
+        if status == "applied":
+            results.append((p, "applied", path))
+        elif status == "needed":
+            file_contents[path] = apply_patch(content, p)
+            results.append((p, "needed", path))
+        else:
+            results.append((p, "mismatch", path))
+    return results, file_contents
+
+def expected_final_text(index):
+    """The text patch[index]'s `new` is expected to still contain, after
+    accounting for any LATER same-file patch whose `old` is a substring of
+    THIS patch's `new` (i.e. a patch that legitimately layers on top of this
+    one's output, like 7g inside 7b). Generalizes the manual reasoning the
+    opus review had to do by hand for the 7b/7g pair."""
+    patch = PATCHES[index]
+    text = patch["new"]
+    for later in PATCHES[index + 1:]:
+        if later["file"] != patch["file"]:
+            continue
+        if later["old"] in text:
+            text = text.replace(later["old"], later["new"], 1)
+    return text
+
+# ── fail-closed banner ───────────────────────────────────────────────────────
+
+BANNER = "=" * 78
+
+def print_fail_closed_banner(missing_files, mismatches):
+    print(BANNER, file=sys.stderr)
+    print("CARRIER PATCH APPLY FAILED -- NOTHING WAS WRITTEN (fail-closed)", file=sys.stderr)
+    print(BANNER, file=sys.stderr)
+    if missing_files:
+        print(f"Missing target file(s): {', '.join(sorted(missing_files))}", file=sys.stderr)
+    for file, marker in mismatches:
+        print(f"MISMATCH [{file}] {marker[:70]}", file=sys.stderr)
+        print(f"   Neither marker nor old-text found. OMB source likely changed upstream.", file=sys.stderr)
+    print("", file=sys.stderr)
+    print("This OMB install ships an auto-updater; if this ran after an update,", file=sys.stderr)
+    print("every carrier bot with composio:true is now UNGATED -- Composio writes", file=sys.stderr)
+    print("(Gmail send, DB writes, etc.) will execute with NO approval card until", file=sys.stderr)
+    print("this script is fixed and re-run successfully.", file=sys.stderr)
+    print("", file=sys.stderr)
+    print("IMMEDIATE MITIGATION -- disable composio fleet-wide until this is fixed", file=sys.stderr)
+    print("(PowerShell, against the local harness on port 8799):", file=sys.stderr)
+    print("", file=sys.stderr)
+    print('  (Invoke-RestMethod http://127.0.0.1:8799/api/bots).bots | ForEach-Object {', file=sys.stderr)
+    print('      Invoke-RestMethod "http://127.0.0.1:8799/api/bots/$($_.id)" -Method Patch `', file=sys.stderr)
+    print('          -ContentType "application/json" -Body (@{ composio = $false } | ConvertTo-Json)', file=sys.stderr)
+    print('  }', file=sys.stderr)
+    print("", file=sys.stderr)
+    print("Then fix the anchor(s) named above against the current OMB source and", file=sys.stderr)
+    print("re-run this script before re-enabling composio on any bot.", file=sys.stderr)
+    print(BANNER, file=sys.stderr)
+
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--check", action="store_true", help="Check only, do not modify")
+    parser.add_argument("--verify-content", action="store_true", help="Stronger check: confirms the live file actually contains each patch's expected text")
     parser.add_argument("--omb-dir", default=DEFAULT_OMB_DIR, help="OMB server/server directory")
     args = parser.parse_args()
 
@@ -1057,48 +1171,69 @@ def main():
         print("        Is OpenMausBot installed? Override with --omb-dir.", file=sys.stderr)
         sys.exit(2)
 
-    needs_patch = []
-    missing = []
-    already_applied = []
+    if args.verify_content:
+        drift = []
+        for i, p in enumerate(PATCHES):
+            path = os.path.join(omb_dir, p["file"])
+            if not os.path.isfile(path):
+                drift.append((p["file"], p["marker"], "file missing"))
+                continue
+            content = read(path)
+            if p["marker"] not in content:
+                drift.append((p["file"], p["marker"], "marker not present (not applied)"))
+                continue
+            if expected_final_text(i) not in content:
+                drift.append((p["file"], p["marker"], "marker present but expected text missing (hand-edit drift?)"))
+        if drift:
+            print(f"⚠️  {len(drift)} patch(es) show content drift:")
+            for file, marker, reason in drift:
+                print(f"  [{file}] {marker[:60]} -- {reason}")
+            sys.exit(1)
+        print(f"✅ All {len(PATCHES)} patches verified present with expected content.")
+        sys.exit(0)
 
-    for patch in PATCHES:
-        path = os.path.join(omb_dir, patch["file"])
-        if not os.path.isfile(path):
-            missing.append(patch["file"])
-            continue
-        content = read(path)
-        status = check_patch(content, patch)
-        label = f"  [{patch['file']}] {patch['marker'][:60]}"
+    results, file_contents = plan(omb_dir)
+
+    missing_files = set()
+    mismatches = []
+    needed = []
+    applied = []
+    for p, status, path in results:
+        label = f"  [{p['file']}] {p['marker'][:60]}"
         if status == "applied":
             print(f"✅ APPLIED   {label}")
-            already_applied.append(patch)
+            applied.append(p)
         elif status == "needed":
             print(f"⚠️  NEEDED    {label}")
-            needs_patch.append((path, patch, content))
+            needed.append(p)
+        elif status == "missing":
+            print(f"❓ MISSING   {label}")
+            missing_files.add(p["file"])
         else:
             print(f"❓ MISMATCH  {label}")
             print(f"   Neither marker nor old-text found. File may have been updated upstream.")
-            print(f"   Manual review required: {path}")
-            missing.append(patch["file"])
+            mismatches.append((p["file"], p["marker"]))
 
-    if missing:
-        print(f"\n[ERROR] {len(missing)} patch(es) could not be applied (file changed or missing).", file=sys.stderr)
+    if missing_files or mismatches:
+        print("")
+        print_fail_closed_banner(missing_files, mismatches)
         sys.exit(2)
 
-    if not needs_patch:
-        print(f"\n✅ All {len(already_applied)} patches already applied. Nothing to do.")
+    if not needed:
+        print(f"\n✅ All {len(applied)} patches already applied. Nothing to do.")
         sys.exit(0)
 
     if args.check:
-        print(f"\n⚠️  {len(needs_patch)} patch(es) need applying. Run without --check to apply.")
+        print(f"\n⚠️  {len(needed)} patch(es) need applying. Run without --check to apply.")
         sys.exit(1)
 
-    # Apply
-    print(f"\nApplying {len(needs_patch)} patch(es)...")
-    for path, patch, content in needs_patch:
-        new_content = apply_patch(content, patch)
-        write(path, new_content)
-        print(f"  ✅ Patched: {os.path.relpath(path, omb_dir)}")
+    # Apply — write only the files that actually changed.
+    print(f"\nApplying {len(needed)} patch(es)...")
+    changed_paths = {os.path.join(omb_dir, p["file"]) for p in needed}
+    for path in changed_paths:
+        write(path, file_contents[path])
+    for p in needed:
+        print(f"  ✅ Patched: {p['file']}")
 
     print(f"\n✅ Done. Restart OpenMausBot for patches to take effect.")
     print("   (The harness server — port 8799 — must be restarted, not just the UI.)")
