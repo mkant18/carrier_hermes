@@ -53,7 +53,7 @@ SILENT_RUNNING_HALT = CARRIER_DIR / "SILENT_RUNNING_HALT"
 KANBAN_DB = HERMES_HOME / "kanban" / "boards" / "carrier" / "kanban.db"
 
 OLLAMA_TAGS_URL = "http://localhost:11434/api/tags"
-REQUIRED_MODEL = "qwen2.5:7b-instruct-q4_K_M"
+REQUIRED_MODEL = "llama3.1:8b-instruct-q4_K_M"
 
 # ─── Threshold policy ─────────────────────────────────────────────────────────
 

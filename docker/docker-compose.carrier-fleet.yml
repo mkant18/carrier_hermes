@@ -16,7 +16,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   # ── Senior Lieutenants ───────────────────────────────────────────────────
@@ -36,7 +38,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   coding_lt:
@@ -55,7 +59,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   ops_lt:
@@ -74,7 +80,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   knowledge_lt:
@@ -93,7 +101,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   maintenance_lt:
@@ -112,7 +122,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   # ── Workers ──────────────────────────────────────────────────────────────
@@ -132,7 +144,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   git_yeoman:
@@ -151,7 +165,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   subscription_watcher:
@@ -170,7 +186,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   api_watcher:
@@ -189,7 +207,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   lockbox:
@@ -208,7 +228,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   passive_watch:
@@ -227,7 +249,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   # ── Watchers & Specialized Workers ──────────────────────────────────────
@@ -247,7 +271,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   hermes_ai_explorer:
@@ -266,7 +292,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   todoist_manager:
@@ -285,7 +313,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   email_reader:
@@ -304,7 +334,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   email_drafter:
@@ -323,7 +355,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   calendar_manager:
@@ -342,7 +376,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   finance_reader:
@@ -361,7 +397,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
   obsidian_archivist:
@@ -380,7 +418,9 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 4G
+          memory: 6G
+        reservations:
+          memory: 1G
     restart: unless-stopped
 
 networks:

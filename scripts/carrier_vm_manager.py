@@ -198,7 +198,7 @@ def start_bot_vm(bot_id: str) -> bool:
         "--env", "CARRIER_PEERS_BROKER_URL=http://host.docker.internal:9876",
         "--env", "PYTHONUNBUFFERED=1",
         "--cpus", "2",
-        "--memory", "4g",
+        "--memory", "6g",
         "--restart", "unless-stopped",
         IMAGE_NAME,
     ], timeout=30)

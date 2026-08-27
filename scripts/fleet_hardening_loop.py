@@ -50,8 +50,8 @@ HPY = str(HOME / "hermes-agent" / "venv" / "Scripts" / "python.exe")
 OLLAMA_URL      = "http://localhost:11434"
 PRIMARY_MODEL   = "llama3.1:8b-instruct-q4_K_M"
 FALLBACK_MODEL  = "gemma4:26b"    # only if primary fails
-OLLAMA_TIMEOUT  = 90              # seconds per Ollama request
-MAX_MEM_TOKENS  = 600             # keep Ollama outputs concise
+OLLAMA_TIMEOUT  = 120             # seconds per Ollama request
+MAX_MEM_TOKENS  = 800             # keep Ollama outputs concise
 
 # ─── Hardening concurrency limits ─────────────────────────────────────────────
 MAX_HARDEN_PER_CYCLE = 3    # max bots improved per run (keeps cycles fast)
