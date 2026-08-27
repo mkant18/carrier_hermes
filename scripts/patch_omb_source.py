@@ -205,6 +205,186 @@ PATCHES = [
         ),
     },
 
+    # ── PATCH 6a: claude.js — stop blanket-allowlisting mcp__composio ──────
+    # Root cause (Phase 2A): the driver did allowed.push("mcp__composio") and
+    # passed it via --allowedTools, blanket-approving the ENTIRE composio MCP
+    # server at the CLI's own permission layer. Every mcp__composio__* call —
+    # including write actions wrapped by COMPOSIO_MULTI_EXECUTE_TOOL, e.g.
+    # GMAIL_SEND_EMAIL — never reached OMB's autoVerdict()/approval-card
+    # pipeline. autoApprove:false was silently bypassed for all Composio use.
+    # Fix: do not add mcp__composio to `allowed`. Composio calls then fall
+    # through to --permission-prompt-tool mcp__ogb__approve like any other
+    # gated tool — the same pattern already used for host-controlling
+    # `computer` tools (the `controlsHost` branch just above).
+    {
+        "file": "drivers/claude.js",
+        "marker": PATCH_MARKER + " 6a: do NOT pre-allow mcp__composio",
+        "old": (
+            '            if (turn.integrations?.composio) {\n'
+            '                mcpServers.composio = { ...turn.integrations.composio };\n'
+            '                allowed.push("mcp__composio");\n'
+            '            }'
+        ),
+        "new": (
+            '            if (turn.integrations?.composio) {\n'
+            '                mcpServers.composio = { ...turn.integrations.composio };\n'
+            '                // ' + PATCH_MARKER + ' 6a: do NOT pre-allow mcp__composio.\n'
+            '                // Every Composio action, including write-shaped ones like\n'
+            '                // GMAIL_SEND_EMAIL, is funneled through the single wrapper\n'
+            '                // tool COMPOSIO_MULTI_EXECUTE_TOOL — pre-allowing the whole\n'
+            '                // server (the previous behavior) blanket-approved every\n'
+            '                // Composio call before OMB\'s own autoVerdict()/approval-card\n'
+            '                // pipeline ever saw it, silently bypassing autoApprove:false.\n'
+            '                // Leaving it off `allowed` routes it through the same\n'
+            '                // --permission-prompt-tool mcp__ogb__approve broker used by\n'
+            '                // host-controlling computer tools above (the `controlsHost`\n'
+            '                // branch) — the proven working pattern.\n'
+            '            }'
+        ),
+    },
+
+    # ── PATCH 6b: connector-proxy.js — classify composio execute calls ─────
+    # Defense-in-depth logging (not a gate — patch 6a is the gate). Parses
+    # COMPOSIO_EXECUTE_TOOL / COMPOSIO_MULTI_EXECUTE_TOOL arguments to extract
+    # the underlying action slug(s) and logs read vs write-shaped calls to
+    # stderr so a future audit can see write actions distinctly. Fails open
+    # to "write" for anything ambiguous or unresolved; never blocks/rewrites.
+    {
+        "file": "connector-proxy.js",
+        "marker": PATCH_MARKER + " 6b: classify composio execute calls",
+        "old": (
+            'async function showConnectorCards(slugs) {\n'
+            '    const response = await fetch(`${HARNESS}/api/internal/connectors/request`, {\n'
+            '        method: "POST",\n'
+            '        headers: { "content-type": "application/json", authorization: `Bearer ${TOKEN}` },\n'
+            '        body: JSON.stringify({ botId: BOT_ID, threadId: THREAD_ID, slugs, resumeKey: randomUUID() }),\n'
+            '        signal: AbortSignal.timeout(30_000),\n'
+            '    });\n'
+            '    if (!response.ok) {\n'
+            '        const body = (await response.json().catch(() => ({})));\n'
+            '        throw new Error(String(body.error ?? `could not show connection card (HTTP ${response.status})`));\n'
+            '    }\n'
+            '}\n'
+            'async function handle(message) {\n'
+            '    const id = message.id;\n'
+            '    const method = String(message.method ?? "");\n'
+            '    if (method === "tools/call") {\n'
+            '        const params = (message.params ?? {});\n'
+            '        const name = String(params.name ?? "");\n'
+            '        const slugs = /MANAGE_CONNECTIONS$/i.test(name) ? connectorAdds(params.arguments) : [];\n'
+            '        if (slugs.length) {\n'
+            '            await showConnectorCards(slugs);\n'
+            '            send(textResult(id, `OpenMausBot showed the user a secure connection card for ${slugs.join(", ")}. End this turn now. The app will continue the task automatically after the connection finishes.`));\n'
+            '            return;\n'
+            '        }\n'
+            '        if (/WAIT_FOR_CONNECTIONS$/i.test(name)) {\n'
+            '            send(textResult(id, "OpenMausBot is handling connection completion and will continue the task automatically."));\n'
+            '            return;\n'
+            '        }\n'
+            '    }\n'
+            '    const response = await relay(message);\n'
+            '    if (response && id !== undefined)\n'
+            '        send(response);\n'
+            '}'
+        ),
+        "new": (
+            '// ' + PATCH_MARKER + ' 6b: classify composio execute calls — logging\n'
+            '// only, layered defense-in-depth. The permission broker wired in\n'
+            '// claude.js (patch 6a) is the actual gate for every composio call,\n'
+            '// read or write; this never blocks or rewrites anything, it only makes\n'
+            '// write-shaped actions visible in the connector-proxy logs for audit.\n'
+            'const READ_ONLY_ACTION_RE = /^([A-Z0-9]+_)?(SEARCH|GET|LIST|FETCH|FIND|READ|RETRIEVE|QUERY|CHECK)_/;\n'
+            'const READ_ONLY_META_TOOLS = new Set(["COMPOSIO_SEARCH_TOOLS", "COMPOSIO_GET_TOOL_SCHEMAS", "COMPOSIO_WAIT_FOR_CONNECTIONS"]);\n'
+            'const EXECUTE_TOOL_NAME_RE = /^COMPOSIO_(MULTI_)?EXECUTE_TOOL$/i;\n'
+            'const UPPER_SNAKE_TOKEN_RE = /\\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+){1,}\\b/g;\n'
+            'function extractActionSlugs(args) {\n'
+            '    if (!args || typeof args !== "object" || Array.isArray(args))\n'
+            '        return [];\n'
+            '    const found = new Set();\n'
+            '    for (const key of ["tool_slug", "toolSlug", "slug", "action", "tool", "name"]) {\n'
+            '        if (typeof args[key] === "string")\n'
+            '            found.add(args[key]);\n'
+            '    }\n'
+            '    for (const key of ["tools", "actions", "tool_slugs", "calls"]) {\n'
+            '        const list = args[key];\n'
+            '        if (!Array.isArray(list))\n'
+            '            continue;\n'
+            '        for (const item of list) {\n'
+            '            if (typeof item === "string") {\n'
+            '                found.add(item);\n'
+            '                continue;\n'
+            '            }\n'
+            '            if (!item || typeof item !== "object")\n'
+            '                continue;\n'
+            '            for (const itemKey of ["tool_slug", "toolSlug", "slug", "action", "tool", "name"]) {\n'
+            '                if (typeof item[itemKey] === "string")\n'
+            '                    found.add(item[itemKey]);\n'
+            '            }\n'
+            '        }\n'
+            '    }\n'
+            '    if (found.size === 0) {\n'
+            '        // Unfamiliar shape: scan the serialized arguments for anything that\n'
+            '        // looks like an action slug rather than silently treating it as safe.\n'
+            '        try {\n'
+            '            for (const token of JSON.stringify(args).match(UPPER_SNAKE_TOKEN_RE) ?? [])\n'
+            '                found.add(token);\n'
+            '        }\n'
+            '        catch {\n'
+            '            // ignore\n'
+            '        }\n'
+            '    }\n'
+            '    return [...found];\n'
+            '}\n'
+            'function isReadOnlyAction(slug) {\n'
+            '    return READ_ONLY_META_TOOLS.has(slug) || READ_ONLY_ACTION_RE.test(slug);\n'
+            '}\n'
+            'function logComposioExecuteClassification(name, args) {\n'
+            '    const slugs = extractActionSlugs(args);\n'
+            '    // Fail-open: no slug found at all is ambiguous, so it logs as write.\n'
+            '    const entries = slugs.length ? slugs.map((slug) => `${slug}:${isReadOnlyAction(slug) ? "read" : "write"}`) : ["<unresolved>:write"];\n'
+            '    const hasWrite = slugs.length === 0 || slugs.some((slug) => !isReadOnlyAction(slug));\n'
+            '    console.error(`[carrier_openmausbot patch 6] ${name} -> ${entries.join(", ")}${hasWrite ? " (write-shaped or unresolved; permission broker approval required)" : " (read-only)"}`);\n'
+            '}\n'
+            'async function showConnectorCards(slugs) {\n'
+            '    const response = await fetch(`${HARNESS}/api/internal/connectors/request`, {\n'
+            '        method: "POST",\n'
+            '        headers: { "content-type": "application/json", authorization: `Bearer ${TOKEN}` },\n'
+            '        body: JSON.stringify({ botId: BOT_ID, threadId: THREAD_ID, slugs, resumeKey: randomUUID() }),\n'
+            '        signal: AbortSignal.timeout(30_000),\n'
+            '    });\n'
+            '    if (!response.ok) {\n'
+            '        const body = (await response.json().catch(() => ({})));\n'
+            '        throw new Error(String(body.error ?? `could not show connection card (HTTP ${response.status})`));\n'
+            '    }\n'
+            '}\n'
+            'async function handle(message) {\n'
+            '    const id = message.id;\n'
+            '    const method = String(message.method ?? "");\n'
+            '    if (method === "tools/call") {\n'
+            '        const params = (message.params ?? {});\n'
+            '        const name = String(params.name ?? "");\n'
+            '        const slugs = /MANAGE_CONNECTIONS$/i.test(name) ? connectorAdds(params.arguments) : [];\n'
+            '        if (slugs.length) {\n'
+            '            await showConnectorCards(slugs);\n'
+            '            send(textResult(id, `OpenMausBot showed the user a secure connection card for ${slugs.join(", ")}. End this turn now. The app will continue the task automatically after the connection finishes.`));\n'
+            '            return;\n'
+            '        }\n'
+            '        if (/WAIT_FOR_CONNECTIONS$/i.test(name)) {\n'
+            '            send(textResult(id, "OpenMausBot is handling connection completion and will continue the task automatically."));\n'
+            '            return;\n'
+            '        }\n'
+            '        // ' + PATCH_MARKER + ' 6b: logging only, never blocks or rewrites —\n'
+            '        // see the function comment above for why the broker is the real gate.\n'
+            '        if (EXECUTE_TOOL_NAME_RE.test(name))\n'
+            '            logComposioExecuteClassification(name, params.arguments);\n'
+            '    }\n'
+            '    const response = await relay(message);\n'
+            '    if (response && id !== undefined)\n'
+            '        send(response);\n'
+            '}'
+        ),
+    },
+
 ]
 
 # ── helpers ───────────────────────────────────────────────────────────────────
