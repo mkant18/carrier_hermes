@@ -99,13 +99,17 @@ three identical silent messages.
 
 ## Patch 6 — Composio Approval-Gate Bypass (`drivers/claude.js` + `connector-proxy.js`)
 
-**Status: NOT resolved.** Both halves of this patch are applied, on disk, and
+**Status: NOT resolved. See [Patch 7](#patch-7--composio-write-gate-at-the-proxy-connector-proxyjs--indexjs)
+for the actual fix.** Both halves of this patch are applied, on disk, and
 idempotent — but live testing (below) proved 6a does not close the approval
 gap it was written to close. Composio calls still execute with zero approval
 cards after this patch, identically to before it. The safety interlock is
 still the ollama-only model pinning on Yeoman/Inbox, not this patch. See
 "Verified NOT effective at runtime" below before relying on this patch for
-anything.
+anything. Patch 6b's classifier (logging only, never a gate) was superseded
+wholesale by Patch 7a, which keeps the same slug-extraction/classification
+logic but adds the write-gate; `scripts/patch_omb_source.py`'s Patch 6b
+check entry is retired (commented out) for this reason — see that file.
 
 **Symptom (found in Phase 2A pilot):** With `Yeoman.autoApprove === false` and
 no `alwaysAllow` grant, every `mcp__composio__*` tool call — including four
