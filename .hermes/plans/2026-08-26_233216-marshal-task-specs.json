@@ -1,0 +1,107 @@
+[
+  {
+    "title": "Confirm Phantom Model Errors in Chief of Staff Logs",
+    "body": "Review chief_of_staff logs to identify root causes of phantom model errors. Investigate updates to model configuration or retraining requirements. Confirm fixes.",
+    "assignee": "code_auditor",
+    "priority": 5,
+    "depends_on_title": null
+  },
+  {
+    "title": "Update Model Configuration",
+    "body": "Update model configuration to resolve phantom model errors. Investigate and resolve any outdated or misaligned model configurations. Confirm fixes.",
+    "assignee": "repair_planner",
+    "priority": 5,
+    "depends_on_title": "Confirm Phantom Model Errors in Chief of Staff Logs"
+  },
+  {
+    "title": "Fix Phantom Model Errors in Code Auditor Logs",
+    "body": "Review code_auditor logs to identify root causes of phantom model errors. Investigate and resolve any misaligned code changes or model configuration issues. Confirm fixes.",
+    "assignee": "code_auditor",
+    "priority": 4,
+    "depends_on_title": null
+  },
+  {
+    "title": "Review Synchronization Mechanisms",
+    "body": "Investigate and review synchronization mechanisms and data validation algorithms to resolve crash_loop issues in carrier logs. Confirm fixes.",
+    "assignee": "repair_planner",
+    "priority": 4,
+    "depends_on_title": "Fix Crash Loop Issues in Carrier Logs"
+  },
+  {
+    "title": "Fix Crash Loop Issues in System Logs",
+    "body": "Review system logs to identify root causes of crash_loop issues. Investigate and resolve any resource exhaustion or out-of-memory errors. Confirm fixes.",
+    "assignee": "code_auditor",
+    "priority": 4,
+    "depends_on_title": null
+  },
+  {
+    "title": "Retire Failed Kanban Tasks",
+    "body": "Investigate and retire failed Kanban tasks (t_d977444c, t_e7a0429e, t_4b259dcc). Review task dependencies and implementation, then retrigger tasks.",
+    "assignee": "maintenance_lt",
+    "priority": 3,
+    "depends_on_title": null
+  },
+  {
+    "title": "Review Task Dependencies",
+    "body": "Review task dependencies for failed Kanban tasks (t_d977444c, t_e7a0429e, t_4b259dcc). Identify and resolve any implementation or dependencies issues.",
+    "assignee": "repair_planner",
+    "priority": 3,
+    "depends_on_title": "Retire Failed Kanban Tasks"
+  },
+  {
+    "title": "Seed Bot Memory Stores",
+    "body": "Seed bot memory stores for all bots to avoid empty or missing identity content. Investigate and resolve any config issues in worker bot configs.",
+    "assignee": "knowledge_lt",
+    "priority": 2,
+    "depends_on_title": null
+  },
+  {
+    "title": "Fix Config Issues in Worker Bot Configs",
+    "body": "Review worker bot configs to identify config issues. Investigate and resolve any misconfigured or outdated configurations.",
+    "assignee": "knowledge_lt",
+    "priority": 2,
+    "depends_on_title": "Seed Bot Memory Stores"
+  },
+  {
+    "title": "Update Bot Logs",
+    "body": "Update all bot logs to resolve phantom model errors and other issues. Confirm fixes.",
+    "assignee": "git_yeoman",
+    "priority": 1,
+    "depends_on_title": null
+  },
+  {
+    "title": "Review and Fix Traceback Issues",
+    "body": "Review traceback issues in api_watcher and other logs. Investigate and resolve any implementation or dependencies issues.",
+    "assignee": "code_auditor",
+    "priority": 1,
+    "depends_on_title": null
+  },
+  {
+    "title": "Increase Resource Allocation",
+    "body": "Increase resource allocation for the fleet to resolve resource exhaustion or out-of-memory errors.",
+    "assignee": "maintenance_lt",
+    "priority": 5,
+    "depends_on_title": "Fix Crash Loop Issues in System Logs"
+  },
+  {
+    "title": "Review and Optimize Memory Usage",
+    "body": "Review and optimize memory usage for the fleet to resolve resource exhaustion or out-of-memory errors.",
+    "assignee": "maintenance_lt",
+    "priority": 5,
+    "depends_on_title": "Fix Crash Loop Issues in System Logs"
+  },
+  {
+    "title": "Write Code Changes",
+    "body": "Write code changes to resolve phantom model errors and other issues. Investigate and resolve any misaligned code changes or model configuration issues.",
+    "assignee": "patch_writer",
+    "priority": 4,
+    "depends_on_title": "Fix Phantom Model Errors in Chief of Staff Logs"
+  },
+  {
+    "title": "Review and Test Code Changes",
+    "body": "Review and test code changes to resolve phantom model errors and other issues. Investigate and resolve any testing or implementation issues.",
+    "assignee": "code_auditor",
+    "priority": 4,
+    "depends_on_title": "Write Code Changes"
+  }
+]
