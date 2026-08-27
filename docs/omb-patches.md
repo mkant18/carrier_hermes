@@ -179,11 +179,12 @@ QUERY|CHECK)_` plus the `COMPOSIO_SEARCH_TOOLS` / `COMPOSIO_GET_TOOL_SCHEMAS`
 / `COMPOSIO_WAIT_FOR_CONNECTIONS` meta tools). Everything else — `SEND`,
 `CREATE`, `DELETE`, `UPDATE`, etc., or anything unrecognized — logs as
 write-shaped to stderr (fail-open: an unresolved slug also logs as write).
-This **never blocks or rewrites** a call; it exists purely so a future audit
-of the connector-proxy logs can see write actions distinctly. **6a is the
-actual gate** — every Composio call cards at the broker again regardless of
-classification; that is the deliberate, acceptable-for-now safe default (a
-read-only search still requires a click, same as a write).
+This **never blocks or rewrites** a call; it was designed purely so a future
+audit of the connector-proxy logs could see write actions distinctly, on the
+assumption that 6a was the actual gate. **That assumption is false — see
+below.** 6a does not gate anything, so today this log is the only visibility
+into write-shaped Composio calls that exists at all, not a backstop behind a
+working gate.
 
 **6b could not be runtime-verified either, for a different reason:**
 `connector-proxy.js` runs as a grandchild process (spawned by the Claude Code
@@ -196,11 +197,11 @@ inspection). Per this project's own precedent (Phase 1B labeled 2a/2b
 `VERIFIED-STATIC-ONLY` for the same reason — no observable trigger), 6b's
 status is **VERIFIED-STATIC-ONLY, not runtime-exercised.**
 
-**Given 6a does not work, 6b's design (logging-only, layered *behind* the
-broker) is now mis-ordered.** The classifier's own comment correctly says
-"6a is the actual gate" — but 6a is not currently gating anything, so today
-6b's write-vs-read distinction is invisible everywhere except a log stream
-nothing reads. The likely correct fix is Phase 2A's option (b): have
+**Given 6a does not work, 6b's design (logging-only, originally intended to
+sit *behind* the broker) is now mis-ordered.** 6a is not currently gating
+anything, so today 6b's write-vs-read distinction is invisible everywhere
+except a log stream nothing reads. The likely correct fix is Phase 2A's
+option (b): have
 `connector-proxy.js` itself raise the approval card for write-shaped actions
 (the same `/api/internal/connectors/request`-style mechanism it already uses
 for `MANAGE_CONNECTIONS`) rather than relying on the CLI-level broker for
