@@ -212,10 +212,13 @@ PATCHES = [
     # including write actions wrapped by COMPOSIO_MULTI_EXECUTE_TOOL, e.g.
     # GMAIL_SEND_EMAIL — never reached OMB's autoVerdict()/approval-card
     # pipeline. autoApprove:false was silently bypassed for all Composio use.
-    # Fix: do not add mcp__composio to `allowed`. Composio calls then fall
-    # through to --permission-prompt-tool mcp__ogb__approve like any other
-    # gated tool — the same pattern already used for host-controlling
-    # `computer` tools (the `controlsHost` branch just above).
+    # Attempted fix: do not add mcp__composio to `allowed`, intending Composio
+    # calls to fall through to --permission-prompt-tool mcp__ogb__approve like
+    # other gated tools. LIVE-VERIFIED 2026-08-27 NOT TO WORK — see
+    # docs/omb-patches.md "Patch 6" for the evidence (fresh-session test,
+    # zero request.opened cards). Kept applied anyway: it is a strict
+    # narrowing of trust (removes a blanket allowlist entry) with no
+    # observed downside, but it does NOT close the approval gap by itself.
     {
         "file": "drivers/claude.js",
         "marker": PATCH_MARKER + " 6a: do NOT pre-allow mcp__composio",
@@ -235,10 +238,18 @@ PATCHES = [
             '                // server (the previous behavior) blanket-approved every\n'
             '                // Composio call before OMB\'s own autoVerdict()/approval-card\n'
             '                // pipeline ever saw it, silently bypassing autoApprove:false.\n'
-            '                // Leaving it off `allowed` routes it through the same\n'
-            '                // --permission-prompt-tool mcp__ogb__approve broker used by\n'
-            '                // host-controlling computer tools above (the `controlsHost`\n'
-            '                // branch) — the proven working pattern.\n'
+            '                // Leaving it off `allowed` was INTENDED to route it through\n'
+            '                // the same --permission-prompt-tool mcp__ogb__approve broker\n'
+            '                // used by host-controlling computer tools above (the\n'
+            '                // `controlsHost` branch). Live-verified 2026-08-27: it does\n'
+            '                // NOT — mcp__composio__* calls still execute with zero\n'
+            '                // request.opened cards after this change, on both a resumed\n'
+            '                // and a brand-new session. See docs/omb-patches.md "Patch 6"\n'
+            '                // for the evidence. The controlsHost/mcp__computer parity\n'
+            '                // claim above is UNVERIFIED, not confirmed working — no bot\n'
+            '                // is currently configured with computer:"local" to test it.\n'
+            '                // Until this is genuinely fixed, the ollama-only model\n'
+            '                // pinning on Yeoman/Inbox remains the real safety interlock.\n'
             '            }'
         ),
     },
