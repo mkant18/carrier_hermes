@@ -45,7 +45,7 @@ for repo in REPOS:
         dirty = subprocess.run(["git", "-C", repo, "status", "--porcelain"],
                                capture_output=True, text=True, timeout=60).stdout.strip()
         if dirty:
-            subprocess.run(["git", "-C", repo, "add", "-A"], check=True, timeout=60)
+            subprocess.run(["git", "-C", repo, "add", "-A", "--", ":!.worktrees"], check=True, timeout=60)
             r = subprocess.run(["git", "-C", repo, "commit", "-m",
                                 f"wip(pre-5am-save): auto-save {STAMP} before scheduled restart"],
                                capture_output=True, text=True, timeout=60)
