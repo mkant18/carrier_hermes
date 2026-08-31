@@ -52,7 +52,7 @@ httptools==0.7.1
 httpx==0.28.1
 httpx-sse==0.4.3
 httpx2==2.7.0
-huggingface_hub==1.24.0
+huggingface_hub==1.29.0
 hyperframe==6.1.0
 idna==3.18
 importlib_metadata==8.7.1
